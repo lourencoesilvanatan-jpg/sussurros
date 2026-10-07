@@ -46,6 +46,7 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 
 import com.sussurros.Sussurros;
 import com.sussurros.entidade.HospedeEntity;
+import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
@@ -1059,23 +1060,24 @@ public final class Diretor {
 		return Math.max(min, Math.min(max, v));
 	}
 
+	private static void definirNotaSpawn(EstadoJogador e, String nota) {
+		PedidoManifestacao base = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
+		e.pedidoSpawn = base.comNota(nota);
+	}
+
 	// =====================================================================
 	// Execução (com "ele provavelmente percebeu?")
 	// =====================================================================
 
 	/** Executa um evento. A criatura que ele criar fica marcada com a origem e o evento (v0.4.2). */
 	private static boolean executar(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Evento ev, long seg, long tick) {
-		e.origemSpawn = e.forcando ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-		e.eventoSpawn = ev;
+		e.pedidoSpawn = e.forcando ? PedidoManifestacao.deComando(ev) : PedidoManifestacao.doDiretor(ev);
 		try {
 			return executarInterno(level, p, m, e, ev, seg, tick);
 		} finally {
-			e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-			e.eventoSpawn = null;
-			e.notaSpawn = "";
+			e.pedidoSpawn = null;
 		}
 	}
-
 	private static boolean executarInterno(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Evento ev, long seg, long tick) {
 		RandomSource rnd = level.getRandom();
 		int ousadia = Math.min(10, m.get(Memoria.VEZES_VISTO) / 2 + m.get(Memoria.VEZES_FERIDO));
@@ -1535,7 +1537,7 @@ public final class Diretor {
 		if (chao == null || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 			return false;
 		}
-		e.notaSpawn = "ROTA chunk=(" + escolhida[0] + "," + escolhida[1] + ")";
+		definirNotaSpawn(e, "ROTA chunk=(" + escolhida[0] + "," + escolhida[1] + ")");
 		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * (15 + ousadia * 2), 1.0);
 		return true;
 	}
@@ -1852,7 +1854,7 @@ public final class Diretor {
 		if (chao == null || naTela(p, chao)) {
 			return false;
 		}
-		e.notaSpawn = "TUMULO";
+		definirNotaSpawn(e, "TUMULO");
 		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * 30, 1.0);
 		return true;
 	}
@@ -2067,7 +2069,7 @@ public final class Diretor {
 			estrategia += "+FLORESTA";
 		}
 		if (Depuracao.ativo) {
-			e.notaSpawn = "ESTRATEGIA=" + estrategia + String.format(Locale.ROOT, " ang=%.0f-%.0f", min, max);
+			definirNotaSpawn(e, "ESTRATEGIA=" + estrategia + String.format(Locale.ROOT, " ang=%.0f-%.0f", min, max));
 		}
 		return new double[] {min, max};
 	}
@@ -2106,7 +2108,7 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		e.notaSpawn = "APARICAO2 " + candidato.resumo();
+		definirNotaSpawn(e, "APARICAO2 " + candidato.resumo());
 		criar(level, p, e, candidato.chao(), modo, duracao, velocidade, distSumir);
 		if (!e.forcando) {
 			Aparicao.registrar(e, candidato);
@@ -2129,7 +2131,7 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		e.notaSpawn = "APARICAO2_COBERTURA " + candidato.resumo();
+		definirNotaSpawn(e, "APARICAO2_COBERTURA " + candidato.resumo());
 		criar(level, p, e, candidato.chao(), modo, duracao, 1.0, distSumir);
 		if (!e.forcando) {
 			Aparicao.registrar(e, candidato);
@@ -2184,8 +2186,8 @@ public final class Diretor {
 		if (melhor == null) {
 			return false;
 		}
-		e.notaSpawn = String.format(Locale.ROOT, "MARCO_EXATO distMarco=%.1f cobertura=%s",
-				melhorDistMarco, melhorCobertura ? "sim" : "nao");
+		definirNotaSpawn(e, String.format(Locale.ROOT, "MARCO_EXATO distMarco=%.1f cobertura=%s",
+				melhorDistMarco, melhorCobertura ? "sim" : "nao"));
 		criar(level, p, e, melhor, modo, duracao, 1.0, distSumir);
 		return true;
 	}
@@ -2199,7 +2201,7 @@ public final class Diretor {
 			double z = e.zonaZ + Math.sin(ang) * r;
 			BlockPos chao = acharChao(level, x, e.zonaY, z);
 			if (chao != null) {
-				e.notaSpawn = "BORDA_DA_VELA";
+				definirNotaSpawn(e, "BORDA_DA_VELA");
 				criar(level, p, e, chao, HospedeEntity.Modo.ESPERAR, 20 * 150, 1.0 + ousadia * 0.03);
 				return true;
 			}
@@ -2220,12 +2222,13 @@ public final class Diretor {
 		h.setPos(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
 		h.configurar(p, modo, duracao, ousadia, velocidade);
 		h.definirDistanciaSumir(distSumir);
-		h.definirOrigem(e.origemSpawn, e.eventoSpawn); // de comando: nada do que acontece com ele fica na memória
+		h.definirOrigem(pedido.origem(), pedido.evento()); // de comando: nada do que acontece com ele fica na memória
 		h.definirId(novoIdManifestacao());
 		level.addFreshEntity(h);
 		e.criatura = h;
 		if (Depuracao.ativo) {
-			String motivo = e.notaSpawn.isEmpty() ? "NORMAL" : e.notaSpawn;
+			PedidoManifestacao pedido = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
+		String motivo = pedido.nota().isEmpty() ? "NORMAL" : pedido.nota();
 			if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 				motivo = "CENA_CASA+" + motivo;
 			} else if (e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA) {
@@ -2239,10 +2242,10 @@ public final class Diretor {
 			}
 			Depuracao.log(p, level.getGameTime() / 20, String.format(Locale.ROOT,
 					"HOSPEDE id=%s criado origem=%s evento=%s modo=%s pos=%s dist=%.1f motivoPosicao=%s cena=%s",
-					h.getIdManifestacao(), e.origemSpawn, e.eventoSpawn, modo, pos(h.getX(), h.getY(), h.getZ()),
+					h.getIdManifestacao(), pedido.origem(), pedido.evento(), modo, pos(h.getX(), h.getY(), h.getZ()),
 					Math.sqrt(h.distanceToSqr(p)), motivo, cenaAtiva(e)));
 		}
-		e.notaSpawn = "";
+		e.pedidoSpawn = null;
 	}
 
 	/** Tenta colocar a manifestação perto da Isca Pálida, respeitando tela, terreno e zona calma. */
@@ -2284,8 +2287,8 @@ public final class Diretor {
 		if (melhor == null) {
 			return false;
 		}
-		e.notaSpawn = String.format(Locale.ROOT, "ISCA cobertura=%s distIsca=%.1f", melhorCobertura,
-				Math.sqrt(Math.pow(melhor.getX() + 0.5 - e.iscaX, 2) + Math.pow(melhor.getZ() + 0.5 - e.iscaZ, 2)));
+		definirNotaSpawn(e, String.format(Locale.ROOT, "ISCA cobertura=%s distIsca=%.1f", melhorCobertura,
+				Math.sqrt(Math.pow(melhor.getX() + 0.5 - e.iscaX, 2) + Math.pow(melhor.getZ() + 0.5 - e.iscaZ, 2))));
 		criar(level, p, e, melhor, HospedeEntity.Modo.OBSERVAR, duracao, 1.0, HospedeEntity.DIST_SUMIR_PADRAO);
 		e.iscaAtiva = false;
 		m.add(Memoria.ISCAS_ATENDIDAS, 1);
@@ -2332,8 +2335,8 @@ public final class Diretor {
 			if (chao == null || naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 				continue;
 			}
-			e.notaSpawn = String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
-					Math.sqrt(distanciaSqr(p, pt.x(), pt.z())));
+			definirNotaSpawn(e, String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
+					Math.sqrt(distanciaSqr(p, pt.x(), pt.z()))));
 			criar(level, p, e, chao, modo, duracao, 1.0, distSumir);
 			return true;
 		}
@@ -2834,8 +2837,7 @@ public final class Diretor {
 	}
 
 	private static boolean presencaNoTunel(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
-		e.origemSpawn = teste ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-		e.eventoSpawn = Evento.PRESENCA;
+		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
 		try {
 			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 200, 14, 30, 20 * 75, 7.0);
@@ -2843,9 +2845,8 @@ public final class Diretor {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 65, 105, 15, 26, 20 * 75, 1.0, true, 7.0, true);
 			}
 		} finally {
-			e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-			e.eventoSpawn = null;
-			e.notaSpawn = "";
+		e.pedidoSpawn = null;
+			definirNotaSpawn(e, "");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -3013,9 +3014,8 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		e.origemSpawn = teste ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-		e.eventoSpawn = Evento.PRESENCA;
-		e.notaSpawn = "APARICAO2_CAMPO " + candidato.resumo();
+		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+		definirNotaSpawn(e, "APARICAO2_CAMPO " + candidato.resumo());
 		try {
 			HospedeEntity.Modo modo = segunda ? HospedeEntity.Modo.ESPREITAR : HospedeEntity.Modo.OBSERVAR;
 			criar(level, p, e, candidato.chao(), modo, 20 * (segunda ? 70 : 35), 1.0, segunda ? 7.0 : 10.0);
@@ -3037,9 +3037,8 @@ public final class Diretor {
 			}
 			return true;
 		} finally {
-			e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-			e.eventoSpawn = null;
-			e.notaSpawn = "";
+		e.pedidoSpawn = null;
+			definirNotaSpawn(e, "");
 		}
 	}
 
@@ -3198,8 +3197,7 @@ public final class Diretor {
 
 	private static boolean presencaNoMarco(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e,
 			long seg, long tick, boolean teste) {
-		e.origemSpawn = teste ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-		e.eventoSpawn = Evento.PRESENCA;
+		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok = false;
 		try {
 			double[] ang = angulosPresencaAdaptativa(m, e);
@@ -3218,9 +3216,8 @@ public final class Diretor {
 						Math.max(60, ang[0]), Math.max(105, ang[1]), 17, 29, 20 * 70, 1.0, true, 7.0, true);
 			}
 		} finally {
-			e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-			e.eventoSpawn = null;
-			e.notaSpawn = "";
+		e.pedidoSpawn = null;
+			definirNotaSpawn(e, "");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -3321,15 +3318,13 @@ public final class Diretor {
 					}
 					return;
 				}
-				e.origemSpawn = e.cenaJanelaTeste ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-				e.eventoSpawn = Evento.PRESENCA;
-				e.notaSpawn = "JANELA vidro=" + alvo.vidro();
+				e.pedidoSpawn = e.cenaJanelaTeste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+				definirNotaSpawn(e, "JANELA vidro=" + alvo.vidro());
 				try {
 					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6);
 				} finally {
-					e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-					e.eventoSpawn = null;
-					e.notaSpawn = "";
+		e.pedidoSpawn = null;
+					definirNotaSpawn(e, "");
 				}
 				e.cenaJanelaPos = alvo.vidro();
 				e.cenaJanela = EstadoJogador.CenaJanela.OBSERVANDO;
@@ -3687,8 +3682,7 @@ public final class Diretor {
 
 	/** Ele aparece, sem aviso, num ponto do caminho que você usou para voltar. Uma espreita, no máximo. */
 	private static boolean presencaNoCaminho(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
-		e.origemSpawn = teste ? HospedeEntity.Origem.COMANDO : HospedeEntity.Origem.DIRETOR;
-		e.eventoSpawn = Evento.PRESENCA;
+		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
 		try {
 			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 15, 150, 14, 35, 20 * 90, 8.0);
@@ -3696,9 +3690,8 @@ public final class Diretor {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 18, 30, 20 * 90, 1.0, true, 8.0, true);
 			}
 		} finally {
-			e.origemSpawn = HospedeEntity.Origem.DIRETOR;
-			e.eventoSpawn = null;
-			e.notaSpawn = "";
+		e.pedidoSpawn = null;
+			definirNotaSpawn(e, "");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -4206,12 +4199,11 @@ public final class Diretor {
 			p.sendOverlayMessage(Component.translatable("message.sussurros.olho.atencao").withStyle(s -> s.withColor(0xB01818).withItalic(true)));
 			agendar(level, 60 + level.getRandom().nextInt(80), () -> {
 				if (!p.isRemoved() && (e.criatura == null || e.criatura.isRemoved())) {
-					e.origemSpawn = HospedeEntity.Origem.OLHO;
-					e.eventoSpawn = null;
+					e.pedidoSpawn = PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null);
 					try {
 						invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true);
 					} finally {
-						e.origemSpawn = HospedeEntity.Origem.DIRETOR;
+		e.pedidoSpawn = null;
 					}
 				}
 			});
