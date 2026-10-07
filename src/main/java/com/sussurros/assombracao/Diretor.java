@@ -190,6 +190,10 @@ public final class Diretor {
 			}
 		});
 
+		// Antes de o mundo ser salvo: desfaz o que era temporário (tocha apagada, marca no caminho).
+		// No SERVER_STOPPED já é tarde: o mundo já foi gravado com a alteração.
+		ServerLifecycleEvents.SERVER_STOPPING.register(AlteracoesTemporarias::restaurarTudo);
+
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
 			Agenda.limpar();
@@ -2028,17 +2032,13 @@ public final class Diretor {
 		if (!(original.is(Blocks.TORCH) || original.is(Blocks.WALL_TORCH))) {
 			return null;
 		}
-		level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+		// Pelas AlteracoesTemporarias (e não pela Agenda): assim a tocha volta mesmo se o mundo fechar antes.
+		AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, "TOCHA_PISCA",
+				() -> ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
+						ModSons.Som.ESTALO, 0.25F, 1.05F));
 		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.22F, 0.72F);
 		estado(p).tochas.remove(pos);
-		agendar(level, duracaoTicks, () -> {
-			if (level.getBlockState(pos).isAir()) {
-				level.setBlock(pos, original, 3);
-				ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
-						ModSons.Som.ESTALO, 0.25F, 1.05F);
-			}
-		});
 		return pos;
 	}
 
