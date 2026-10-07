@@ -3029,8 +3029,7 @@ public final class Diretor {
 				posEvento(p, e, Evento.PRESENCA, null, 0, seg, tick);
 			}
 			return true;
-
-	
+	}
 
 	private static void silencioCenaCampo(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaCampo = EstadoJogador.CenaCampo.SILENCIO;
