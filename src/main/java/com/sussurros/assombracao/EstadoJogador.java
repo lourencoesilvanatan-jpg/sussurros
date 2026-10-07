@@ -17,6 +17,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.entidade.HospedeEntity;
+import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 
 /**
  * Tudo o que o Diretor sabe sobre um jogador NESTA sessão (não é salvo no disco).
@@ -26,10 +27,8 @@ final class EstadoJogador {
 	// --- Criatura ---
 	@Nullable HospedeEntity criatura;
 
-	// --- Origem da PRÓXIMA criatura criada (lida e zerada em Diretor.criar) ---
-	HospedeEntity.Origem origemSpawn = HospedeEntity.Origem.DIRETOR;
-	@Nullable Evento eventoSpawn;
-	String notaSpawn = "";
+	// --- Pedido da PRÓXIMA manifestação (passagem explícita será feita no próximo subpasso) ---
+	@Nullable PedidoManifestacao pedidoSpawn;
 
 	// --- Obsessão: escalada LENTA (a pressão é a tensão do momento) (v0.4.2) ---
 	double obsessao;
