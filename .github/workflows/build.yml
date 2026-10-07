@@ -3,7 +3,7 @@ name: Build Sussurros
 on:
   push:
     branches:
-      - refactor/passo-1-pedido-agenda
+      - main
   pull_request:
     branches:
       - main
