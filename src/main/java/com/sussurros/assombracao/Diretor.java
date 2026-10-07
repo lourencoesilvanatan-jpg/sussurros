@@ -4,7 +4,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -47,6 +46,7 @@ import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 
 import com.sussurros.Sussurros;
 import com.sussurros.entidade.HospedeEntity;
+import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -94,10 +94,6 @@ public final class Diretor {
 	// Telemetria (0.4.2a-test): contadores simples. NUNCA números aleatórios aqui (mudaria as decisões).
 	private static int contadorManifestacao;
 	private static int contadorCena;
-	private static final List<Tarefa> TAREFAS = new ArrayList<>();
-
-	private record Tarefa(long tick, Runnable acao) {
-	}
 
 	private record SinalResultado(Vec3 fonte, double observabilidade) {
 	}
@@ -194,7 +190,7 @@ public final class Diretor {
 
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
-			TAREFAS.clear();
+			Agenda.limpar();
 			Atmosfera.limpar();
 			contadorManifestacao = 0;
 			contadorCena = 0;
@@ -210,9 +206,6 @@ public final class Diretor {
 		return estado(p);
 	}
 
-	static void agendar(ServerLevel level, int atrasoTicks, Runnable acao) {
-		TAREFAS.add(new Tarefa(level.getGameTime() + atrasoTicks, acao));
-	}
 
 	// =====================================================================
 	// Tick
@@ -226,24 +219,7 @@ public final class Diretor {
 		// Atualizações curtas da Atmosfera: restaura blocos temporários e mantém animais olhando.
 		Atmosfera.tickRapido(level, tick);
 
-		if (!TAREFAS.isEmpty()) {
-			List<Tarefa> prontas = new ArrayList<>();
-			Iterator<Tarefa> it = TAREFAS.iterator();
-			while (it.hasNext()) {
-				Tarefa t = it.next();
-				if (t.tick() <= tick) {
-					prontas.add(t);
-					it.remove();
-				}
-			}
-			for (Tarefa t : prontas) {
-				try {
-					t.acao().run();
-				} catch (Exception ex) {
-					Sussurros.LOGGER.error("Erro numa tarefa agendada", ex);
-				}
-			}
-		}
+		Agenda.tick(level);
 
 		// Leitura fina das reações (a cada 0,25 s).
 		if (tick % 5 == 0) {
