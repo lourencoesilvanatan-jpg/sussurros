@@ -2211,11 +2211,13 @@ public final class Diretor {
 
 	private static void criar(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos chao,
 			HospedeEntity.Modo modo, int duracao, double velocidade) {
-		criar(level, p, e, chao, modo, duracao, velocidade, HospedeEntity.DIST_SUMIR_PADRAO);
+		criar(level, p, e, chao, modo, duracao, velocidade, HospedeEntity.DIST_SUMIR_PADRAO,
+				e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null));
 	}
 
 	private static void criar(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos chao,
 			HospedeEntity.Modo modo, int duracao, double velocidade, double distSumir) {
+		PedidoManifestacao pedido = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
 		Memoria m = Memoria.de(p);
 		int ousadia = Math.min(10, m.get(Memoria.VEZES_VISTO) / 2 + m.get(Memoria.VEZES_FERIDO));
 		HospedeEntity h = new HospedeEntity(ModEntidades.HOSPEDE, level);
@@ -2227,8 +2229,7 @@ public final class Diretor {
 		level.addFreshEntity(h);
 		e.criatura = h;
 		if (Depuracao.ativo) {
-			PedidoManifestacao pedido = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
-		String motivo = pedido.nota().isEmpty() ? "NORMAL" : pedido.nota();
+			String motivo = pedido.nota().isEmpty() ? "NORMAL" : pedido.nota();
 			if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 				motivo = "CENA_CASA+" + motivo;
 			} else if (e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA) {
