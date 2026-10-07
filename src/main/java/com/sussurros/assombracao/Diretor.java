@@ -1222,7 +1222,9 @@ public final class Diretor {
 						Depuracao.log(p, seg, String.format(Locale.ROOT, "ISCA ignorada aprendida=sim atendidas=%d chance=%.2f", atendidas, chanceIgnorar));
 					}
 				}
-				if (rnd.nextFloat() < 0.12F) {
+				// Só tenta a rota se a isca não foi atendida: sem o !ok, um segundo Hóspede nascia
+				// por cima do primeiro, que ficava órfão (vivo, mas fora de e.criatura).
+				if (!ok && rnd.nextFloat() < 0.12F) {
 					ok = invocarNaRota(level, p, m, e, ousadia, pedido);
 					if (ok) {
 						Depuracao.log(p, seg, "lugar: presença num caminho que você usa");
