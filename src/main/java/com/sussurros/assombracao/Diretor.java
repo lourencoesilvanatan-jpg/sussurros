@@ -2835,7 +2835,7 @@ public final class Diretor {
 	private static boolean presencaNoTunel(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
 		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
-		try {
+		
 			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 200, 14, 30, 20 * 75, 7.0, pedido);
 			if (!ok) {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 65, 105, 15, 26, 20 * 75, 1.0, true, 7.0, true, pedido);
@@ -2850,7 +2850,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	}
+	
 
 	private static void silencioCenaTunel(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaTunel = EstadoJogador.CenaTunel.SILENCIO;
@@ -3009,7 +3009,7 @@ public final class Diretor {
 		}
 		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		pedido = pedido.comNota("APARICAO2_CAMPO " + candidato.resumo());
-		try {
+		
 			HospedeEntity.Modo modo = segunda ? HospedeEntity.Modo.ESPREITAR : HospedeEntity.Modo.OBSERVAR;
 			criar(level, p, e, candidato.chao(), modo, 20 * (segunda ? 70 : 35), 1.0, segunda ? 7.0 : 10.0, pedido);
 			HospedeEntity h = e.criatura;
@@ -3030,7 +3030,7 @@ public final class Diretor {
 			}
 			return true;
 
-	}
+	
 
 	private static void silencioCenaCampo(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaCampo = EstadoJogador.CenaCampo.SILENCIO;
@@ -3189,7 +3189,7 @@ public final class Diretor {
 			long seg, long tick, boolean teste) {
 		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok = false;
-		try {
+		
 			double[] ang = angulosPresencaAdaptativa(m, e, pedido);
 			if (e.cenaMarcoPos != null) {
 				ok = invocarPertoDoMarco(level, p, e, e.cenaMarcoPos, HospedeEntity.Modo.ESPREITAR, 20 * 70, 7.0, pedido);
@@ -3216,7 +3216,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	}
+	
 
 	private static void silencioCenaMarco(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaMarco = EstadoJogador.CenaMarco.SILENCIO;
@@ -3307,7 +3307,7 @@ public final class Diretor {
 				}
 				PedidoManifestacao pedido = e.cenaJanelaTeste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 				pedido = pedido.comNota("JANELA vidro=" + alvo.vidro());
-				try {
+				
 					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6, pedido);
 
 				e.cenaJanelaPos = alvo.vidro();
@@ -3316,7 +3316,7 @@ public final class Diretor {
 				e.cenaJanelaAte = seg + 6 + rnd.nextInt(5);
 				Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=APARICAO manifestacao="
 						+ manifestacaoAtiva(e) + " vidro=" + alvo.vidro() + " anuncio=nenhum");
-			}
+			
 			case OBSERVANDO -> {
 				if (!presente) {
 					silencioCenaJanela(p, e, seg, rnd);
@@ -3668,7 +3668,7 @@ public final class Diretor {
 	private static boolean presencaNoCaminho(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
 		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
-		try {
+		
 			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 15, 150, 14, 35, 20 * 90, 8.0, pedido);
 			if (!ok) {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 18, 30, 20 * 90, 1.0, true, 8.0, true, pedido);
@@ -3683,7 +3683,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	}
+	
 
 	// =====================================================================
 	// Âncora: a porta habitual (v0.4.2)
