@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:string",
+    "minecraft:bone_meal",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 3,
+    "id": "sussurros:fio_vigilia"
+  }
+}

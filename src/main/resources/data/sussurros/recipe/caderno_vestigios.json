@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "minecraft:charcoal",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sussurros:caderno_vestigios"
+  }
+}

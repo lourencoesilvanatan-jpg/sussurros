@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "sussurros",
+	"version": "${version}",
+	"name": "Sussurros",
+	"description": "Um mod de terror. Algo está te observando.",
+	"authors": [
+		"Você"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/sussurros/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.sussurros.Sussurros"
+		],
+		"client": [
+			"com.sussurros.client.SussurrosClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.0",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:iron_ingot",
+    "minecraft:bone",
+    "minecraft:string",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sussurros:sino_oco"
+  }
+}

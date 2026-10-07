@@ -1,0 +1,44 @@
+{
+  "pano": {
+    "subtitle": "subtitles.sussurros.pano",
+    "sounds": [
+      "sussurros:pano_1",
+      "sussurros:pano_2"
+    ]
+  },
+  "respiracao": {
+    "subtitle": "subtitles.sussurros.respiracao",
+    "sounds": [
+      "sussurros:respiracao_1",
+      "sussurros:respiracao_2"
+    ]
+  },
+  "madeira": {
+    "subtitle": "subtitles.sussurros.madeira",
+    "sounds": [
+      "sussurros:madeira_1",
+      "sussurros:madeira_2"
+    ]
+  },
+  "arrasto": {
+    "subtitle": "subtitles.sussurros.arrasto",
+    "sounds": [
+      "sussurros:arrasto_1",
+      "sussurros:arrasto_2"
+    ]
+  },
+  "estalo": {
+    "subtitle": "subtitles.sussurros.estalo",
+    "sounds": [
+      "sussurros:estalo_1",
+      "sussurros:estalo_2"
+    ]
+  },
+  "grave": {
+    "subtitle": "subtitles.sussurros.grave",
+    "sounds": [
+      "sussurros:grave_1",
+      "sussurros:grave_2"
+    ]
+  }
+}
