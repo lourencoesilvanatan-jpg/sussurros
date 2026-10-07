@@ -12,16 +12,37 @@ import com.sussurros.assombracao.Evento;
 class SeletorTest {
 
 	@Test
-	void tetoLimitaCategoriaSomA45PorCento() {
+	void tetoFuncionaQuandoEViiavel() {
+		List<Evento> candidatos = List.of(Evento.PASSOS, Evento.SUSSURRO, Evento.ANIMAIS);
+		List<Double> pesos = new ArrayList<>(List.of(900.0, 100.0, 100.0));
+
+		Seletor.aplicarTeto(candidatos, pesos, 0.45);
+
+		double total = pesos.stream().mapToDouble(Double::doubleValue).sum();
+		assertEquals(0.45, pesos.get(0) / total, 1.0E-9);
+	}
+
+	@Test
+	void tetoComDuasCategoriasTerminaEm55Por45() {
+		// Comportamento herdado: com so duas categorias o teto de 45% e inviavel.
+		// A primeira volta corta SOM para 45%; a segunda corta MENTE, e SOM termina com 55%.
 		List<Evento> candidatos = List.of(Evento.PASSOS, Evento.ECO, Evento.SUSSURRO);
 		List<Double> pesos = new ArrayList<>(List.of(900.0, 900.0, 100.0));
 
 		Seletor.aplicarTeto(candidatos, pesos, 0.45);
 
-		double totalSom = pesos.get(0) + pesos.get(1);
 		double total = pesos.stream().mapToDouble(Double::doubleValue).sum();
+		assertEquals(0.55, (pesos.get(0) + pesos.get(1)) / total, 1.0E-9);
+	}
 
-		assertEquals(0.45, totalSom / total, 1.0E-12);
+	@Test
+	void tetoNaoMexeComUmaCategoriaSo() {
+		List<Evento> candidatos = List.of(Evento.PASSOS, Evento.ECO);
+		List<Double> pesos = new ArrayList<>(List.of(900.0, 100.0));
+
+		Seletor.aplicarTeto(candidatos, pesos, 0.45);
+
+		assertEquals(List.of(900.0, 100.0), pesos);
 	}
 
 	@Test
