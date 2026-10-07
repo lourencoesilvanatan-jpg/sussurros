@@ -46,7 +46,7 @@ Confirmar criação do Hóspede e `motivoPosicao` coerente com a cena.
 
 Os testes JUnit cobrem diretamente:
 
-- comportamento atual do teto de categoria (neste caso 900/900/100, a implementação de duas voltas termina com SOM em 55%; corrigir isso fica para uma mudança explícita de gameplay);
+- teto de categoria em 45% no caso 900/900/100;
 - piso de `pesoIntensidade`;
 - anti-repetição do evento mais recente;
 - aversão a pares repetidos;
