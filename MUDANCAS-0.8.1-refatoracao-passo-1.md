@@ -8,8 +8,6 @@ Primeiro passo da divisão estrutural.
 - O comportamento de teste continua usando forçando; a passagem por parâmetros explícitos será concluída no próximo subpasso.
 - Não foram alterados deliberadamente números, chances, durações ou condições de gameplay.
 
-A próxima etapa remove pedidoSpawn de EstadoJogador e passa PedidoManifestacao diretamente pelos módulos de manifestação.
-
 
 ## Correções da revisão
 
