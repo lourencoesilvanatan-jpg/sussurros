@@ -1060,10 +1060,7 @@ public final class Diretor {
 		return Math.max(min, Math.min(max, v));
 	}
 
-	private static void definirNotaSpawn(EstadoJogador e, String nota) {
-		PedidoManifestacao base = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
-		e.pedidoSpawn = base.comNota(nota);
-	}
+
 
 	// =====================================================================
 	// Execução (com "ele provavelmente percebeu?")
@@ -1071,14 +1068,10 @@ public final class Diretor {
 
 	/** Executa um evento. A criatura que ele criar fica marcada com a origem e o evento (v0.4.2). */
 	private static boolean executar(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Evento ev, long seg, long tick) {
-		e.pedidoSpawn = e.forcando ? PedidoManifestacao.deComando(ev) : PedidoManifestacao.doDiretor(ev);
-		try {
-			return executarInterno(level, p, m, e, ev, seg, tick);
-		} finally {
-			e.pedidoSpawn = null;
-		}
+		PedidoManifestacao pedido = e.forcando ? PedidoManifestacao.deComando(ev) : PedidoManifestacao.doDiretor(ev);
+		return executarInterno(level, p, m, e, ev, seg, tick, pedido);
 	}
-	private static boolean executarInterno(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Evento ev, long seg, long tick) {
+	private static boolean executarInterno(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Evento ev, long seg, long tick, PedidoManifestacao pedido) {
 		RandomSource rnd = level.getRandom();
 		int ousadia = Math.min(10, m.get(Memoria.VEZES_VISTO) / 2 + m.get(Memoria.VEZES_FERIDO));
 		boolean ok = true;
@@ -1218,43 +1211,43 @@ public final class Diretor {
 					int atendidas = m.get(Memoria.ISCAS_ATENDIDAS);
 					double chanceIgnorar = atendidas < 3 ? 0.0 : Math.min(0.45, 0.15 + (atendidas - 3) * 0.07);
 					if (rnd.nextDouble() >= chanceIgnorar) {
-						ok = invocarPertoDaIsca(level, p, m, e, duracao);
+						ok = invocarPertoDaIsca(level, p, m, e, duracao, pedido);
 					} else {
 						Depuracao.log(p, seg, String.format(Locale.ROOT, "ISCA ignorada aprendida=sim atendidas=%d chance=%.2f", atendidas, chanceIgnorar));
 					}
 				}
 				if (rnd.nextFloat() < 0.12F) {
-					ok = invocarNaRota(level, p, m, e, ousadia);
+					ok = invocarNaRota(level, p, m, e, ousadia, pedido);
 					if (ok) {
 						Depuracao.log(p, seg, "lugar: presença num caminho que você usa");
 					}
 				}
 				if (!ok && rnd.nextFloat() < 0.45F) {
 					ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.OBSERVAR, seg, 20, 180, 18, 40, duracao,
-							HospedeEntity.DIST_SUMIR_PADRAO);
+							HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 				}
-				double[] angulos = angulosPresencaAdaptativa(m, e);
+				double[] angulos = angulosPresencaAdaptativa(m, e, pedido);
 				if (!ok && rnd.nextFloat() < 0.60F) {
 					ok = invocarComCobertura(level, p, e, HospedeEntity.Modo.OBSERVAR, angulos[0], angulos[1],
 							Math.max(14, 18 - ousadia), Math.max(24, 35 - ousadia * 1.5), duracao,
-							HospedeEntity.DIST_SUMIR_PADRAO);
+							HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 				}
 				if (!ok) {
 					ok = invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, angulos[0], angulos[1],
 							Math.max(14, 18 - ousadia), Math.max(24, 35 - ousadia * 1.5),
-							duracao, 1.0, true, HospedeEntity.DIST_SUMIR_PADRAO, true);
+							duracao, 1.0, true, HospedeEntity.DIST_SUMIR_PADRAO, true, pedido);
 				}
 				if (ok) {
 					anunciar(level, p, e.criatura);
 				}
 			}
-			case ESPREITA -> ok = invocarEspreita(level, p, e, ousadia, seg);
+			case ESPREITA -> ok = invocarEspreita(level, p, e, ousadia, seg, pedido);
 			case ATRAS -> {
 				boolean vigiaAsCostas = m.get(Memoria.OLHADAS) >= 12;
 				// v0.4.1: ele está PERTO de propósito. Só some se você chegar a 4 blocos.
 				ok = vigiaAsCostas
-						? invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 65, 110, 8, 13, 20 * 12, 1.0, true, 4.0)
-						: invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 160, 180, 9, 14, 20 * 12, 1.0, true, 4.0);
+						? invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 65, 110, 8, 13, 20 * 12, 1.0, true, 4.0, pedido)
+						: invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 160, 180, 9, 14, 20 * 12, 1.0, true, 4.0, pedido);
 				HospedeEntity atras = e.criatura;
 				if (ok && atras != null && rnd.nextFloat() < 0.25F) {
 					agendar(level, 20 + rnd.nextInt(25), () -> {
@@ -1264,12 +1257,12 @@ public final class Diretor {
 					});
 				}
 			}
-			case TUMULO -> ok = invocarNoTumulo(level, p, m, e);
+			case TUMULO -> ok = invocarNoTumulo(level, p, m, e, pedido);
 			case VISTO -> p.sendOverlayMessage(Component.translatable("message.sussurros.visto", p.getName())
 					.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
 			case CACA -> {
 				ok = invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26,
-						20 * 60, 0.9 + 0.08 * m.get(Memoria.VEZES_FERIDO), true);
+						20 * 60, 0.9 + 0.08 * m.get(Memoria.VEZES_FERIDO), true, pedido);
 				if (ok) {
 					// Evita a assinatura sonora do Warden: a caca deve parecer do Sussurros.
 					ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.75F, 0.82F);
@@ -1279,7 +1272,7 @@ public final class Diretor {
 					}
 				}
 			}
-			case ESPERA -> ok = invocarNaBordaDaZona(level, p, e, ousadia);
+			case ESPERA -> ok = invocarNaBordaDaZona(level, p, e, ousadia, pedido);
 		}
 
 		if (!ok) {
@@ -1518,7 +1511,7 @@ public final class Diretor {
 	}
 
 	/** Coloca a criatura num caminho que o jogador costuma usar. */
-	private static boolean invocarNaRota(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int ousadia) {
+	private static boolean invocarNaRota(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int ousadia, PedidoManifestacao pedido) {
 		boolean temCasa = m.get(Memoria.TEM_CAMA) == 1;
 		List<int[]> rotas = Lugares.de(p).rotas(temCasa, m.get(Memoria.CAMA_X) >> 4, m.get(Memoria.CAMA_Z) >> 4);
 		List<int[]> boas = new ArrayList<>();
@@ -1537,8 +1530,8 @@ public final class Diretor {
 		if (chao == null || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 			return false;
 		}
-		definirNotaSpawn(e, "ROTA chunk=(" + escolhida[0] + "," + escolhida[1] + ")");
-		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * (15 + ousadia * 2), 1.0);
+		pedido = pedido.comNota("ROTA chunk=(" + escolhida[0] + "," + escolhida[1] + ")");
+		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * (15 + ousadia * 2), 1.0, pedido);
 		return true;
 	}
 
@@ -1849,13 +1842,13 @@ public final class Diretor {
 	}
 
 	/** Ele fica parado exatamente onde você morreu. */
-	private static boolean invocarNoTumulo(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e) {
+	private static boolean invocarNoTumulo(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, PedidoManifestacao pedido) {
 		BlockPos chao = acharChao(level, m.get(Memoria.MORTE_X) + 0.5, m.get(Memoria.MORTE_Y), m.get(Memoria.MORTE_Z) + 0.5);
 		if (chao == null || naTela(p, chao)) {
 			return false;
 		}
-		definirNotaSpawn(e, "TUMULO");
-		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * 30, 1.0);
+		pedido = pedido.comNota("TUMULO");
+		criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * 30, 1.0, pedido);
 		return true;
 	}
 
@@ -2046,7 +2039,7 @@ public final class Diretor {
 	 * Jogador cauteloso, que vive checando as costas, recebe mais aparições laterais; quem confronta
 	 * o Hóspede recebe ângulos mais traseiros e difíceis de encarar imediatamente.
 	 */
-	private static double[] angulosPresencaAdaptativa(Memoria m, EstadoJogador e) {
+	private static double[] angulosPresencaAdaptativa(Memoria m, EstadoJogador e, PedidoManifestacao pedido) {
 		double min = 55;
 		double max = 80;
 		String estrategia = "PADRAO";
@@ -2069,7 +2062,7 @@ public final class Diretor {
 			estrategia += "+FLORESTA";
 		}
 		if (Depuracao.ativo) {
-			definirNotaSpawn(e, "ESTRATEGIA=" + estrategia + String.format(Locale.ROOT, " ang=%.0f-%.0f", min, max));
+			pedido = pedido.comNota("ESTRATEGIA=" + estrategia + String.format(Locale.ROOT, " ang=%.0f-%.0f", min, max));
 		}
 		return new double[] {min, max};
 	}
@@ -2080,17 +2073,17 @@ public final class Diretor {
 	 */
 	private static boolean invocar(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			double angMin, double angMax, double distMin, double distMax,
-			int duracao, double velocidade, boolean preferirEscuro) {
+			int duracao, double velocidade, boolean preferirEscuro, PedidoManifestacao pedido) {
 		return invocar(level, p, e, modo, angMin, angMax, distMin, distMax, duracao, velocidade, preferirEscuro,
-				HospedeEntity.DIST_SUMIR_PADRAO);
+				HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 	}
 
 	/** distSumir: se o jogador chegar mais perto que isso (modo OBSERVAR), ele não está mais lá. */
 	private static boolean invocar(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			double angMin, double angMax, double distMin, double distMax,
-			int duracao, double velocidade, boolean preferirEscuro, double distSumir) {
+			int duracao, double velocidade, boolean preferirEscuro, double distSumir, PedidoManifestacao pedido) {
 		return invocar(level, p, e, modo, angMin, angMax, distMin, distMax, duracao, velocidade, preferirEscuro,
-				distSumir, false);
+				distSumir, false, pedido);
 	}
 
 	/**
@@ -2099,7 +2092,7 @@ public final class Diretor {
 	 */
 	private static boolean invocar(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			double angMin, double angMax, double distMin, double distMax,
-			int duracao, double velocidade, boolean preferirEscuro, double distSumir, boolean exigirVisivel) {
+			int duracao, double velocidade, boolean preferirEscuro, double distSumir, boolean exigirVisivel, PedidoManifestacao pedido) {
 		Aparicao.Config cfg = new Aparicao.Config(
 				angMin, angMax, distMin, distMax, exigirVisivel ? 20 : 18,
 				exigirVisivel, false, preferirEscuro, true, true, 1,
@@ -2108,9 +2101,9 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		definirNotaSpawn(e, "APARICAO2 " + candidato.resumo());
-		criar(level, p, e, candidato.chao(), modo, duracao, velocidade, distSumir);
-		if (!e.forcando) {
+		pedido = pedido.comNota("APARICAO2 " + candidato.resumo());
+		criar(level, p, e, candidato.chao(), modo, duracao, velocidade, distSumir, pedido);
+		if (!pedido.ehTeste()) {
 			Aparicao.registrar(e, candidato);
 		}
 		return true;
@@ -2122,7 +2115,7 @@ public final class Diretor {
 	 * mas em que a posicao ainda seria visivel se o jogador virasse. E o equivalente a "metade atras da arvore".
 	 */
 	private static boolean invocarComCobertura(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
-			double angMin, double angMax, double distMin, double distMax, int duracao, double distSumir) {
+			double angMin, double angMax, double distMin, double distMax, int duracao, double distSumir, PedidoManifestacao pedido) {
 		Aparicao.Config cfg = new Aparicao.Config(
 				angMin, angMax, distMin, distMax, 22,
 				true, true, true, true, true, 1,
@@ -2131,8 +2124,8 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		definirNotaSpawn(e, "APARICAO2_COBERTURA " + candidato.resumo());
-		criar(level, p, e, candidato.chao(), modo, duracao, 1.0, distSumir);
+		pedido = pedido.comNota("APARICAO2_COBERTURA " + candidato.resumo());
+		criar(level, p, e, candidato.chao(), modo, duracao, 1.0, distSumir, pedido);
 		if (!e.forcando) {
 			Aparicao.registrar(e, candidato);
 		}
@@ -2144,7 +2137,7 @@ public final class Diretor {
 	 * A memória deixa de ser apenas "este chunk": quando o terreno ainda permite, ele reutiliza o lugar.
 	 */
 	private static boolean invocarPertoDoMarco(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos marco,
-			HospedeEntity.Modo modo, int duracao, double distSumir) {
+			HospedeEntity.Modo modo, int duracao, double distSumir, PedidoManifestacao pedido) {
 		if (marco == null) {
 			return false;
 		}
@@ -2186,13 +2179,13 @@ public final class Diretor {
 		if (melhor == null) {
 			return false;
 		}
-		definirNotaSpawn(e, String.format(Locale.ROOT, "MARCO_EXATO distMarco=%.1f cobertura=%s",
+		pedido = pedido.comNota(String.format(Locale.ROOT, "MARCO_EXATO distMarco=%.1f cobertura=%s",
 				melhorDistMarco, melhorCobertura ? "sim" : "nao"));
-		criar(level, p, e, melhor, modo, duracao, 1.0, distSumir);
+		criar(level, p, e, melhor, modo, duracao, 1.0, distSumir, pedido);
 		return true;
 	}
 
-	private static boolean invocarNaBordaDaZona(ServerLevel level, ServerPlayer p, EstadoJogador e, int ousadia) {
+	private static boolean invocarNaBordaDaZona(ServerLevel level, ServerPlayer p, EstadoJogador e, int ousadia, PedidoManifestacao pedido) {
 		RandomSource rnd = level.getRandom();
 		for (int tentativa = 0; tentativa < 14; tentativa++) {
 			double ang = rnd.nextDouble() * Math.PI * 2;
@@ -2201,8 +2194,8 @@ public final class Diretor {
 			double z = e.zonaZ + Math.sin(ang) * r;
 			BlockPos chao = acharChao(level, x, e.zonaY, z);
 			if (chao != null) {
-				definirNotaSpawn(e, "BORDA_DA_VELA");
-				criar(level, p, e, chao, HospedeEntity.Modo.ESPERAR, 20 * 150, 1.0 + ousadia * 0.03);
+				pedido = pedido.comNota("BORDA_DA_VELA");
+				criar(level, p, e, chao, HospedeEntity.Modo.ESPERAR, 20 * 150, 1.0 + ousadia * 0.03, pedido);
 				return true;
 			}
 		}
@@ -2210,15 +2203,13 @@ public final class Diretor {
 	}
 
 	private static void criar(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos chao,
-			HospedeEntity.Modo modo, int duracao, double velocidade) {
-		criar(level, p, e, chao, modo, duracao, velocidade, HospedeEntity.DIST_SUMIR_PADRAO,
-				e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null));
+			HospedeEntity.Modo modo, int duracao, double velocidade, PedidoManifestacao pedido) {
+		criar(level, p, e, chao, modo, duracao, velocidade, HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 	}
 
 	private static void criar(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos chao,
-			HospedeEntity.Modo modo, int duracao, double velocidade, double distSumir) {
-		PedidoManifestacao pedido = e.pedidoSpawn != null ? e.pedidoSpawn : PedidoManifestacao.doDiretor(null);
-		Memoria m = Memoria.de(p);
+			HospedeEntity.Modo modo, int duracao, double velocidade, double distSumir, PedidoManifestacao pedido) {
+				Memoria m = Memoria.de(p);
 		int ousadia = Math.min(10, m.get(Memoria.VEZES_VISTO) / 2 + m.get(Memoria.VEZES_FERIDO));
 		HospedeEntity h = new HospedeEntity(ModEntidades.HOSPEDE, level);
 		h.setPos(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
@@ -2246,11 +2237,10 @@ public final class Diretor {
 					h.getIdManifestacao(), pedido.origem(), pedido.evento(), modo, pos(h.getX(), h.getY(), h.getZ()),
 					Math.sqrt(h.distanceToSqr(p)), motivo, cenaAtiva(e)));
 		}
-		e.pedidoSpawn = null;
 	}
 
 	/** Tenta colocar a manifestação perto da Isca Pálida, respeitando tela, terreno e zona calma. */
-	private static boolean invocarPertoDaIsca(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int duracao) {
+	private static boolean invocarPertoDaIsca(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int duracao, PedidoManifestacao pedido) {
 		if (!e.iscaAtiva || level.getGameTime() >= e.iscaAteTick) {
 			return false;
 		}
@@ -2288,9 +2278,9 @@ public final class Diretor {
 		if (melhor == null) {
 			return false;
 		}
-		definirNotaSpawn(e, String.format(Locale.ROOT, "ISCA cobertura=%s distIsca=%.1f", melhorCobertura,
+		pedido = pedido.comNota(String.format(Locale.ROOT, "ISCA cobertura=%s distIsca=%.1f", melhorCobertura,
 				Math.sqrt(Math.pow(melhor.getX() + 0.5 - e.iscaX, 2) + Math.pow(melhor.getZ() + 0.5 - e.iscaZ, 2))));
-		criar(level, p, e, melhor, HospedeEntity.Modo.OBSERVAR, duracao, 1.0, HospedeEntity.DIST_SUMIR_PADRAO);
+		criar(level, p, e, melhor, HospedeEntity.Modo.OBSERVAR, duracao, 1.0, HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 		e.iscaAtiva = false;
 		m.add(Memoria.ISCAS_ATENDIDAS, 1);
 		m.salvar();
@@ -2325,7 +2315,7 @@ public final class Diretor {
 
 	/** O Hóspede aparece num lugar por onde você passou: "ele veio atrás de mim". */
 	private static boolean invocarNoRastro(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
-			long seg, int idadeMin, int idadeMax, double distMin, double distMax, int duracao, double distSumir) {
+			long seg, int idadeMin, int idadeMax, double distMin, double distMax, int duracao, double distSumir, PedidoManifestacao pedido) {
 		for (int tentativa = 0; tentativa < 6; tentativa++) {
 			Rastro.Ponto pt = pontoDoRastro(p, e, seg, idadeMin, idadeMax, distMin, distMax, true);
 			if (pt == null) {
@@ -2336,22 +2326,22 @@ public final class Diretor {
 			if (chao == null || naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 				continue;
 			}
-			definirNotaSpawn(e, String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
+			pedido = pedido.comNota(String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
 					Math.sqrt(distanciaSqr(p, pt.x(), pt.z()))));
-			criar(level, p, e, chao, modo, duracao, 1.0, distSumir);
+			criar(level, p, e, chao, modo, duracao, 1.0, distSumir, pedido);
 			return true;
 		}
 		return false;
 	}
 
 	/** Começo da espreita: num ponto do seu rastro ou logo fora da tela, longe o bastante para poder se aproximar. */
-	private static boolean invocarEspreita(ServerLevel level, ServerPlayer p, EstadoJogador e, int ousadia, long seg) {
+	private static boolean invocarEspreita(ServerLevel level, ServerPlayer p, EstadoJogador e, int ousadia, long seg, PedidoManifestacao pedido) {
 		RandomSource rnd = level.getRandom();
 		int duracao = 20 * 120;
 		boolean ok = rnd.nextFloat() < 0.5F
-				&& invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 240, 22, 38, duracao, 8.0);
+				&& invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 240, 22, 38, duracao, 8.0, pedido);
 		if (!ok) {
-			ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 24, 36, duracao, 1.0, true, 8.0, true);
+			ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 24, 36, duracao, 1.0, true, 8.0, true, pedido);
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -2838,16 +2828,15 @@ public final class Diretor {
 	}
 
 	private static boolean presencaNoTunel(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
-		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
 		try {
-			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 200, 14, 30, 20 * 75, 7.0);
+			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 20, 200, 14, 30, 20 * 75, 7.0, pedido);
 			if (!ok) {
-				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 65, 105, 15, 26, 20 * 75, 1.0, true, 7.0, true);
+				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 65, 105, 15, 26, 20 * 75, 1.0, true, 7.0, true, pedido);
 			}
 		} finally {
-		e.pedidoSpawn = null;
-			definirNotaSpawn(e, "");
+			pedido = pedido.comNota("");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -3015,11 +3004,11 @@ public final class Diretor {
 		if (candidato == null) {
 			return false;
 		}
-		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
-		definirNotaSpawn(e, "APARICAO2_CAMPO " + candidato.resumo());
+		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+		pedido = pedido.comNota("APARICAO2_CAMPO " + candidato.resumo());
 		try {
 			HospedeEntity.Modo modo = segunda ? HospedeEntity.Modo.ESPREITAR : HospedeEntity.Modo.OBSERVAR;
-			criar(level, p, e, candidato.chao(), modo, 20 * (segunda ? 70 : 35), 1.0, segunda ? 7.0 : 10.0);
+			criar(level, p, e, candidato.chao(), modo, 20 * (segunda ? 70 : 35), 1.0, segunda ? 7.0 : 10.0, pedido);
 			HospedeEntity h = e.criatura;
 			if (h != null && segunda) {
 				h.definirMaxReposicoes(1);
@@ -3038,8 +3027,7 @@ public final class Diretor {
 			}
 			return true;
 		} finally {
-		e.pedidoSpawn = null;
-			definirNotaSpawn(e, "");
+			pedido = pedido.comNota("");
 		}
 	}
 
@@ -3198,27 +3186,26 @@ public final class Diretor {
 
 	private static boolean presencaNoMarco(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e,
 			long seg, long tick, boolean teste) {
-		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok = false;
 		try {
-			double[] ang = angulosPresencaAdaptativa(m, e);
+			double[] ang = angulosPresencaAdaptativa(m, e, pedido);
 			if (e.cenaMarcoPos != null) {
-				ok = invocarPertoDoMarco(level, p, e, e.cenaMarcoPos, HospedeEntity.Modo.ESPREITAR, 20 * 70, 7.0);
+				ok = invocarPertoDoMarco(level, p, e, e.cenaMarcoPos, HospedeEntity.Modo.ESPREITAR, 20 * 70, 7.0, pedido);
 			}
 			if (!ok) {
 				ok = invocarComCobertura(level, p, e, HospedeEntity.Modo.ESPREITAR,
-					Math.max(60, ang[0]), Math.max(100, ang[1]), 17, 30, 20 * 70, 7.0);
+					Math.max(60, ang[0]), Math.max(100, ang[1]), 17, 30, 20 * 70, 7.0, pedido);
 			}
 			if (!ok) {
-				ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 12, 150, 12, 32, 20 * 70, 7.0);
+				ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 12, 150, 12, 32, 20 * 70, 7.0, pedido);
 			}
 			if (!ok) {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR,
-						Math.max(60, ang[0]), Math.max(105, ang[1]), 17, 29, 20 * 70, 1.0, true, 7.0, true);
+						Math.max(60, ang[0]), Math.max(105, ang[1]), 17, 29, 20 * 70, 1.0, true, 7.0, true, pedido);
 			}
 		} finally {
-		e.pedidoSpawn = null;
-			definirNotaSpawn(e, "");
+			pedido = pedido.comNota("");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -3319,13 +3306,12 @@ public final class Diretor {
 					}
 					return;
 				}
-				e.pedidoSpawn = e.cenaJanelaTeste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
-				definirNotaSpawn(e, "JANELA vidro=" + alvo.vidro());
+				PedidoManifestacao pedido = e.cenaJanelaTeste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+				pedido = pedido.comNota("JANELA vidro=" + alvo.vidro());
 				try {
-					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6);
+					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6, pedido);
 				} finally {
-		e.pedidoSpawn = null;
-					definirNotaSpawn(e, "");
+					pedido = pedido.comNota("");
 				}
 				e.cenaJanelaPos = alvo.vidro();
 				e.cenaJanela = EstadoJogador.CenaJanela.OBSERVANDO;
@@ -3683,16 +3669,15 @@ public final class Diretor {
 
 	/** Ele aparece, sem aviso, num ponto do caminho que você usou para voltar. Uma espreita, no máximo. */
 	private static boolean presencaNoCaminho(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick, boolean teste) {
-		e.pedidoSpawn = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
+		PedidoManifestacao pedido = teste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
 		boolean ok;
 		try {
-			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 15, 150, 14, 35, 20 * 90, 8.0);
+			ok = invocarNoRastro(level, p, e, HospedeEntity.Modo.ESPREITAR, seg, 15, 150, 14, 35, 20 * 90, 8.0, pedido);
 			if (!ok) {
-				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 18, 30, 20 * 90, 1.0, true, 8.0, true);
+				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 18, 30, 20 * 90, 1.0, true, 8.0, true, pedido);
 			}
 		} finally {
-		e.pedidoSpawn = null;
-			definirNotaSpawn(e, "");
+			pedido = pedido.comNota("");
 		}
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
@@ -4200,11 +4185,10 @@ public final class Diretor {
 			p.sendOverlayMessage(Component.translatable("message.sussurros.olho.atencao").withStyle(s -> s.withColor(0xB01818).withItalic(true)));
 			agendar(level, 60 + level.getRandom().nextInt(80), () -> {
 				if (!p.isRemoved() && (e.criatura == null || e.criatura.isRemoved())) {
-					e.pedidoSpawn = PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null);
+					PedidoManifestacao pedido = PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null);
 					try {
-						invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true);
+						invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true, pedido);
 					} finally {
-		e.pedidoSpawn = null;
 					}
 				}
 			});
