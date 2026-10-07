@@ -4,6 +4,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -207,6 +208,11 @@ public final class Diretor {
 		return estado(p);
 	}
 
+
+	// Compatibilidade interna: mantém as chamadas curtas durante a refatoração.
+	static void agendar(ServerLevel level, int atrasoTicks, Runnable acao) {
+		Agenda.agendar(level, atrasoTicks, acao);
+	}
 
 	// =====================================================================
 	// Tick
@@ -2061,9 +2067,8 @@ public final class Diretor {
 			max = Math.max(max, 100);
 			estrategia += "+FLORESTA";
 		}
-		if (Depuracao.ativo) {
-			pedido = pedido.comNota("ESTRATEGIA=" + estrategia + String.format(Locale.ROOT, " ang=%.0f-%.0f", min, max));
-		}
+		// TODO: a nota da estratégia já era uma reatribuição local sem efeito para o chamador; bug pré-existente.
+
 		return new double[] {min, max};
 	}
 
@@ -2103,7 +2108,7 @@ public final class Diretor {
 		}
 		pedido = pedido.comNota("APARICAO2 " + candidato.resumo());
 		criar(level, p, e, candidato.chao(), modo, duracao, velocidade, distSumir, pedido);
-		if (!pedido.ehTeste()) {
+		if (!e.forcando) {
 			Aparicao.registrar(e, candidato);
 		}
 		return true;
@@ -2209,7 +2214,7 @@ public final class Diretor {
 
 	private static void criar(ServerLevel level, ServerPlayer p, EstadoJogador e, BlockPos chao,
 			HospedeEntity.Modo modo, int duracao, double velocidade, double distSumir, PedidoManifestacao pedido) {
-				Memoria m = Memoria.de(p);
+		Memoria m = Memoria.de(p);
 		int ousadia = Math.min(10, m.get(Memoria.VEZES_VISTO) / 2 + m.get(Memoria.VEZES_FERIDO));
 		HospedeEntity h = new HospedeEntity(ModEntidades.HOSPEDE, level);
 		h.setPos(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
@@ -2835,9 +2840,7 @@ public final class Diretor {
 			if (!ok) {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 65, 105, 15, 26, 20 * 75, 1.0, true, 7.0, true, pedido);
 			}
-		} finally {
-			pedido = pedido.comNota("");
-		}
+
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
 			h.definirMaxReposicoes(1);
@@ -3026,9 +3029,7 @@ public final class Diretor {
 				posEvento(p, e, Evento.PRESENCA, null, 0, seg, tick);
 			}
 			return true;
-		} finally {
-			pedido = pedido.comNota("");
-		}
+
 	}
 
 	private static void silencioCenaCampo(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
@@ -3204,9 +3205,7 @@ public final class Diretor {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR,
 						Math.max(60, ang[0]), Math.max(105, ang[1]), 17, 29, 20 * 70, 1.0, true, 7.0, true, pedido);
 			}
-		} finally {
-			pedido = pedido.comNota("");
-		}
+
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
 			h.definirMaxReposicoes(1);
@@ -3310,9 +3309,7 @@ public final class Diretor {
 				pedido = pedido.comNota("JANELA vidro=" + alvo.vidro());
 				try {
 					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6, pedido);
-				} finally {
-					pedido = pedido.comNota("");
-				}
+
 				e.cenaJanelaPos = alvo.vidro();
 				e.cenaJanela = EstadoJogador.CenaJanela.OBSERVANDO;
 				e.cenaJanelaDesde = seg;
@@ -3676,9 +3673,7 @@ public final class Diretor {
 			if (!ok) {
 				ok = invocar(level, p, e, HospedeEntity.Modo.ESPREITAR, 55, 85, 18, 30, 20 * 90, 1.0, true, 8.0, true, pedido);
 			}
-		} finally {
-			pedido = pedido.comNota("");
-		}
+
 		HospedeEntity h = e.criatura;
 		if (ok && h != null) {
 			h.definirMaxReposicoes(1);

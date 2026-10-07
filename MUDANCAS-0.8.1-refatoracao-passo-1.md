@@ -9,3 +9,8 @@ Primeiro passo da divisão estrutural.
 - Não foram alterados deliberadamente números, chances, durações ou condições de gameplay.
 
 A próxima etapa remove pedidoSpawn de EstadoJogador e passa PedidoManifestacao diretamente pelos módulos de manifestação.
+
+
+## Correções da revisão
+
+Foram corrigidos o import de `Iterator`, o delegate de compatibilidade de `agendar(...)`, a preservação da semântica de `forcando`, os cinco `finally` que apenas reatribuíam uma variável local e o comentário TODO da nota de estratégia pré-existente.
