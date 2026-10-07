@@ -17,7 +17,6 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.entidade.HospedeEntity;
-import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 
 /**
  * Tudo o que o Diretor sabe sobre um jogador NESTA sessão (não é salvo no disco).
@@ -26,9 +25,6 @@ import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 final class EstadoJogador {
 	// --- Criatura ---
 	@Nullable HospedeEntity criatura;
-
-	// --- Pedido da PRÓXIMA manifestação (passagem explícita será feita no próximo subpasso) ---
-	@Nullable PedidoManifestacao pedidoSpawn;
 
 	// --- Obsessão: escalada LENTA (a pressão é a tensão do momento) (v0.4.2) ---
 	double obsessao;
