@@ -20,7 +20,7 @@ O `Diretor` continua responsável pelo contexto do jogo, pelas memórias e pelo 
 
 ## Regra de preservação
 
-Não foram alterados deliberadamente números, fórmulas, linhas de log ou a ordem das chamadas aleatórias. O `rnd.nextDouble()` continua no `Diretor`, no mesmo ponto do fluxo e uma única vez para o sorteio normal.
+Não foram alterados deliberadamente números, fórmulas, linhas de log ou a ordem das chamadas aleatórias. Durante a extração, um teste revelou que a implementação existente de `aplicarTeto` faz duas voltas e, no caso 900/900/100, termina com 55% para SOM; isso foi mantido como caracterização para evitar uma mudança de gameplay. O `rnd.nextDouble()` continua no `Diretor`, no mesmo ponto do fluxo e uma única vez para o sorteio normal.
 
 `longo`, `longoCat`, `curto`, `curtoCat`, `aprender`, `decairCurto` e `sortearContinuacao` continuam no `Diretor`.
 
