@@ -12,7 +12,7 @@ import com.sussurros.assombracao.Evento;
 class SeletorTest {
 
 	@Test
-	void tetoFuncionaQuandoEViiavel() {
+	void tetoFuncionaQuandoEViavel() {
 		List<Evento> candidatos = List.of(Evento.PASSOS, Evento.SUSSURRO, Evento.ANIMAIS);
 		List<Double> pesos = new ArrayList<>(List.of(900.0, 100.0, 100.0));
 
