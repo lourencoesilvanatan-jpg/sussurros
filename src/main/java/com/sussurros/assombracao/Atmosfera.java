@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.registro.ModSons;
 
 /**
@@ -401,7 +402,7 @@ final class Atmosfera {
 		for (int i = 0; i < qtd; i++) {
 			BlockPos pos = tochas.get(i);
 			int atraso = i * 12;
-			Diretor.agendar(level, atraso, () -> {
+			Agenda.agendar(level, atraso, () -> {
 				AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), 90, "LUZ_SEQUENCIA");
 				level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 						SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.45F, 0.82F);
@@ -464,7 +465,7 @@ final class Atmosfera {
 		level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
 				rnd.nextBoolean() ? SoundEvents.WOODEN_DOOR_OPEN : SoundEvents.WOODEN_DOOR_CLOSE,
 				SoundSource.BLOCKS, 0.75F, 0.88F);
-		Diretor.agendar(level, 30 + rnd.nextInt(31), () -> ModSons.tocar(level, fonte.x, fonte.y, fonte.z,
+		Agenda.agendar(level, 30 + rnd.nextInt(31), () -> ModSons.tocar(level, fonte.x, fonte.y, fonte.z,
 				ModSons.Som.ESTALO, 0.38F, 0.9F));
 		if (!teste) gastar(e, Familia.OBJETO, 2.2, seg, rnd, 420, 780);
 		Depuracao.log(p, seg, "OBJETO tipo=NAO_FOI_VOCE porta=" + porta + " semCriatura=sim");
@@ -479,7 +480,7 @@ final class Atmosfera {
 		for (int i = 0; i < 4; i++) {
 			int n = i;
 			Vec3 pt = pontoRelativo(p, (110 - n * 35) * lado, 10 + n * 2);
-			Diretor.agendar(level, i * (7 + rnd.nextInt(5)), () -> ModSons.tocar(level, pt.x, p.getY(), pt.z,
+			Agenda.agendar(level, i * (7 + rnd.nextInt(5)), () -> ModSons.tocar(level, pt.x, p.getY(), pt.z,
 					n % 2 == 0 ? ModSons.Som.PANO : ModSons.Som.ESTALO, 0.38F, 0.88F));
 		}
 		if (!gastar(e, Familia.RUIDO, sutil ? 1.0 : 1.5, seg, rnd, 180, 360)) return null;
@@ -545,7 +546,7 @@ final class Atmosfera {
 			Vec3 v = new Vec3(pt.x(), pt.y() + 0.08, pt.z());
 			fim = v;
 			int atraso = i * 7;
-			Diretor.agendar(level, atraso, () -> level.sendParticles(ParticleTypes.ASH, v.x, v.y, v.z, 5, 0.25, 0.03, 0.25, 0.001));
+			Agenda.agendar(level, atraso, () -> level.sendParticles(ParticleTypes.ASH, v.x, v.y, v.z, 5, 0.25, 0.03, 0.25, 0.001));
 		}
 		if (fim == null || !gastar(e, Familia.VESTIGIO, sutil ? 1.2 : 2.0, seg, rnd, 300, 540)) return null;
 		Depuracao.log(p, seg, "TRILHA_INTERROMPIDA pontos=" + qtd + " fim=" + pos(fim) + " semCriatura=sim");

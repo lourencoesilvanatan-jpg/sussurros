@@ -26,11 +26,6 @@ final class EstadoJogador {
 	// --- Criatura ---
 	@Nullable HospedeEntity criatura;
 
-	// --- Origem da PRÓXIMA criatura criada (lida e zerada em Diretor.criar) ---
-	HospedeEntity.Origem origemSpawn = HospedeEntity.Origem.DIRETOR;
-	@Nullable Evento eventoSpawn;
-	String notaSpawn = "";
-
 	// --- Obsessão: escalada LENTA (a pressão é a tensão do momento) (v0.4.2) ---
 	double obsessao;
 	boolean obsessaoCarregada;
