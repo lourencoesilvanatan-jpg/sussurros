@@ -2850,7 +2850,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	
+	}
 
 	private static void silencioCenaTunel(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaTunel = EstadoJogador.CenaTunel.SILENCIO;
@@ -3215,7 +3215,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	
+	}
 
 	private static void silencioCenaMarco(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
 		e.cenaMarco = EstadoJogador.CenaMarco.SILENCIO;
@@ -3315,7 +3315,7 @@ public final class Diretor {
 				e.cenaJanelaAte = seg + 6 + rnd.nextInt(5);
 				Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=APARICAO manifestacao="
 						+ manifestacaoAtiva(e) + " vidro=" + alvo.vidro() + " anuncio=nenhum");
-			
+			}
 			case OBSERVANDO -> {
 				if (!presente) {
 					silencioCenaJanela(p, e, seg, rnd);
@@ -3682,7 +3682,7 @@ public final class Diretor {
 			}
 		}
 		return ok;
-	
+	}
 
 	// =====================================================================
 	// Âncora: a porta habitual (v0.4.2)
