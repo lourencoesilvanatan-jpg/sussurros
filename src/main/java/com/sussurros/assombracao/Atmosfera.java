@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
+import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.registro.ModSons;
 
 /**
