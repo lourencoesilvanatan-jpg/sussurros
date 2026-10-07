@@ -432,7 +432,7 @@ public final class Diretor {
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
-		verificarFioVigilia(level, p, e, seg, tick);
+		verificarFioVigilia(level, p, m, e, seg, tick);
 		double queda = e.estado == EstadoDiretor.RECUANDO ? 0.8 : 0.4;
 		e.pressao = Math.max(0, e.pressao - queda + (criaturaPresente ? 0.6 : 0));
 
@@ -4013,7 +4013,7 @@ public final class Diretor {
 		return true;
 	}
 
-	private static void verificarFioVigilia(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick) {
+	private static void verificarFioVigilia(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, long seg, long tick) {
 		if (!e.vigiaAtiva) {
 			return;
 		}
@@ -4037,9 +4037,9 @@ public final class Diretor {
 		ModSons.tocar(level, h.getX(), h.getY() + 1.0, h.getZ(), ModSons.Som.PANO, 0.34F, 0.84F);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.fio.rompeu")
 				.withStyle(s -> s.withColor(0xDDD6C2).withItalic(true)));
-		Memoria m = Memoria.de(p);
+		// Usa a Memoria do tick: uma cópia própria aqui era sobrescrita pelo salvar() no fim de segundo(),
+		// e o fio rompido nunca chegava ao disco (nem ao Caderno).
 		m.add(Memoria.FIOS_ROMPIDOS, 1);
-		m.salvar();
 		Vestigios.de(p).registrar(BlockPos.containing(e.vigiaX, e.vigiaY, e.vigiaZ), Vestigios.Tipo.VIGILIA, seg);
 		somarObsessao(e, 1.5);
 		Depuracao.log(p, seg, String.format(Locale.ROOT,
