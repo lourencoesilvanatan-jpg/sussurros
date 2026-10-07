@@ -907,7 +907,6 @@ public final class Diretor {
 					"alvoBase=%.1f bonusObsessao=%.1f bonusV=%.1f abatimento=%.1f alvoFinal=%.1f maisForte=%d",
 					alvoBase, bonusObsessao, bonusV, abatimento, alvoInt, maisForte);
 			for (int i = 0; i < candidatos.size(); i++) {
-				double z = (candidatos.get(i).intensidade - alvoInt) / 10.0;
 				pesos.set(i, pesos.get(i) * Seletor.pesoIntensidade(candidatos.get(i).intensidade, alvoInt));
 			}
 		}
