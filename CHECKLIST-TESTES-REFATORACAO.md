@@ -46,7 +46,7 @@ Confirmar criação do Hóspede e `motivoPosicao` coerente com a cena.
 
 Os testes JUnit cobrem diretamente:
 
-- teto de categoria em 45% no caso 900/900/100;
+- teto de categoria: caso viável com 3 categorias + caracterização do caso 900/900/100, que termina em 55/45 por comportamento herdado;
 - piso de `pesoIntensidade`;
 - anti-repetição do evento mais recente;
 - aversão a pares repetidos;
