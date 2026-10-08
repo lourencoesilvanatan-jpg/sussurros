@@ -364,15 +364,241 @@ Conferido com `javap` em `~/.gradle/caches/fabric-loom/26.2/`. "Existe" quer diz
 | Respawn, entrada, saída, troca de dimensão | `ServerPlayerEvents.AFTER_RESPAWN/JOIN/LEAVE`, `ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL` |
 | Livro escrito, placa, conquista | `DataComponents.WRITTEN_BOOK_CONTENT`, `SignBlockEntity.setText`, `PlayerAdvancements.award` |
 | Mensagem de saída de jogador | chave de tradução `multiplayer.player.left` |
+| Figura com a pele de um jogador | `net.minecraft.world.entity.decoration.Mannequin`, com um perfil (`ResolvableProfile`). O `setProfile` é privado, então falta testar como definir o perfil pelo código |
+| Respiração sem gravar nada | `SoundEvents.PLAYER_BREATH` (som do jogo que quase nunca toca) e `SoundEvents.AMBIENT_CAVE` |
 
 **Não existe pronto:** um evento do Fabric para "o jogador colocou um bloco". Há `ItemEvents.USE_ON` e `BlockEvents.USE_ITEM_ON`; falta conferir se servem ou se é preciso um mixin.
 
 ---
 
-## 12. Limites desta pesquisa
+## 12. Segunda rodada: o que os jogadores dizem
 
-- O Reddit bloqueou o acesso; o post veio do arquivo Arctic Shift, com a pontuação do momento da captura.
-- O código dos mods fechados (The Broken Script, The Obsessed, Don't Let It Learn, Understudy, The Knocker, The One Who Watches, The Anomaly) não foi lido.
-- Do Midnight Lurker foram lidos só o README e os nomes dos arquivos.
-- Nenhuma técnica dos outros mods foi testada na 26.2.
+Fonte: tópicos do Reddit lidos pelo arquivo Arctic Shift (r/feedthebeast, r/ModdedMinecraft, r/TheBrokenScript, r/HorrorMinecraft, r/FromTheFog). A cobertura é parcial. Todas as citações são [P].
+
+### Os momentos descritos como mais assustadores
+
+- **Cave Dweller**, por quem não sabia que o mod estava instalado: "these cave noises are wild. then turned a corner and watched this abomination crack its neck towards me. barricade myself in a spot and make a tiny window. Big mistake, the horror of watching that thing crawl its way into my little hidy spot". São três ingredientes: jogador desavisado, som antes e o esconderijo violado. https://www.reddit.com/r/feedthebeast/comments/150tfjj/
+- **Quase morrer marca mais que morrer:** "60-70% of my encounters with it it doesn't kill me, just chases me and damages me to where I'm at 1-2 hearts" (mesmo tópico).
+- **The Broken Script:** "the most intense feeling comes before the chase"; "when he's in another cave and you can hear him in the distant talking"; a criatura "lurking in the distance, slightly obscured by the render distance fog". https://www.reddit.com/r/TheBrokenScript/comments/1wxqbm4/
+- **Aviso divide opiniões:** uns preferem o susto sem aviso; outros respondem que o aviso "adds an element of fairness for a novice... but it blunts his fangs against veterans" (mesmo tópico).
+- **Pedidos de jogadores:** "Look at the player while they are sleeping from somewhere that they could been barely seen"; "scan for a new position when you look away... just move him from one hiding spot to another"; "Looks great behind the tree but just looks too goofy out in the open". https://www.reddit.com/r/ModdedMinecraft/comments/1ug7mj0/
+
+### Quando e por que deixa de assustar
+
+Ninguém deu um número de horas. O que aparece:
+
+- **Um truque só:** "Ok for 1 cheap jumpscare but offer nothing more... in survival they're more annoying than scary". https://www.reddit.com/r/feedthebeast/comments/1q9ag7j/
+- **Frequência alta:** "scale back the spawn rate so you're not dealing with it so often it becomes not scary. It should be an event". https://www.reddit.com/r/feedthebeast/comments/1hgukjg/
+- **Duas vezes em dois dias já foi lido como "o tempo todo".** https://www.reddit.com/r/feedthebeast/comments/176nk4z/
+- **Invadir a base:** "make it that it doesent spawn in underground bases, its really anoying".
+- **Jeito fácil de vencer:** "really easy to tower up to beat him".
+- **Injustiça:** "most horror mods are just unfair, not even scary". https://www.reddit.com/r/ModdedMinecraft/comments/1rhfpa1/
+- **Volume alto:** "earrape screamfests"; "that shit hurts my ears every. Single. Time."
+- **Virar jogo de progressão:** sobre a versão 2.0 do Broken Script, "the new dimensions, the boss fights, the progression... feel out of place". https://www.reddit.com/r/TheBrokenScript/comments/1wxhj1y/
+- **Servidor de amigos dura pouco:** "play for about 2 weeks with friends. Then everyone loses the itch and the server dies." https://www.reddit.com/r/ModdedMinecraft/comments/1uieiba/
+
+### Raro demais também é problema
+
+- "never encountered him... even though I heard his 'warning' sounds. I started to think my mod is broken" (Cave Dweller).
+- Em r/FromTheFog há vários tópicos do tipo "How do I know if it's working" e "Herobrine isnt spawning".
+
+### O que os jogadores de longa data elogiam
+
+- "The last 'horror' 'mod' you could actually PLAY with was From the Fog. The rest... focus on mob griefing more than tension". https://www.reddit.com/r/HorrorMinecraft/comments/1wyl8ok/
+- Um dono de servidor pede exatamente a proposta do Sussurros: "subtle horror mods that wouldn't be obvious right away? I want them to think they're going crazy". https://www.reddit.com/r/ModdedMinecraft/comments/1ugibq7/
+
+### O que faz parecer "eu vi alguma coisa?" e não "um mob sumiu"
+
+- **Distância e atraso.** No From The Fog a aparição distante fica a 50–100 blocos e some 1 s depois de ser mirada; a média fica a 25–46 e some em 0,5 s. Sem ninguém olhar, some sozinha em 30 s. [C]
+- **Som só às vezes.** O ruído de sumiço do From The Fog toca em metade das vezes. [C]
+- **Lugar ruim cancela.** Ele é removido se a cabeça ficar dentro de folhas ou de um bloco, ou se estiver na água. [C]
+- **Silhueta.** O mod The Hollow desenha a entidade sem luz, "flat silhouette with two pale eyes", a 14–22 blocos. [P]
+- **Fora do olhar.** A Ghost Girl de Lethal Company nunca aparece a menos de 8 unidades nem dentro de 80° da direção do olhar. [P] https://lethal-company.fandom.com/wiki/Ghost_Girl
+- **Curta.** No Phasmophobia a aparição parada dura de 2 a 5 s. [P] https://phasmophobia.fandom.com/wiki/Ghost_Event
+- **Meio encoberta.** Neblina e tronco de árvore são as duas coisas que os jogadores citam.
+
+---
+
+## 13. From The Fog em números
+
+Lido no datapack. [C] https://github.com/LunarEclipseStudios/From-The-Fog/tree/main/data/lunareclipse.watching/function/
+
+**Início:** nada acontece nos três primeiros dias de jogo.
+
+**Intervalo até o próximo avistamento** (só conta quando não há um em andamento):
+
+| Opção | De dia | De noite |
+|---|---|---|
+| insane | 15–30 s | 8–15 s |
+| common | 30–60 s | 15–30 s |
+| padrão | 60–120 s | 30–60 s |
+| rare | 120–240 s | 60–120 s |
+| scarce | 240–360 s | 120–180 s |
+
+**Tipos de avistamento:**
+
+| Tipo | Distância | Some depois de mirado em | Observação |
+|---|---|---|---|
+| creeping | 3–5 blocos, atrás | 0,1 s | desligado por padrão |
+| dwelling | 6–12 | 0,5 s | em caverna |
+| stalking | 25–46 | 0,5 s | |
+| lurking | 50–100 | 1 s | |
+| nightmare | 2 blocos do pé da cama | 0,1 s | dura 60 s |
+
+**Eventos físicos** (passos, minerador fantasma, placas, golpe por não olhar): uma tentativa a cada 5 minutos reais, com chance padrão de 1 em 100 para a maioria e 1 em 25 para passos e quadros. Dá, em média, passos a cada 2 horas e minerador fantasma a cada 8 horas.
+
+**Leitura para o Sussurros:** o From The Fog não é "raro" em tudo. Ele faz avistamentos frequentes, distantes e curtos, e eventos físicos muito raros.
+
+**"Give Him Control":** liga todos os tipos, zera a espera inicial e, a cada dia de jogo, sorteia de novo cerca de 42 opções da própria configuração. Ao ser visto, a atividade dobra por 360 s.
+
+**Multiplayer:** o alvo é um jogador aleatório e só existe um Herobrine por vez. Nada é por jogador.
+
+---
+
+## 14. Mais ideias de outros mods
+
+### The Broken Script: eventos que faltavam
+
+Fonte: https://thebrokenscript.wiki.gg/wiki/Random_Events [P]. A página não documenta chance nem intervalo.
+
+| Evento | O que o jogador vive |
+|---|---|
+| Isolation | Em multiplayer, um jogador fica invisível e mudo para os outros por 3,5 min |
+| OpenGL Error | Quatro linhas de erro no chat; a última diz "Here I am." |
+| Null Interface Trigger | Abre sozinho um contêiner vazio com o título "help" ou "behind you" |
+| Close Menu | O baú que você abriu fecha sozinho |
+| Null Getting Advancement | Um jogador falso ganha uma conquista ligada ao seu progresso |
+| Breathe | Toca o som de respiração do próprio jogo |
+| Doors | Todas as portas de madeira por perto abrem juntas |
+| Hallucination | Algo nasce fora da visão; se você olha, corre até você e não dá dano |
+| Moon Glitch | A neblina fecha para dois chunks por 5 min |
+| JFrame | Uma caixinha preta cobre parte da tela por 1 s |
+| Entity Discard | O mob que você acabou de acertar desaparece |
+| Noop | Não faz nada. Está na lista de propósito |
+
+### The Obsessed
+
+Fonte: https://www.curseforge.com/minecraft/mc-mods/obsessed [P]
+
+- Os modos saem de um saco embaralhado: todos aparecem, sem ordem previsível.
+- Aparece 4 vezes mais à noite; a intensidade sobe ao longo de cerca de 1 hora.
+- Aparece dentro de casa agachado, de preferência atrás de uma janela, e foge se for olhado.
+- Alucinações: atrás de você, pendurado no teto, e saltando de um canto quando você quebra um bloco.
+- Pode perder o interesse em jogadores ausentes.
+
+### Midnight Lurker
+
+Fonte: https://github.com/Voxla/midnightlurker [C, só os nomes das variantes]
+
+- Variantes: agressivo, de costas, rastejante, falso, escondido, invisível, fugitivo, sombra, sombra com olhos, metamorfo (vaca, porco, aldeão), parado encarando, cabeça fantasma.
+- Estágios de insanidade de 0 a 7 por jogador, um a cada 20 min, voltando a zero no fim.
+- Quatro variantes de arquivo para cada tipo de som.
+
+### Mods sutis que faltavam na primeira rodada
+
+| Mod | Onde roda | Código | Por que interessa |
+|---|---|---|---|
+| The Hollow — https://modrinth.com/mod/hollow-dread | **Fabric 26.2** | fechado | Roda na mesma versão do Sussurros. Medo de 0 a 100; abaixo de 25 não acontece nada. Outro jogador a 16 blocos faz o medo cair. Ser pego cega e enfraquece, não mata |
+| TheWatcher — https://modrinth.com/mod/thewatcher | Fabric/Forge 1.20.1–1.21.1 | licença fechada, com fonte em https://github.com/Al-Capone11/TheWatcher (não lida) | Conceito quase igual ao do Sussurros: vulto fora da visão, ecos das suas ações, portas e tochas alteradas, animais encarando, itens da hotbar trocando de lugar, nomes de itens virando sussurros |
+| Existence — https://modrinth.com/mod/existence | Fabric/Forge 1.20–1.20.1 | aberto, LGPL-3.0: https://github.com/CipherXOR/Existence | Terror entre amigos: fantasmas com a pele, o nome e a voz dos amigos |
+| The Silence — https://modrinth.com/mod/the-silence-mod | NeoForge 1.21.1 | fechado | Itens somem dos baús; aparecem túmulos para os animais que você matou |
+
+---
+
+## 15. Terror entre amigos
+
+### De onde vêm as mecânicas
+
+- **Lethal Company, Masked:** imita o comportamento de um jogador (vira, espia cantos); ao ver alguém, para e encara de 2 a 5 s antes de agir. O único sinal é o movimento estranho. [P] https://lethal-company.fandom.com/wiki/Masked
+- **Lethal Company, Ghost Girl:** "invisible to everyone but the employee she's haunting". Se outro jogador encosta nela, some. [P]
+- **Phasmophobia:** o alvo de um evento é o jogador mais próximo; a sanidade é de cada um, mas a atividade usa a média do grupo, então o calmo sofre pelos colegas. Um tipo de fantasma fixa um alvo no começo e vai atrás dele em dois terços das vezes. [P] https://phasmophobia.fandom.com/wiki/Sanity
+- **Skinwalkers** (mod de Lethal Company): grava a voz dos jogadores e a reproduz a partir dos inimigos. [P]
+
+### Como fazer o sósia
+
+1. **Entidade do próprio jogo.** O `Mannequin` mostra a pele de um jogador sem ele estar conectado. Existe na 26.2 (seção 11). O From The Fog já usa. [C]
+2. **A técnica do Existence.** Um mob comum com dois identificadores sincronizados (dono da pele e alvo). O renderizador usa o modelo de jogador, pega a textura na lista de jogadores do cliente e não desenha nada para quem não é o alvo. São cerca de 50 linhas. Limite: o amigo precisa estar online. [C]
+3. **Jogador falso de verdade, como o do Carpet.** Aparece para todos e conta como jogador; é exagero aqui. [C]
+
+### Quinze ideias
+
+| # | Ideia | Por que funciona | Fonte | Dificuldade |
+|---|---|---|---|---|
+| 1 | Vulto só para um; some se um amigo passa por cima | Ninguém confirma o relato | Ghost Girl [P] | fácil a média |
+| 2 | Marcado da noite: um alvo fixo por noite recebe a maior parte | "Por que só comigo?" | Phasmophobia [P] | fácil |
+| 3 | Sósia na linha das árvores, com a pele de um amigo que está longe | O rosto conhecido no lugar errado | Existence [C] | média |
+| 4 | Sósia dentro da base, de costas; encara de 2 a 5 s antes de reagir | O único sinal é o comportamento | Masked [P] | média |
+| 5 | Uma frase antiga de A reaparece só para B | Faz duvidar do amigo, não do jogo | The Obsessed [P] | fácil |
+| 6 | Voz roubada do microfone | A voz do amigo sem o amigo | Skinwalkers [P], Existence [C] | difícil |
+| 7 | Isolamento: um jogador fica invisível e mudo para os outros por 1 a 3 min | O grupo acha que ele saiu | The Broken Script [P] | média |
+| 8 | "Saiu do jogo" falso, ou nome repetido na lista, só para um | Usa a interface em que todos confiam | From The Fog [C] | fácil |
+| 9 | Eventos fortes só com o jogador separado; juntar-se alivia | Dá uma defesa social e pune a separação sem matar | The Hollow [P], Phasmophobia [P] | fácil |
+| 10 | O mesmo som de aviso para evento falso e real | O aviso nunca vira dica confiável | Phasmophobia [P] | fácil |
+| 11 | Pressão pela média do grupo | O calmo é assombrado porque o outro entrou em pânico | Phasmophobia [P] | fácil |
+| 12 | Prova que só quem segura o item vê | O resultado tem de ser contado em voz alta | Phasmophobia [P] | fácil |
+| 13 | Batida na porta só quando há um jogador em casa | Quando os outros voltam, não há nada | The Knocker [P] | fácil |
+| 14 | Um jogador sem nada por dias, outro com a noite cheia | O poupado desacredita os relatos | The Broken Script [P] | fácil |
+| 15 | Túmulo ou placa citando algo que só um jogador fez | Acusação que os outros leem | The Silence [P] | média |
+
+---
+
+## 16. Áudio sem orçamento
+
+### Regras do Minecraft
+
+Fonte: https://minecraft.wiki/w/Sounds.json [P]
+
+- **Mono tem posição; estéreo não.** Sussurro "na cabeça" e fundo sonoro podem ser arquivos estéreo; passos e ruídos no mundo devem ser mono.
+- **`"stream": true`** para sons de mais de alguns segundos.
+- **Tom:** vai de 0,5 a 2 (uma oitava para cada lado).
+- **Volume acima de 1** não fica mais alto: aumenta o alcance (16 blocos × volume).
+- **Variantes:** uma é sorteada a cada vez. Para voz, de 8 a 12 (inferência; repetição de voz se nota rápido).
+- **Sons do jogo que servem de graça:** a respiração do jogador (`PLAYER_BREATH`), o ambiente de caverna e os discos 11 e 13 tocados bem graves.
+
+### Receitas de tratamento
+
+As fontes descrevem os passos, mas quase sem números. **Os valores abaixo são ponto de partida e não foram testados.** O `ffmpeg` não está instalado na máquina do dono; o Audacity faz o mesmo à mão.
+
+- **Sussurro com pré-eco ("eco invertido"):** inverter o áudio, aplicar reverberação, inverter de novo. O eco passa a vir antes da voz. No Audacity: deixar silêncio no início, Reverse, Reverb (sala 70–85, reverberação 60–80, só o som molhado), Reverse, e misturar com o original uns 6 a 10 dB abaixo. [P] https://www.howtogeek.com/63091/how-to-recreate-popular-effects-by-reversing-audio-in-audacity/
+- **Atrás da parede:** cortar os agudos acima de 700–1200 Hz e baixar 6 dB.
+- **Voz que não parece humana:** descer uns 3 semitons.
+- **Coro de sussurros:** três gravações da mesma frase, uma mais grave, uma mais aguda e uma invertida, com atraso de 30 a 80 ms entre elas.
+- **Variantes de graça:** tocar o mesmo arquivo com tom sorteado entre 0,9 e 1,1.
+
+### Bibliotecas
+
+- **Sonniss GameAudioGDC:** pacotes anuais gratuitos, uso liberado sem crédito; só não pode redistribuir os arquivos soltos. Para um mod privado serve. [P] https://sonniss.com/gameaudiogdc/
+- **Freesound:** filtrar por licença CC0 e procurar "whisper" e "breath". Nenhum pacote específico foi conferido.
+
+### O que é real e o que é mito
+
+- **Infrassom (17–19 Hz):** a base é um relato de 1998 e um experimento de 2003. Fone e caixa comuns não reproduzem isso. Tratar como mito; um som grave audível de 30–60 Hz é a alternativa. [P] https://en.wikipedia.org/wiki/Infrasound
+- **Silêncio e incerteza:** têm apoio nos relatos de jogadores e no código do From The Fog.
+- **Volume alto:** é rejeitado explicitamente pelos jogadores.
+
+---
+
+## 17. As dez lições
+
+1. **O medo está no antes.** O som distante antes do encontro é o momento mais citado.
+2. **Raro, mas com prova de vida.** Duas vezes em dois dias já é "o tempo todo"; zero vezes vira "meu mod quebrou".
+3. **Aparição é longe, parada, meio encoberta e curta.** Nunca perto em campo aberto.
+4. **Saco embaralhado e carta vazia.** Evita padrão aprendido.
+5. **Aviso fixo perde força com veterano.** O mesmo aviso deve servir para evento falso e real.
+6. **Injustiça, jeito fácil de vencer e invasão da base matam o medo.** Quase morrer marca mais que morrer.
+7. **Não virar jogo de progressão.** Os itens de defesa ficam pequenos e sem "vitória".
+8. **Entre amigos, o alvo é a confiança.** Um vê, o outro não.
+9. **Separação é o gatilho; reunião é o alívio.**
+10. **Planejar para duas semanas e áudio barato.** Sons do jogo em tom grave, a própria voz tratada e nunca volume alto.
+
+---
+
+## 18. Limites desta pesquisa
+
+- O Reddit bloqueou o acesso; os tópicos vieram do arquivo Arctic Shift, com a pontuação do momento da captura. A busca por texto falhou várias vezes, então a amostra de opiniões é parcial.
+- O código dos mods fechados (The Broken Script, The Obsessed, Don't Let It Learn, Understudy, The Knocker, The One Who Watches, The Anomaly, The Hollow, The Silence) não foi lido.
+- O código do TheWatcher está no GitHub e não foi lido.
+- Do Midnight Lurker foram lidos só os nomes dos arquivos.
+- Comentários do CurseForge e do PlanetMinecraft não foram lidos.
+- Nenhuma técnica dos outros mods foi testada na 26.2, e nenhuma receita de áudio foi testada.
 - A análise do log cobre uma sessão só, de um jogador.

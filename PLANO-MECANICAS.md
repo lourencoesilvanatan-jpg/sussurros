@@ -6,14 +6,17 @@ Plano escrito em 08/10/2026 a partir do `PESQUISA-E-ANALISE.md`. Ele diz o que c
 
 ---
 
-## Os seis princípios deste plano
+## Os sete princípios deste plano
 
 1. **Perceptível antes de inteligente.** Se o jogador não ouviu nem viu, não aconteceu. O Diretor só aprende com o que foi confirmado como perceptível.
 2. **Mexer na percepção, não no mundo.** Sempre que der, a mudança existe só para um jogador (som, bloco, criatura). A construção de ninguém é estragada, e entre amigos cada um vive uma coisa diferente.
-3. **Raridade em camadas.** Um fundo constante quase inaudível; coisas sutis de vez em quando; coisas médias raramente; um susto grande uma vez por sessão longa, ou nenhuma.
+3. **Longe e curto pode ser frequente; perto e físico tem de ser raro.** É o que o From The Fog faz: vultos distantes a cada um ou dois minutos, que somem em um segundo, e eventos físicos uma vez a cada várias horas. Raro demais também falha: o jogador conclui que o mod quebrou.
 4. **Menos eventos, todos sentidos.** Hoje acontece algo a cada ~65 s e a maioria passa despercebida. A meta é o contrário.
 5. **Regra aprendida é regra que pode ser quebrada.** Se "encarar faz sumir" sempre funciona, deixa de assustar. De vez em quando não funciona.
 6. **Nem o autor sabe.** Cada mundo sorteia quais mecânicas estão ligadas e quando. Sem isso, quem leu o plano não se assusta.
+7. **O medo está no antes.** O momento que os jogadores mais citam é o som distante antes do encontro, não o encontro. O mesmo aviso serve para evento falso e para evento real, para nunca virar dica confiável.
+
+Os princípios 3 e 7 vêm da segunda rodada de pesquisa (seções 12, 13 e 17 do `PESQUISA-E-ANALISE.md`).
 
 ---
 
@@ -156,6 +159,17 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 
 - Dois pontos claros no escuro total, sem corpo. Somem se a luz no lugar subir ou se forem encarados com precisão. Precisa de desenho que brilha no cliente.
 
+### 3f. Regras de lugar para toda aparição
+
+Vêm do que os jogadores dizem ("looks great behind the tree but just looks too goofy out in the open") e dos números do From The Fog. No log analisado, as três aparições nasceram de dia, em campo aberto e sem cobertura.
+
+- **De dia e em campo aberto:** só a 25 blocos ou mais, ou meio encoberta por tronco, parede ou neblina. Nunca perto e inteira.
+- **Vulto distante (novo):** a 50–100 blocos, some 1 s depois de mirado. Pode ser mais frequente que os outros, porque é negável.
+- **Sem plateia:** se ninguém olhar em cerca de 30 s, some sozinha.
+- **Lugar ruim cancela:** se a cabeça ficar dentro de folhas ou de um bloco, ou se cair na água, some sem contar como evento.
+- **Som de sumiço:** no máximo em metade das vezes.
+- **Duração na tela:** de 2 a 5 s para as aparições paradas, salvo o Relance, que é mais curto.
+
 ---
 
 ## Etapa 4 — Som que perturba
@@ -168,9 +182,12 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 
 **O que você vai sentir:** uma voz baixa, sem direção, que diz o seu nome. Às vezes vem de trás de uma parede.
 
-- **Produção:** o dono grava de 10 a 15 frases curtas sussurradas (celular serve). Se os amigos toparem, gravam também. A receita de tratamento (tom, eco invertido, corte de agudos) entra neste arquivo depois da segunda rodada de pesquisa.
+- **Produção:** o dono grava de 10 a 15 frases curtas sussurradas (celular serve), cada uma duas ou três vezes para ter variação. Se os amigos toparem, gravam também.
+- **Tratamento:** as receitas estão na seção 16 do `PESQUISA-E-ANALISE.md` (eco invertido, corte de agudos para "atrás da parede", tom mais grave). São ponto de partida e não foram testadas. O `ffmpeg` não está instalado na máquina; o Audacity resolve à mão.
 - **O que muda:** `Diretor.sussurro` toca o áudio; o texto em cima da hotbar vira legenda opcional. Duas formas: "na cabeça" (sem posição) e posicional abafado.
-- **Experimento antes:** conferir em jogo se um `.ogg` estéreo toca sem posição ou se é preciso tocar pelo cliente com `SimpleSoundInstance.forUI`.
+- **Formato:** a wiki do Minecraft diz que arquivo mono tem posição e estéreo não. Então o sussurro "na cabeça" pode ser um `.ogg` estéreo, sem código no cliente. Conferir em jogo antes de gravar tudo.
+- **De graça enquanto a voz não chega:** a respiração do jogador que o próprio jogo tem (`SoundEvents.PLAYER_BREATH`) e o ambiente de caverna tocado grave.
+- **Nunca alto.** Volume alto é a reclamação mais repetida sobre mods de terror.
 
 ### 4c. Silêncio de verdade
 
@@ -188,6 +205,14 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 
 - Versões já filtradas dos sons para "atrás da parede", escolhidas pela quantidade de blocos sólidos entre a fonte e o jogador.
 - De vez em quando, um som conhecido do jogo (um baú abrindo) tocado perto e grave demais.
+
+### 4f. O aviso que não é confiável
+
+**O que você vai sentir:** um som distante que você aprende a temer. Na maioria das vezes não vem nada depois.
+
+- **Como funciona:** um som-assinatura, longe, tocado antes das aparições e dos sustos grandes. O mesmo som toca sozinho, sem nada depois, em mais da metade das vezes.
+- **Por quê:** aviso que sempre acerta "perde os dentes com veteranos"; aviso nenhum é lido como injusto. O aviso que mente fica no meio.
+- **O que já existe:** o anúncio de dois passos (`Diretor.anunciar`) e os falsos positivos (`SINAL`). Esta parte junta os dois num som só.
 
 ---
 
@@ -208,6 +233,8 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 - Porta que parece aberta (o som toca só para você).
 - Um bloco faltando na parede da casa, por alguns segundos.
 - Uma tocha sua que virou tocha de redstone.
+- Todas as portas por perto parecendo abertas ao mesmo tempo.
+- O baú que você abriu fecha sozinho (isto é real, mas não estraga nada).
 
 ### 5c. Coisas escritas
 
@@ -223,6 +250,8 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 ### 6a. Baralho de picos
 
 - **Como funciona:** um baralho por mundo, embaralhado, com cartas de susto e cartas "nada". Uma carta é virada a cada 60 a 120 minutos de jogo. Cada carta tem condições (lugar, hora, fase); se não couber, espera. Uma carta só volta depois que o baralho acabar.
+- **De onde vem:** o The Obsessed tira os modos de um saco embaralhado para que todos apareçam sem ordem previsível, e o The Broken Script tem um evento que não faz nada, de propósito.
+- **Sem morte.** Nenhuma carta mata. Quase morrer (ficar com um ou dois corações) é o que os jogadores relatam como marcante; morrer e renascer acaba com o medo.
 - **Sempre** com preparação antes e silêncio longo depois, como as cenas de hoje.
 - **No log:** `BARALHO carta=... estado=VIRADA|ESPERANDO|EXECUTADA`.
 
@@ -233,6 +262,8 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 - **Intruso:** na volta de uma viagem longa, várias mudanças pequenas de uma vez: portas abertas, miragens, um item mudado de um baú para outro. Nada é destruído.
 - **Ontem:** ao longe, uma figura refaz o seu caminho de minutos atrás, com as suas paradas. Usa o `Rastro`.
 - **Salto de aproximação:** na caça, quando ele encurta a distância fora da sua vista, um aperto de câmera e um batimento. Com recarga longa.
+- **O esconderijo não segura:** você se tranca e ele encontra um jeito de olhar para dentro. É o momento mais citado do Cave Dweller. Usa miragem (um bloco "faltando") em vez de quebrar a parede.
+- **Neblina que fecha:** a distância de visão encolhe por alguns minutos e um vulto distante fica no limite dela. Precisa do cliente.
 
 ---
 
@@ -240,18 +271,43 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 
 **O que você vai sentir:** você ouviu; ele não. Ele viu; você não. Ninguém tem certeza de nada.
 
+A ideia central vem de Lethal Company e Phasmophobia: entre amigos, o alvo não é o jogador, é a confiança entre eles. As fontes e as quinze ideias estão na seção 15 do `PESQUISA-E-ANALISE.md`.
+
+### 7a. Quem é assombrado
+
 - **Realidades divergentes:** já vem das etapas 3d, 4a e 5a. Fica como padrão.
-- **Alvo isolado:** os eventos preferem quem se afastou do grupo. Hoje estar sozinho só soma vulnerabilidade.
+- **Se um amigo encosta, some:** a aparição de um jogador desaparece se outro passar por cima dela. Ninguém consegue confirmar o relato.
+- **Marcado da noite:** a cada noite o Diretor fixa um alvo, que recebe a maior parte do que acontece. Os outros quase nada.
+- **Separação é o gatilho, reunião é o alívio:** os eventos fortes só acontecem com o jogador longe dos outros. A menos de 16 blocos de um amigo, a pressão cai. Hoje estar sozinho só soma vulnerabilidade.
+- **Pressão pela média do grupo:** o amigo calmo passa a ser assombrado porque o outro entrou em pânico.
+
+### 7b. Mentir com a interface e com os amigos
+
 - **"Fulano saiu do jogo":** a linha amarela de saída, enviada só para um jogador, com o amigo ainda lá. Ou a entrada de alguém que não está online.
-- **Eco de amigo:** o eco de chat passa a usar frases dos amigos também.
+- **Eco de amigo:** uma frase antiga de um jogador reaparece só para outro. Faz duvidar do amigo, não do jogo.
 - **Voz de amigo:** se eles gravarem, o sussurro pode vir na voz de quem não está por perto.
-- **Figura com o nome do amigo:** ao longe, à noite, alguém com o nome dele sobre a cabeça. Some ao ser encarada. Versão simples primeiro (silhueta e nome); pele de jogador de verdade fica para depois.
+- **Batida só com um em casa:** quando os outros voltam, não há nada.
+
+### 7c. O sósia
+
+**O que você vai sentir:** seu amigo parado na linha das árvores, de costas. Ele está do outro lado do mapa.
+
+- **Como funciona:** uma figura com a pele de um amigo que está longe. Fica parada ou de costas, encara de 2 a 5 s quando é notada e some ao ser abordada.
+- **Caminho mais curto:** a entidade `Mannequin` do próprio jogo, que mostra a pele de um jogador. Existe na 26.2; falta testar como definir o perfil pelo código.
+- **Caminho alternativo:** o do mod Existence (código aberto): um mob comum cujo renderizador usa o modelo de jogador e a textura do amigo, e não desenha nada para quem não é o alvo.
+- **Experimento antes:** `/sussurros teste sosia <jogador>`.
+
+### 7d. Carta grande de grupo
+
+- **Isolamento:** por um a três minutos, um jogador fica invisível e mudo para os outros. O grupo acha que ele saiu; ele acha que foi ignorado. Entra no baralho da etapa 6.
 
 ---
 
 ## Etapa 8 — Surpresa para o autor
 
 - **Baralho da sessão:** ao criar o mundo, o mod sorteia quais mecânicas das etapas 3 a 7 estão ligadas e em que dia cada uma destrava. Fica salvo no mundo. Nenhum comando mostra, a não ser `/sussurros spoiler`.
+- **Cabe em duas semanas:** servidores de amigos costumam durar umas duas semanas. A escalada inteira tem de caber em cerca de dez a quinze sessões, com alguma coisa nova destravando em quase todas.
+- **Um jogador desavisado vale ouro:** o relato mais forte da pesquisa é de alguém que não sabia que o mod estava instalado. Para os amigos, não contar o que o mod faz.
 - **Variantes escondidas:** quem programa pode criar variações sem descrevê-las, registrando-as num arquivo de spoilers que o dono escolhe não abrir. A explicação depois de cada entrega diz o que testar, não o que acontece.
 
 ---
@@ -262,6 +318,17 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 - **Falsa desconexão, erro falso, título da janela, brilho resetado:** são a maior fonte de reclamação em outros mods. Se entrarem, entram como cartas do baralho, desligadas por padrão.
 - **GeckoLib e SmartBrainLib:** continuam valendo as regras do `ARQUITETURA.md`. Nada neste plano precisa delas.
 - **Registro de blocos colocados pelo jogador:** o Fabric não tem um evento pronto para isso; falta investigar. As miragens dispensam esse registro na maior parte dos casos.
+
+---
+
+## Para jogar e comparar
+
+Jogar outros mods é a melhor medida, porque o público deste mod é o próprio dono. Em cada um, anotar três momentos que pegaram e três que irritaram.
+
+- **The Hollow** (https://modrinth.com/mod/hollow-dread): roda em Fabric 26.2, a mesma versão do Sussurros. É o mais fácil de instalar ao lado.
+- **From The Fog:** o mais elogiado por quem joga há muito tempo. Reparar na distância e na duração dos avistamentos.
+- **The Broken Script:** quarta parede. Reparar no que incomoda de verdade e no que só irrita.
+- **TheWatcher:** conceito quase igual ao do Sussurros. O código está no GitHub e ainda não foi lido; vale uma leitura antes da etapa 3.
 
 ---
 
