@@ -3454,7 +3454,13 @@ public final class Diretor {
 			e.forcando = false;
 		}
 		m.salvar();
-		return ok ? null : "não achei chão livre (3 blocos de ar em cima) no lugar sorteado. Tente num lugar mais aberto.";
+		if (ok) {
+			return null;
+		}
+		// O motivo depende do tipo de evento: só os que usam a criatura precisam de chão livre para ela.
+		return usaCriatura(ev)
+				? "não achei um lugar livre para ele (chão firme com 3 blocos de ar em cima, fora da sua tela). Tente num lugar mais aberto."
+				: "não encontrou condições agora (sem ponto do seu caminho por perto, sem ação recente ao alcance ou sem lugar livre). Ande um pouco e tente de novo.";
 	}
 
 	public static String testarPressagio(ServerPlayer p) {
@@ -3479,6 +3485,43 @@ public final class Diretor {
 				e.recentes, e.sequencia, e.elosCadeia, e.rastro.tamanho(), manifestacaoAtiva(e), cenaAtiva(e), Perfil.resumo(Memoria.de(p)));
 	}
 
+	private static final String HOSPEDE_ATIVO = "Já existe um Hóspede ativo. Espere ele sumir, ou use /sussurros cena parar.";
+
+	/** Cada cena termina com um a dois minutos de silêncio. Para quem está testando, isso trava a próxima: o comando parar resolve. */
+	private static String cenaOcupada(EstadoJogador e) {
+		return "Já existe outra cena em andamento (" + cenaAtiva(e) + "). Para interromper: /sussurros cena parar";
+	}
+
+	/**
+	 * Interrompe a cena composta em andamento (inclusive o silêncio do fim) e tira o Hóspede de cena.
+	 * Existe para testar uma cena atrás da outra; num jogo normal as cenas terminam sozinhas.
+	 */
+	public static String pararCenas(ServerPlayer p) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		long seg = level.getGameTime() / 20;
+		String id = cenaAtiva(e);
+		boolean haviaCena = e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA
+				|| e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA
+				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA
+				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
+				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA;
+		boolean haviaHospede = e.criatura != null && !e.criatura.isRemoved();
+		if (!haviaCena && !haviaHospede) {
+			return "Não há cena nem Hóspede para interromper.";
+		}
+		e.cenaCasa = EstadoJogador.CenaCasa.NENHUMA;
+		e.cenaTunel = EstadoJogador.CenaTunel.NENHUMA;
+		e.cenaCampo = EstadoJogador.CenaCampo.NENHUMA;
+		e.cenaMarco = EstadoJogador.CenaMarco.NENHUMA;
+		e.cenaJanela = EstadoJogador.CenaJanela.NENHUMA;
+		if (haviaHospede) {
+			e.criatura.sumir(level, false, "PARADA_POR_COMANDO");
+		}
+		Depuracao.log(p, seg, "COMANDO cena parar: cena=" + (haviaCena ? id : "-") + " hospede=" + (haviaHospede ? "sim" : "nao"));
+		return haviaCena ? "Cena " + id + " interrompida. Já pode começar outra." : "Hóspede retirado. Já pode começar uma cena.";
+	}
+
 	/** Começa a cena "Ele voltou com você" agora. Teste: não conta para o aprendizado nem para a memória. */
 	public static String testarCenaCasa(ServerPlayer p) {
 		EstadoJogador e = estado(p);
@@ -3488,10 +3531,10 @@ public final class Diretor {
 				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA
 				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
 				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
-			return "Já existe outra cena em andamento (" + cenaAtiva(e) + ").";
+			return cenaOcupada(e);
 		}
 		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return "Já existe um Hóspede ativo. Espere ele sumir antes do teste.";
+			return HOSPEDE_ATIVO;
 		}
 		CenaVoltouComVoce.iniciarCenaCasa(p, e, seg, p.level().getRandom(), true);
 		return "Cena \"Ele voltou com você\" em 10-20 s (teste: não conta para o aprendizado). "
@@ -3507,10 +3550,10 @@ public final class Diretor {
 				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA
 				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
 				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
-			return "Já existe outra cena em andamento (" + cenaAtiva(e) + ").";
+			return cenaOcupada(e);
 		}
 		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return "Já existe um Hóspede ativo. Espere ele sumir antes do teste.";
+			return HOSPEDE_ATIVO;
 		}
 		CenaAlgoNoTunel.iniciarCenaTunel(p, e, seg, p.level().getRandom(), true);
 		return "Cena \"Algo no túnel\" iniciada (teste: não aprende). Funciona melhor no subsolo depois de minerar e andar um pouco.";
@@ -3523,10 +3566,10 @@ public final class Diretor {
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA || e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA
 				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA || e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
 				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
-			return "Ja existe outra cena em andamento (" + cenaAtiva(e) + ").";
+			return cenaOcupada(e);
 		}
 		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return "Ja existe um Hospede ativo. Espere ele sumir antes do teste.";
+			return HOSPEDE_ATIVO;
 		}
 		CenaLinhaDasArvores.iniciarCenaCampo(p, e, seg, p.level().getRandom(), true);
 		return "Cena \"Na linha das arvores\" iniciada (teste: nao aprende). Funciona melhor em area externa com algum espaco e cobertura ao redor.";
@@ -3539,10 +3582,10 @@ public final class Diretor {
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA || e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA
 				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA || e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
 				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
-			return "Já existe outra cena em andamento (" + cenaAtiva(e) + ").";
+			return cenaOcupada(e);
 		}
 		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return "Já existe um Hóspede ativo. Espere ele sumir antes do teste.";
+			return HOSPEDE_ATIVO;
 		}
 		CenaFoiAqui.iniciarCenaMarco(p, e, seg, p.level().getRandom(), true, p.blockPosition());
 		return "Cena \"Foi aqui\" iniciada (teste: não aprende). Em jogo normal ela só nasce ao revisitar um lugar marcado por uma reação forte anterior.";
@@ -3557,10 +3600,10 @@ public final class Diretor {
 				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA
 				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA
 				|| e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
-			return "Já existe outra cena em andamento (" + cenaAtiva(e) + ").";
+			return cenaOcupada(e);
 		}
 		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return "Já existe um Hóspede ativo. Espere ele sumir antes do teste.";
+			return HOSPEDE_ATIVO;
 		}
 		atualizarCacheAmbiente(p.level(), p, e);
 		if (e.janelas.isEmpty()) {

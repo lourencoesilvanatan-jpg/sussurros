@@ -85,14 +85,45 @@ final class Experimentos {
 			enviarMiragem(level, p, achada, Blocks.AIR.defaultBlockState(), 20 * 20);
 			return "A tocha mais próxima sumiu SÓ PARA VOCÊ por 20 s (no mundo ela continua lá). Veja se a luz some junto e clique no lugar dela.";
 		}
-		Vec3 frente = Diretor.pontoRelativo(p, 0, 4);
-		BlockPos pos = Diretor.acharChao(level, frente.x, p.getY(), frente.z);
 		BlockState tocha = Blocks.TORCH.defaultBlockState();
+		BlockPos pos = chaoAFrente(level, p, 4, 1);
 		if (pos == null || !tocha.canSurvive(level, pos)) {
-			return "Não achei chão livre 4 blocos à sua frente. Tente num lugar plano.";
+			return "Não achei chão livre perto, à sua frente. Vire para um lado com chão à vista e tente de novo.";
 		}
 		enviarMiragem(level, p, pos, tocha, 20 * 20);
-		return "Uma tocha que SÓ VOCÊ vê está 4 blocos à frente por 20 s. Veja se ela ilumina (teste no escuro) e clique nela.";
+		return "Uma tocha que SÓ VOCÊ vê está logo à frente por 20 s. Veja se ela ilumina (teste no escuro) e clique nela.";
+	}
+
+	/**
+	 * Chão firme com "altura" blocos de ar em cima, o mais perto possível de "dist" blocos à frente do jogador.
+	 * Tenta algumas distâncias e ângulos: dentro de casa ou em terreno irregular o ponto exato quase nunca serve.
+	 */
+	private static BlockPos chaoAFrente(ServerLevel level, ServerPlayer p, double dist, int altura) {
+		double[] distancias = {dist, dist - 1, dist + 1, dist - 2, dist + 2};
+		double[] angulos = {0, 15, -15, 30, -30};
+		for (double d : distancias) {
+			if (d < 2) {
+				continue;
+			}
+			for (double a : angulos) {
+				Vec3 v = Diretor.pontoRelativo(p, a, d);
+				for (int dy = 3; dy >= -4; dy--) {
+					BlockPos pos = BlockPos.containing(v.x, p.getY() + dy, v.z);
+					BlockPos baixo = pos.below();
+					if (level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
+						continue;
+					}
+					boolean livre = true;
+					for (int h = 0; h < altura && livre; h++) {
+						livre = level.getBlockState(pos.above(h)).isAir();
+					}
+					if (livre) {
+						return pos;
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	private static void enviarMiragem(ServerLevel level, ServerPlayer p, BlockPos pos, BlockState falso, int duracaoTicks) {
@@ -112,10 +143,9 @@ final class Experimentos {
 	static String sosia(ServerPlayer p, String nome, String pose) {
 		ServerLevel level = p.level();
 		MinecraftServer server = level.getServer();
-		Vec3 frente = Diretor.pontoRelativo(p, 0, 8);
-		BlockPos chao = Diretor.acharChao(level, frente.x, p.getY(), frente.z);
+		BlockPos chao = chaoAFrente(level, p, 7, 2);
 		if (chao == null) {
-			return "Não achei chão livre 8 blocos à sua frente. Tente num lugar plano.";
+			return "Não achei chão livre perto, à sua frente. Vire para um lado com chão à vista e tente de novo.";
 		}
 		Vec3 lugar = new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
 		String comando = String.format(Locale.ROOT,
@@ -125,14 +155,15 @@ final class Experimentos {
 		// Um comando disparado de dentro de outro comando só roda depois que o de fora termina. Por isso o
 		// "summon" sai no tick seguinte, fora deste comando: aí ele roda na hora e dá para conferir o resultado.
 		Diretor.agendar(level, 1, () -> {
-			CommandSourceStack fonte = server.createCommandSourceStack().withLevel(level);
+			// Sem saída: senão o chat mostra "[Server: Summoned new Mannequin]", que entregaria o truque.
+			CommandSourceStack fonte = server.createCommandSourceStack().withLevel(level).withSuppressedOutput();
 			server.getCommands().performPrefixedCommand(fonte, comando);
 			List<Mannequin> criados = level.getEntitiesOfClass(Mannequin.class, AABB.ofSize(lugar, 3, 6, 3),
 					m -> m.entityTags().contains(ETIQUETA_SOSIA));
 			if (criados.isEmpty()) {
 				if (!p.hasDisconnected()) {
-					p.sendSystemMessage(Component.literal("[Sussurros] O jogo recusou o comando de invocar o manequim "
-							+ "(o motivo fica no log do jogo). Comando usado: /" + comando));
+					p.sendSystemMessage(Component.literal("[Sussurros] O jogo recusou o comando de invocar o manequim. "
+							+ "Para ver o motivo, rode você mesmo: /" + comando));
 				}
 				return;
 			}
@@ -142,7 +173,7 @@ final class Experimentos {
 				}
 			}));
 		});
-		return "Sósia de \"" + nome + "\" 8 blocos à frente por 30 s. Confira: a pele é a dele? Aparece algum rótulo embaixo do nome? "
+		return "Sósia de \"" + nome + "\" logo à frente por 30 s. Confira: a pele é a dele? Aparece algum rótulo embaixo do nome? "
 				+ "(Nome de quem não está online pode demorar a carregar a pele, ou nem carregar.)";
 	}
 }

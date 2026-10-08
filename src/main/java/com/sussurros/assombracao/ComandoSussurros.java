@@ -27,6 +27,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
  *   /sussurros cena marco        começa a cena "Foi aqui" (teste: não aprende)
  *   /sussurros cena janela       começa a cena "Do outro lado do vidro" (teste: não aprende)
  *   /sussurros cena eco          toca um eco de ação do lugar onde você fez / do rastro (teste: não aprende)
+ *   /sussurros cena parar        interrompe a cena em andamento (inclusive o silêncio do fim) e tira o Hóspede
  *   /sussurros teste sussurro estereo|cabeca|folego|lado   experimento: som sem direção (ver ROTEIRO-DE-TESTE.md)
  *   /sussurros teste miragem [apagar]                      experimento: bloco que só você vê
  *   /sussurros teste sosia <jogador> [agachado|deitado]    experimento: manequim com a pele de um jogador
@@ -63,6 +64,11 @@ public final class ComandoSussurros {
 							})));
 
 			raiz.then(Commands.literal("cena")
+					.then(Commands.literal("parar").executes(ctx -> {
+						String msg = Diretor.pararCenas(ctx.getSource().getPlayerOrException());
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
 					.then(Commands.literal("casa").executes(ctx -> {
 						ServerPlayer p = ctx.getSource().getPlayerOrException();
 						String msg = Diretor.testarCenaCasa(p);
@@ -228,7 +234,13 @@ public final class ComandoSussurros {
 					return 1;
 				}));
 			}
-			teste.then(Commands.literal("sosia").then(testeSosia));
+			teste.then(Commands.literal("sosia")
+					.executes(ctx -> {
+						ctx.getSource().sendSuccess(() -> Component.literal(
+								"[Sussurros] Falta o nome: /sussurros teste sosia <jogador> [agachado|deitado]. No jogo de teste o seu nome é Jogador."), false);
+						return 1;
+					})
+					.then(testeSosia));
 			raiz.then(teste);
 
 			raiz.then(Commands.literal("esquecer").executes(ctx -> {
