@@ -17,6 +17,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.decoration.Mannequin;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -41,6 +42,7 @@ final class Experimentos {
 	static String sussurro(ServerPlayer p, String modo) {
 		Vec3 esquerda = Diretor.pontoRelativo(p, -90, 10);
 		return switch (modo) {
+			case "tudo" -> sussurroTudo(p);
 			case "estereo" -> {
 				// Arquivo estéreo do próprio jogo, enviado como som posicionado. A wiki diz que estéreo ignora a posição.
 				p.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.AMBIENT_UNDERWATER_ENTER),
@@ -63,12 +65,46 @@ final class Experimentos {
 	}
 
 	/**
+	 * Os três sons em sequência, cada um com o seu número no chat, para a resposta não ficar ambígua.
+	 * O de referência vem da esquerda e o estéreo é posto à direita: se o estéreo ignora a posição, ele soa
+	 * no meio e não à direita. O jogador precisa ficar parado, porque os lados são calculados agora.
+	 */
+	private static String sussurroTudo(ServerPlayer p) {
+		ServerLevel level = p.level();
+		Vec3 esquerda = Diretor.pontoRelativo(p, -90, 10);
+		Vec3 direita = Diretor.pontoRelativo(p, 90, 10);
+		double y = p.getEyeY();
+
+		p.sendSystemMessage(Component.literal("[Sussurros] Som 1 de 3: a referência. Tem de vir da ESQUERDA."));
+		ModSons.tocarPara(p, esquerda.x, y, esquerda.z, ModSons.Som.RESPIRACAO, 1.0F, 0.9F);
+		Diretor.agendar(level, 20 * 5, () -> {
+			if (!p.hasDisconnected()) {
+				p.sendSystemMessage(Component.literal("[Sussurros] Som 2 de 3: preso a você. Veio do MEIO, da esquerda ou da direita?"));
+				ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 1.0F, 0.9F);
+			}
+		});
+		Diretor.agendar(level, 20 * 10, () -> {
+			if (!p.hasDisconnected()) {
+				p.sendSystemMessage(Component.literal("[Sussurros] Som 3 de 3: água, arquivo estéreo posto à DIREITA. Veio do MEIO ou da direita?"));
+				p.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.AMBIENT_UNDERWATER_ENTER),
+						SoundSource.HOSTILE, direita.x, y, direita.z, 1.0F, 1.0F, p.getRandom().nextLong()));
+			}
+		});
+		return "Fique parado, sem girar a câmera, por 15 segundos. Vêm três sons, cada um com o número no chat.";
+	}
+
+	/**
 	 * Pergunta: um bloco enviado só para um jogador aparece, ilumina, e o que acontece ao clicar nele?
 	 * apagar=false põe uma tocha falsa à frente; apagar=true esconde a tocha de verdade mais próxima.
 	 */
 	static String miragem(ServerPlayer p, boolean apagar) {
+		return miragem(p, apagar ? "apagar" : "tocha");
+	}
+
+	/** modo: "tocha" põe uma tocha falsa à frente; "apagar" esconde a tocha de verdade mais próxima; "vermelha" a faz parecer de redstone. */
+	static String miragem(ServerPlayer p, String modo) {
 		ServerLevel level = p.level();
-		if (apagar) {
+		if (!"tocha".equals(modo)) {
 			BlockPos centro = p.blockPosition();
 			BlockPos achada = null;
 			double melhor = Double.MAX_VALUE;
@@ -81,6 +117,15 @@ final class Experimentos {
 			}
 			if (achada == null) {
 				return "Não achei uma tocha comum a até 8 blocos. Coloque uma e tente de novo.";
+			}
+			if ("vermelha".equals(modo)) {
+				BlockState real = level.getBlockState(achada);
+				BlockState vermelha = real.is(Blocks.WALL_TORCH)
+						? Blocks.REDSTONE_WALL_TORCH.defaultBlockState()
+								.setValue(BlockStateProperties.HORIZONTAL_FACING, real.getValue(BlockStateProperties.HORIZONTAL_FACING))
+						: Blocks.REDSTONE_TORCH.defaultBlockState();
+				enviarMiragem(level, p, achada, vermelha, 20 * 20);
+				return "A tocha mais próxima virou tocha de redstone SÓ PARA VOCÊ por 20 s. Veja se a luz em volta ficou mais fraca e clique nela.";
 			}
 			enviarMiragem(level, p, achada, Blocks.AIR.defaultBlockState(), 20 * 20);
 			return "A tocha mais próxima sumiu SÓ PARA VOCÊ por 20 s (no mundo ela continua lá). Veja se a luz some junto e clique no lugar dela.";
@@ -127,13 +172,7 @@ final class Experimentos {
 	}
 
 	private static void enviarMiragem(ServerLevel level, ServerPlayer p, BlockPos pos, BlockState falso, int duracaoTicks) {
-		p.connection.send(new ClientboundBlockUpdatePacket(pos, falso));
-		// Desfazer é reenviar o estado de verdade. O mundo nunca mudou.
-		Diretor.agendar(level, duracaoTicks, () -> {
-			if (!p.hasDisconnected()) {
-				p.connection.send(new ClientboundBlockUpdatePacket(level, pos));
-			}
-		});
+		Miragem.mostrar(level, p, pos, falso, duracaoTicks, 0.0, "TESTE");
 	}
 
 	/**

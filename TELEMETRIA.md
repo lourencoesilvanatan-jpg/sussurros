@@ -423,3 +423,22 @@ OLHO usado fase=1 tempo=742 (+90)
 ```
 
 A linha de cada minuto ganhou `tempo=NNN` (segundos de assombração acumulados), logo depois de `fase=`. As fases começam em 600, 1800, 3300 e 5400. Usar o Olho soma 90, ler uma página soma 60 e a punição por indiferença soma 300.
+
+## 0.8.1 — miragens
+
+As linhas de luz ganharam `miragem=sim` quando o bloco existe só para o jogador:
+
+```
+LUZ_ERRADA tipo=FANTASMA miragem=sim pos=(-569,49,602) duracao=31s semCriatura=sim
+LUZ_ERRADA tipo=APARECE miragem=sim pos=(...) semCriatura=sim
+LUZ_ERRADA tipo=VERMELHA miragem=sim pos=(...) semCriatura=sim
+```
+
+Quando a miragem se desfaz:
+
+```
+MIRAGEM fim motivo=LUZ_FANTASMA por=CHEGOU_PERTO pos=(-569,49,602)
+MIRAGEM fim motivo=TOCHA_VERMELHA por=TEMPO pos=(...)
+```
+
+Se o jogador clica na miragem, o jogo a desfaz sozinho na hora e não há linha de log; a linha `MIRAGEM fim` aparece depois, quando o tempo dela vence.
