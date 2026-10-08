@@ -95,6 +95,25 @@ Vem logo depois da linha `escolha[...]` (pesos) e antes do `EVENTO`.
 ### Resumo de cada minuto e `/sussurros memoria`
 Ganharam `manifestacaoAtiva=M017` (ou `-`) e `cenaAtiva=C003` (ou `-`).
 
+### Reação (mudou na 0.8.1)
+
+A linha `REACAO` tem o mesmo formato, mas quatro campos mudaram de significado:
+
+- `giro`: passa a contar em rampa. Abaixo de 30° vale zero; de 60° para cima vale o máximo. Antes era um corte em 60°.
+- `olhou=true`: depois do giro, ele ficou de frente para a fonte. Já estar virado para lá por acaso não conta.
+- `fugiu=true`: acelerou ou começou a correr, e não foi na direção da fonte. `fugiu` e `investigou` não aparecem mais juntos.
+- `investigou=true`: mudou de rumo para a fonte. Quem já vinha andando para ela não investigou.
+
+`percepção confirmada pela reação` agora só aparece quando ele virou 45° ou mais e ficou olhando para a fonte.
+
+Linha nova, quando há teleporte, respawn ou volta de outra dimensão:
+
+```
+SALTO: teleporte, respawn ou portal; leitura cancelada e Rastro esquecido
+```
+
+A punição `indiferença: assombração avança 300 s` só conta eventos com `obs` de 0,70 ou mais.
+
 ## Exemplo de reconstrução
 ```
 HOSPEDE id=M017 criado ... motivoPosicao=RASTRO idadeRastro=62s       -> nasceu onde você estava 62 s antes

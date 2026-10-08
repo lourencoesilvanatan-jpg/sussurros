@@ -50,4 +50,9 @@ final class Rastro {
 	int tamanho() {
 		return this.pontos.size();
 	}
+
+	/** Depois de um teleporte ou respawn, os pontos antigos deixam de ser "por onde ele veio". */
+	void limpar() {
+		this.pontos.clear();
+	}
 }
