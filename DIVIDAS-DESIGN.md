@@ -23,3 +23,11 @@ Este arquivo registra comportamentos ou decisões de arquitetura que foram delib
 - Existe uma possível sobreposição conceitual entre `forcando` e `pedido.ehTeste()`.
 - Não unificar agora: primeiro mapear todos os usos e confirmar se representam realmente o mesmo estado.
 
+## Cenas (depois do passo 3)
+
+- As cinco cenas repetem a mesma máquina de estados (verificar, iniciar, conduzir, silêncio) e a mesma checagem de "nenhuma outra cena ativa". Unificar é mudança de estrutura, não movimento: fazer num passo próprio, com testes.
+- As classes de cena chamam 31 helpers que continuam no `Diretor` e por isso deixaram de ser `private`. Quando manifestação, rastro, som e geometria tiverem os seus módulos, as cenas passam a depender deles e a visibilidade pode fechar de novo.
+- Os nomes dos métodos foram mantidos (`CenaAlgoNoTunel.verificarCenaTunel`). Encurtar para `verificar`/`iniciar`/`conduzir` fica para depois.
+- `sortearQuebraRecente` mora em `CenaAlgoNoTunel` porque estava declarado na seção do túnel, mas também é usado pelo evento `SINAL` no subsolo. Mover para um lugar comum quando os acontecimentos forem extraídos.
+- O estado de cada cena é um enum em `EstadoJogador` (`EstadoJogador.CenaTunel`) com nome parecido com o da classe (`CenaAlgoNoTunel`). Decidir depois se o estado vai morar na classe da cena.
+
