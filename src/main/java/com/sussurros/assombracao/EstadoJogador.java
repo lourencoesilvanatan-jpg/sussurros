@@ -239,6 +239,12 @@ final class EstadoJogador {
 	long vigiaAteTick = -1;
 	boolean vigiaAtiva;
 
+	// --- Olho Sussurrante (0.8.1): usar muito não pode virar um botão de chamar a criatura ---
+	/** Momentos (em segundos) dos usos recentes do Olho sem criatura por perto. */
+	final ArrayDeque<Long> olhoUsos = new ArrayDeque<>();
+	/** Depois de o Olho chamar uma aparição, ele só pode chamar outra a partir daqui. */
+	long olhoRecargaAte = -1;
+
 	// --- Cache do ambiente (portas e tochas por perto) ---
 	long cacheTick = -100000;
 	double cacheX;
