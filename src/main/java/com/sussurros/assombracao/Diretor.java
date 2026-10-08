@@ -84,6 +84,9 @@ public final class Diretor {
 	/** Vulnerabilidade a partir da qual ele não espera o cronômetro: "o momento é agora". */
 	private static final int V_OPORTUNIDADE = 60;
 
+	/** Quantos eventos ele tenta no mesmo segundo quando o sorteado não cabe no mundo. */
+	private static final int MAX_TENTATIVAS_POR_SEGUNDO = 3;
+
 	/** Uma reação forte vale por este tempo mesmo que o estado mude no meio (segundos). */
 	private static final int MEMORIA_REACAO = 120;
 
@@ -726,6 +729,7 @@ public final class Diretor {
 	private static void decidir(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase,
 			boolean escuro, int inq, boolean calma, int v, long seg, long tick, RandomSource rnd) {
 		EstadoDiretor st = e.estado;
+		e.falhasAgora.clear();
 
 		// Piso: estar seguro reduz muito a atividade, mas nunca desliga o mod.
 		if (st != EstadoDiretor.RECUANDO && seg - e.ultimoEventoSeg >= PISO[fase] && !bloqueado(p, e, tick)) {
@@ -739,6 +743,9 @@ public final class Diretor {
 
 		if (st.intensidadeMax == 0) {
 			return;
+		}
+		if (seg < e.semLugarAte) {
+			return; // no último sorteio nada coube no mundo: dá um tempo antes de tentar de novo
 		}
 		if (e.proximoEvento < 0) {
 			e.proximoEvento = seg + 30 + rnd.nextInt(30);
@@ -780,6 +787,7 @@ public final class Diretor {
 			Depuracao.log(p, seg, "oportunidade: V=" + v + ", adiantou " + (e.proximoEvento - seg) + "s");
 		}
 
+		Modo modo = Modo.NORMAL;
 		if (ev == null) {
 			// Nenhum momento bom. Ele espera, até 2 minutos.
 			if (e.esperandoDesde < 0) {
@@ -790,6 +798,7 @@ public final class Diretor {
 			}
 			e.esperandoDesde = -1;
 			e.proximoEvento = seg + intervalo(fase, inq, m, e, rnd);
+			modo = Modo.FRACO;
 			ev = escolher(level, p, m, e, fase, escuro, inq, calma, v, Modo.FRACO, seg, rnd);
 			if (ev == null) {
 				Depuracao.log(p, seg, "o momento não veio; desistiu do ciclo");
@@ -798,9 +807,28 @@ public final class Diretor {
 			Depuracao.log(p, seg, "o momento não veio; evento fraco");
 		} else {
 			e.esperandoDesde = -1;
-			e.proximoEvento = Math.max(e.proximoEvento, seg + intervalo(fase, inq, m, e, rnd));
 		}
-		executar(level, p, m, e, ev, seg, tick);
+
+		// O sorteado pode não caber no mundo agora (sem chão livre, sem ponto do Rastro, sem orçamento).
+		// Antes isso queimava o ciclo, porque a agenda andava antes de saber se o evento rodou. Agora ele
+		// sorteia outro entre os que sobraram, e a agenda só anda quando algo de fato aconteceu.
+		for (int tentativa = 1; ev != null; tentativa++) {
+			if (executar(level, p, m, e, ev, seg, tick)) {
+				if (modo == Modo.NORMAL) {
+					e.proximoEvento = Math.max(e.proximoEvento, seg + intervalo(fase, inq, m, e, rnd));
+				}
+				e.falhasAgora.clear();
+				return;
+			}
+			e.falhasAgora.add(ev);
+			Depuracao.log(p, seg, "SELECAO falhou evento=" + ev + " tentativa=" + tentativa + "/" + MAX_TENTATIVAS_POR_SEGUNDO);
+			ev = tentativa < MAX_TENTATIVAS_POR_SEGUNDO
+					? escolher(level, p, m, e, fase, escuro, inq, calma, v, modo, seg, rnd)
+					: null;
+		}
+		e.falhasAgora.clear();
+		e.semLugarAte = seg + 15 + rnd.nextInt(16);
+		Depuracao.log(p, seg, "SELECAO sem lugar: nada coube agora; tenta de novo em " + (e.semLugarAte - seg) + "s");
 	}
 
 	/** As condições do mundo permitem esse evento agora? */
@@ -850,6 +878,9 @@ public final class Diretor {
 		for (Evento ev : Evento.values()) {
 			if (ev.faseMinima > fase || ev.intensidade > maxInt) {
 				continue;
+			}
+			if (e.falhasAgora.contains(ev)) {
+				continue; // já foi sorteado neste segundo e não coube no mundo
 			}
 			if (!ev.noSorteio && !(calma && ev == Evento.ESPERA)) {
 				continue;

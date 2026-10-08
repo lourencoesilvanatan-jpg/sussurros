@@ -341,3 +341,22 @@ ESTRUTURA descoberta=POSTO_VIGILIA pos=(x,y,z)
 
 ### Caderno
 O Caderno não revela coordenadas no log nem no HUD; os seus estágios são derivados de vestígios, estruturas e contramedidas já persistidas. `CADERNO_USOS` existe apenas para diagnóstico/progressão futura.
+
+## 0.8.1 — evento sorteado que não coube
+
+Antes, quando o evento sorteado não conseguia executar (sem chão livre, sem ponto do Rastro, sem orçamento), a linha `SELECAO` aparecia sem `EVENTO` depois e o ciclo era perdido. Agora o Diretor sorteia outro, até três por segundo:
+
+```
+SELECAO estado=ESCALANDO modo=NORMAL contexto=SUBSOLO V=73 ... escolhido=TRILHA_INTERROMPIDA intensidade=15
+SELECAO falhou evento=TRILHA_INTERROMPIDA tentativa=1/3
+SELECAO estado=ESCALANDO modo=NORMAL contexto=SUBSOLO V=73 ... escolhido=VESTIGIO intensidade=12
+EVENTO VESTIGIO (estado=ESCALANDO, obs=0.50, pressao=12)
+```
+
+Se nenhuma das três tentativas couber, ele espera de 15 a 30 s antes de tentar de novo, sem mexer na agenda:
+
+```
+SELECAO sem lugar: nada coube agora; tenta de novo em 22s
+```
+
+Para conferir: toda linha `SELECAO ... escolhido=` é seguida de `EVENTO` ou de `SELECAO falhou`.
