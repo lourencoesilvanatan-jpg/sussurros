@@ -90,6 +90,9 @@ public final class Diretor {
 	/** Obsessão necessária (0-100) para ele montar a sequência de ameaça (v0.4.2). */
 	private static final double OBSESSAO_AMEACA = 60;
 
+	/** Sem ponto do Rastro por perto, o lugar de uma ação antiga só serve de fonte de som até esta distância (blocos). */
+	static final double ALCANCE_ACAO_ANTIGA = 30;
+
 	private static final Map<UUID, EstadoJogador> ESTADOS = new HashMap<>();
 
 	// Telemetria (0.4.2a-test): contadores simples. NUNCA números aleatórios aqui (mudaria as decisões).
@@ -1753,9 +1756,11 @@ public final class Diretor {
 		if (porta == null) {
 			return null;
 		}
+		// A porta de sempre pode estar a até 24 blocos: o volume escala com a distância para a batida chegar.
+		float volume = volumePara(p, porta.getX() + 0.5, porta.getZ() + 0.5, 0.35F);
 		for (int i = 0; i < 3; i++) {
 			agendar(level, i * 9, () -> level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
-					SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, 0.35F, 1.4F));
+					SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, volume, 1.4F));
 		}
 		return porta;
 	}
@@ -1818,9 +1823,22 @@ public final class Diretor {
 			}
 			case SUBSOLO -> {
 				EstadoJogador.Acao acao = CenaAlgoNoTunel.sortearQuebraRecente(e, seg, rnd);
+				Vec3 ecoCurto = null;
 				if (acao != null && rnd.nextFloat() < 0.58F) {
 					Rastro.Ponto pt = pontoDoRastro(p, e, seg, 20, 300, 10, 28, true);
-					lugar = pt != null ? new Vec3(pt.x(), pt.y(), pt.z()) : new Vec3(acao.x(), acao.y(), acao.z());
+					if (pt != null) {
+						ecoCurto = new Vec3(pt.x(), pt.y(), pt.z());
+					} else {
+						// Sem ponto do Rastro, o lugar da quebra só serve se ainda estiver ao alcance do ouvido
+						// (um log real mostrou este som tocando a 236 blocos).
+						Vec3 daAcao = new Vec3(acao.x(), acao.y(), acao.z());
+						if (distancia(p, daAcao) <= ALCANCE_ACAO_ANTIGA) {
+							ecoCurto = daAcao;
+						}
+					}
+				}
+				if (ecoCurto != null) {
+					lugar = ecoCurto;
 					tipo = "ECO_CURTO_DA_ACAO";
 					float vol = volumePara(p, lugar.x, lugar.z, 0.55F);
 					level.playSound(null, lugar.x, lugar.y, lugar.z, acao.som(), SoundSource.HOSTILE, vol, 0.82F);
