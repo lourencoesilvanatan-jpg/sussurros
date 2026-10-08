@@ -2,7 +2,6 @@ package com.sussurros.assombracao;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -49,6 +48,7 @@ import com.sussurros.Sussurros;
 import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.assombracao.diretor.Agenda;
+import com.sussurros.assombracao.selecao.Seletor;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -766,7 +766,7 @@ public final class Diretor {
 		if (e.sequencia != null) {
 			Evento s = e.sequencia;
 			e.sequencia = null;
-			if (st.permiteCadeias() && s.faseMinima <= fase && v >= portao(s.intensidade)
+			if (st.permiteCadeias() && s.faseMinima <= fase && v >= Seletor.portao(s.intensidade)
 					&& podeAcontecer(level, p, m, e, s, escuro, inq, calma)) {
 				ev = s;
 			} else {
@@ -846,7 +846,8 @@ public final class Diretor {
 			case PISO -> 8;
 			case FRACO -> st.intensidadeMax > 0 ? Math.min(10, st.intensidadeMax) : 10;
 		};
-		boolean explorar = modo == Modo.NORMAL && rnd.nextDouble() < taxaExploracao(e);
+		boolean explorar = modo == Modo.NORMAL && rnd.nextDouble() < Seletor.taxaExploracao(
+				e.estado.exploracao, e.confiancasRecentes, e.estado == EstadoDiretor.ESCALANDO);
 
 		List<Evento> candidatos = new ArrayList<>();
 		List<Double> pesos = new ArrayList<>();
@@ -857,7 +858,7 @@ public final class Diretor {
 			if (!ev.noSorteio && !(calma && ev == Evento.ESPERA)) {
 				continue;
 			}
-			if (modo == Modo.NORMAL && v < portao(ev.intensidade)) {
+			if (modo == Modo.NORMAL && v < Seletor.portao(ev.intensidade)) {
 				continue;
 			}
 			if (!podeAcontecer(level, p, m, e, ev, escuro, inq, calma)) {
@@ -868,10 +869,10 @@ public final class Diretor {
 			if (!explorar) {
 				peso *= longo(m, ev) * longoCat(m, ev.categoria) * curto(e, ev) * curtoCat(e, ev.categoria);
 			}
-			peso *= antiRepeticao(e, ev);
+			peso *= Seletor.antiRepeticao(e.recentes, ev);
 			peso *= Perfil.multiplicador(m, ev);
 			peso *= ContextoMundo.multiplicador(e.contexto, ev);
-			peso *= aversaoSequencia(e, ev);
+			peso *= Seletor.aversaoSequencia(e.ultimoEvento, e.pares, ev);
 			if (st == EstadoDiretor.OBSERVANDO || st == EstadoDiretor.TESTANDO) {
 				peso *= e.interesse.getOrDefault(ev.categoria, 1.0);
 			}
@@ -910,12 +911,11 @@ public final class Diretor {
 					"alvoBase=%.1f bonusObsessao=%.1f bonusV=%.1f abatimento=%.1f alvoFinal=%.1f maisForte=%d",
 					alvoBase, bonusObsessao, bonusV, abatimento, alvoInt, maisForte);
 			for (int i = 0; i < candidatos.size(); i++) {
-				double z = (candidatos.get(i).intensidade - alvoInt) / 10.0;
-				pesos.set(i, pesos.get(i) * Math.max(0.15, Math.exp(-z * z)));
+				pesos.set(i, pesos.get(i) * Seletor.pesoIntensidade(candidatos.get(i).intensidade, alvoInt));
 			}
 		}
 
-		aplicarTeto(candidatos, pesos, 0.45);
+		Seletor.aplicarTeto(candidatos, pesos, 0.45);
 
 		double total = 0;
 		for (double w : pesos) {
@@ -930,91 +930,13 @@ public final class Diretor {
 			Depuracao.log(p, seg, sb.toString());
 		}
 		double sorteio = rnd.nextDouble() * total;
-		Evento escolhido = candidatos.get(candidatos.size() - 1);
-		for (int i = 0; i < candidatos.size(); i++) {
-			sorteio -= pesos.get(i);
-			if (sorteio < 0) {
-				escolhido = candidatos.get(i);
-				break;
-			}
-		}
+		int indiceEscolhido = Seletor.sortearIndice(pesos, sorteio);
+		Evento escolhido = candidatos.get(indiceEscolhido);
 		if (Depuracao.ativo) {
 			Depuracao.log(p, seg, String.format(Locale.ROOT, "SELECAO estado=%s modo=%s contexto=%s V=%d %s escolhido=%s intensidade=%d",
 					st, modo, e.contexto, v, alvoLog, escolhido, escolhido.intensidade));
 		}
 		return escolhido;
-	}
-
-	/** Nenhuma categoria pode ficar com mais de "limite" da probabilidade total. */
-	private static void aplicarTeto(List<Evento> candidatos, List<Double> pesos, double limite) {
-		for (int volta = 0; volta < 2; volta++) {
-			EnumMap<Evento.Categoria, Double> somas = new EnumMap<>(Evento.Categoria.class);
-			double total = 0;
-			for (int i = 0; i < candidatos.size(); i++) {
-				somas.merge(candidatos.get(i).categoria, pesos.get(i), Double::sum);
-				total += pesos.get(i);
-			}
-			if (somas.size() < 2 || total <= 0) {
-				return;
-			}
-			for (Map.Entry<Evento.Categoria, Double> en : somas.entrySet()) {
-				double s = en.getValue();
-				if (s / total > limite) {
-					double fator = limite * (total - s) / ((1 - limite) * s);
-					for (int i = 0; i < candidatos.size(); i++) {
-						if (candidatos.get(i).categoria == en.getKey()) {
-							pesos.set(i, pesos.get(i) * fator);
-						}
-					}
-					break;
-				}
-			}
-		}
-	}
-
-	private static double taxaExploracao(EstadoJogador e) {
-		double base = e.estado.exploracao;
-		if (e.confiancasRecentes.size() >= 3) {
-			double soma = 0;
-			for (double c : e.confiancasRecentes) {
-				soma += c;
-			}
-			double media = soma / e.confiancasRecentes.size();
-			if (media < 0.15) {
-				return Math.max(base, 0.25); // perdido: nada funciona, ele volta a procurar
-			}
-			if (media >= 0.4 && e.estado == EstadoDiretor.ESCALANDO) {
-				return 0.05; // seguro: achou o que funciona
-			}
-		}
-		return base;
-	}
-
-	private static double antiRepeticao(EstadoJogador e, Evento ev) {
-		double f = 1;
-		int i = 0;
-		for (Evento recente : e.recentes) {
-			if (recente == ev) {
-				f *= i == 0 ? 0.15 : (i == 1 ? 0.4 : 0.7);
-			}
-			i++;
-		}
-		return f;
-	}
-
-	/** Evita repetir a mesma "lógica": o mesmo tipo de medo seguido do mesmo tipo de medo. */
-	private static double aversaoSequencia(EstadoJogador e, Evento ev) {
-		if (e.ultimoEvento == null) {
-			return 1;
-		}
-		String par = e.ultimoEvento.categoria + ">" + ev.categoria;
-		int vezes = 0;
-		for (String s : e.pares) {
-			if (s.equals(par)) {
-				vezes++;
-			}
-		}
-		return Math.max(0.25, Math.pow(0.5, vezes));
 	}
 
 	// =====================================================================
@@ -1504,7 +1426,7 @@ public final class Diretor {
 			if (op.faseMinima > fase) {
 				continue;
 			}
-			double w = 100 * longo(m, op) * curto(e, op) * aversaoSequencia(e, op);
+			double w = 100 * longo(m, op) * curto(e, op) * Seletor.aversaoSequencia(e.ultimoEvento, e.pares, op);
 			lista.add(op);
 			pesos.add(w);
 			total += w;
