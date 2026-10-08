@@ -7,9 +7,12 @@ import java.util.Map;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 
@@ -53,5 +56,37 @@ public final class ModSons {
 		if (evento != null) {
 			level.playSound(null, x, y, z, evento, SoundSource.HOSTILE, volume, pitch);
 		}
+	}
+
+	/**
+	 * O mesmo som, mas só para um jogador: quem está ao lado não ouve a assombração do outro.
+	 * Como no envio normal do jogo, fora do alcance o pacote nem sai.
+	 */
+	public static void tocarPara(ServerPlayer p, double x, double y, double z, Som som, float volume, float pitch) {
+		SoundEvent evento = SONS.get(som);
+		if (evento == null) {
+			return;
+		}
+		double alcance = evento.getRange(volume);
+		if (p.distanceToSqr(x, y, z) > alcance * alcance) {
+			return;
+		}
+		// A semente vem do próprio jogador, não do mundo: assim não muda os sorteios do Diretor.
+		p.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(evento), SoundSource.HOSTILE,
+				x, y, z, volume, pitch, p.getRandom().nextLong()));
+	}
+
+	/** "Dentro da cabeça": o som fica preso ao próprio jogador, então não vem de lado nenhum. Só ele ouve. */
+	public static void tocarNaCabeca(ServerPlayer p, Som som, float volume, float pitch) {
+		SoundEvent evento = SONS.get(som);
+		if (evento != null) {
+			tocarNaCabeca(p, evento, volume, pitch);
+		}
+	}
+
+	/** Igual, para um som que não é do mod (a respiração do próprio jogo, por exemplo). */
+	public static void tocarNaCabeca(ServerPlayer p, SoundEvent evento, float volume, float pitch) {
+		p.connection.send(new ClientboundSoundEntityPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(evento), SoundSource.HOSTILE,
+				p, volume, pitch, p.getRandom().nextLong()));
 	}
 }

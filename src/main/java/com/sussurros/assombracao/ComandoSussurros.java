@@ -4,7 +4,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -25,6 +27,9 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
  *   /sussurros cena marco        começa a cena "Foi aqui" (teste: não aprende)
  *   /sussurros cena janela       começa a cena "Do outro lado do vidro" (teste: não aprende)
  *   /sussurros cena eco          toca um eco de ação do lugar onde você fez / do rastro (teste: não aprende)
+ *   /sussurros teste sussurro estereo|cabeca|folego|lado   experimento: som sem direção (ver ROTEIRO-DE-TESTE.md)
+ *   /sussurros teste miragem [apagar]                      experimento: bloco que só você vê
+ *   /sussurros teste sosia <jogador> [agachado|deitado]    experimento: manequim com a pele de um jogador
  *   /sussurros memoria           mostra o que o mod lembra sobre você (SPOILER)
  *   /sussurros esquecer          apaga tudo e recomeça do zero
  *   /sussurros debug [on|off]    grava as decisões do Diretor em sussurros-debug.log (SPOILER)
@@ -185,6 +190,46 @@ public final class ComandoSussurros {
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] Log desligado."), false);
 						return 1;
 					})));
+
+			// Experimentos do PLANO-MECANICAS.md: cada um responde a uma pergunta que só dá para ver jogando.
+			LiteralArgumentBuilder<CommandSourceStack> teste = Commands.literal("teste");
+			LiteralArgumentBuilder<CommandSourceStack> testeSussurro = Commands.literal("sussurro");
+			for (String modo : new String[] {"estereo", "cabeca", "folego", "lado"}) {
+				testeSussurro.then(Commands.literal(modo).executes(ctx -> {
+					String msg = Experimentos.sussurro(ctx.getSource().getPlayerOrException(), modo);
+					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+					return 1;
+				}));
+			}
+			teste.then(testeSussurro);
+			teste.then(Commands.literal("miragem")
+					.executes(ctx -> {
+						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), false);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					})
+					.then(Commands.literal("apagar").executes(ctx -> {
+						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), true);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					})));
+			RequiredArgumentBuilder<CommandSourceStack, String> testeSosia = Commands.argument("jogador", StringArgumentType.word())
+					.executes(ctx -> {
+						String msg = Experimentos.sosia(ctx.getSource().getPlayerOrException(),
+								StringArgumentType.getString(ctx, "jogador"), "standing");
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					});
+			for (String[] pose : new String[][] {{"agachado", "crouching"}, {"deitado", "sleeping"}}) {
+				testeSosia.then(Commands.literal(pose[0]).executes(ctx -> {
+					String msg = Experimentos.sosia(ctx.getSource().getPlayerOrException(),
+							StringArgumentType.getString(ctx, "jogador"), pose[1]);
+					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+					return 1;
+				}));
+			}
+			teste.then(Commands.literal("sosia").then(testeSosia));
+			raiz.then(teste);
 
 			raiz.then(Commands.literal("esquecer").executes(ctx -> {
 				ServerPlayer p = ctx.getSource().getPlayerOrException();
