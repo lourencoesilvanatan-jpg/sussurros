@@ -487,3 +487,13 @@ Na fase 3+, usar o Olho sem criatura e sem vestígio por perto pode chamar uma a
 Aparições chamadas pelo Olho não contam para a ousadia (`VEZES_VISTO`). Pressão e inquietação continuam subindo.
 
 Log: `OLHO chamou aparicao usosRecentes=N chance=0.NN` e `OLHO nada usosRecentes=N chance=0.NN recarga=sim|nao`.
+
+## v0.8.1 — silêncio de verdade e respiração no sussurro
+
+**Silêncio.** A trégua do Diretor sempre foi "sem eventos": a música e o ambiente do jogo continuavam. Agora o mundo pode emudecer de fato para um jogador: a música e o som ambiente dele são cortados, e os mobs em volta (24 blocos) ficam alguns segundos sem som de fundo. Nada muda no mundo nem fica salvo.
+
+- Quando o Hóspede nasce (fora da tela), isso acontece em 70% das vezes, por 25 s. O jogador costuma perceber o silêncio antes de virar e ver.
+- O evento `SINAL` (falso positivo) emudece em 30% das vezes, e os presságios em 20%, por 15 s. É o mesmo aviso, sem criatura: aviso que nunca falha vira dica.
+- Não há acorde de susto. O contraste é o silêncio.
+
+**Sussurro.** `SUSSURRO` e `ECO_CHAT` continuam sendo texto, mas agora vêm com uma respiração "dentro da cabeça": o som fica preso ao próprio jogador, então não tem direção, e só ele ouve. É provisório, até existirem as gravações de voz.

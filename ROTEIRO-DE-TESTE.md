@@ -85,3 +85,13 @@ Fazer num lugar escuro.
 | `/sussurros teste sosia <nome> deitado` | O mesmo, deitado | A pose funcionou? |
 
 Testar com o nome da sua conta de verdade e, se der, com o de um amigo. No jogo de teste o seu nome é `Jogador`, que não tem pele própria.
+
+## 7. Silêncio de verdade e respiração no sussurro
+
+Para ter música tocando: `/playsound minecraft:music.creative music @s`.
+
+- Com a música tocando e animais por perto, rodar `/sussurros evento presenca` três ou quatro vezes. Na maioria delas a música corta na hora e os animais ficam uns 25 s sem fazer som. No log, `SILENCIO_REAL motivo=APARICAO`.
+- `/sussurros evento sinal` algumas vezes: de vez em quando a música corta sem aparecer nada (`SILENCIO_REAL motivo=SINAL`).
+- `/sussurros evento sussurro`: o texto de sempre, agora com uma respiração sem direção.
+
+Perguntas: o corte da música dá medo ou parece defeito? A respiração junto do texto ajuda ou atrapalha?

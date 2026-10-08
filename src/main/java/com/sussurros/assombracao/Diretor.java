@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
@@ -24,6 +25,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -79,6 +81,13 @@ public final class Diretor {
 	/** Olho Sussurrante: por quantos segundos um uso conta como "recente", e a recarga depois de ele chamar uma aparição. */
 	private static final int OLHO_JANELA = 300;
 	private static final int OLHO_RECARGA = 300;
+
+	/**
+	 * Chance de o mundo emudecer quando ele aparece, e quando é só um sinal falso. Nenhuma das duas é 100%
+	 * ou 0% de propósito: aviso que nunca falha vira dica, e os jogadores aprendem a ler.
+	 */
+	private static final float CHANCE_SILENCIO_APARICAO = 0.7F;
+	private static final float CHANCE_SILENCIO_FALSO = 0.3F;
 
 	private static final double DECAIMENTO_CURTO = Math.exp(-1.0 / 1200.0); // tau = 20 min de jogo
 
@@ -1827,6 +1836,7 @@ public final class Diretor {
 		List<String> lista = new ArrayList<>(e.falas);
 		String fala = lista.get(rnd.nextInt(lista.size())).toLowerCase(Locale.ROOT);
 		p.sendOverlayMessage(Component.literal("..." + fala + "...").withStyle(s -> s.withColor(0x5A5A5A).withItalic(true)));
+		ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.4F, 0.78F + rnd.nextFloat() * 0.1F);
 		return true;
 	}
 
@@ -1846,6 +1856,26 @@ public final class Diretor {
 		int n = rnd.nextInt(limite);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.sussurro." + n, p.getName())
 				.withStyle(s -> s.withColor(0x5A5A5A).withItalic(true)));
+		// Enquanto não existem as gravações de voz, o sussurro vem com uma respiração "dentro da cabeça":
+		// sem direção e só para este jogador.
+		ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.5F, 0.82F + rnd.nextFloat() * 0.12F);
+	}
+
+	/**
+	 * Silêncio de verdade: corta a música e o som ambiente deste jogador e adia os sons de fundo dos mobs em
+	 * volta. Nada fica salvo no mundo. O contraste é o silêncio, não um acorde de susto.
+	 */
+	static void emudecer(ServerLevel level, ServerPlayer p, int segundos, String motivo) {
+		p.connection.send(new ClientboundStopSoundPacket(null, SoundSource.MUSIC));
+		p.connection.send(new ClientboundStopSoundPacket(null, SoundSource.AMBIENT));
+		int mobs = 0;
+		for (Mob mob : level.getEntitiesOfClass(Mob.class, p.getBoundingBox().inflate(24.0, 10.0, 24.0), Mob::isAlive)) {
+			// O contador sobe 1 por tick e o mob só "fala" quando ele passa de um sorteio de 0 a 999.
+			// Voltar o contador adia a fala, e ele não é salvo com o mob.
+			mob.ambientSoundTime = Math.min(mob.ambientSoundTime, -segundos * 20);
+			mobs++;
+		}
+		Depuracao.log(p, level.getGameTime() / 20, "SILENCIO_REAL motivo=" + motivo + " duracao=" + segundos + "s mobs=" + mobs);
 	}
 
 	/**
@@ -1938,6 +1968,10 @@ public final class Diretor {
 					volumePara(p, lugar.x, lugar.z, 0.45F), 0.92F);
 			}
 			default -> throw new IllegalStateException("Contexto desconhecido: " + e.contexto);
+		}
+		// O mesmo silêncio que anuncia uma aparição, de vez em quando sem aparição nenhuma.
+		if (rnd.nextFloat() < CHANCE_SILENCIO_FALSO) {
+			emudecer(level, p, 15, "SINAL");
 		}
 		double obs = limitar(1 - distancia(p, lugar) / 34.0, 0.25, 0.85);
 		Depuracao.log(p, seg, String.format(Locale.ROOT,
@@ -2216,6 +2250,10 @@ public final class Diretor {
 		h.definirId(novoIdManifestacao());
 		level.addFreshEntity(h);
 		e.criatura = h;
+		// Ele nasce fora da tela, e na maioria das vezes o mundo emudece antes de o jogador virar e ver.
+		if (level.getRandom().nextFloat() < CHANCE_SILENCIO_APARICAO) {
+			emudecer(level, p, 25, "APARICAO");
+		}
 		if (Depuracao.ativo) {
 			String motivo = pedido.nota().isEmpty() ? "NORMAL" : pedido.nota();
 			if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
