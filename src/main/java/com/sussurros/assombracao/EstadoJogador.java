@@ -141,6 +141,10 @@ final class EstadoJogador {
 	long proximoEvento = -1;
 	long ultimoEventoSeg = -1;
 	long esperandoDesde = -1;
+	/** Eventos sorteados neste segundo que não couberam no mundo: ficam fora do próximo sorteio do mesmo segundo. */
+	final EnumSet<Evento> falhasAgora = EnumSet.noneOf(Evento.class);
+	/** Depois de um segundo em que nada coube, ele só volta a tentar a partir daqui. */
+	long semLugarAte = -1;
 
 	// --- Ritmo e estados ---
 	double pressao;

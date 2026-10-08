@@ -144,12 +144,15 @@ final class Atmosfera {
 	}
 
 	static boolean podeEvento(ServerLevel level, ServerPlayer p, EstadoJogador e, Evento ev, long seg) {
+		// Custos e pontos do Rastro abaixo repetem o que a execução de cada evento exige. Quando a checagem
+		// era mais frouxa, o Diretor sorteava um evento que não conseguia acontecer.
 		return switch (ev) {
-			case ANIMAIS -> disponivel(e, Familia.ANIMAIS, 2.0, seg) && animaisProximos(level, p).size() >= 2;
+			case ANIMAIS -> disponivel(e, Familia.ANIMAIS, 2.2, seg) && animaisProximos(level, p).size() >= 2;
 			case LUZ_ERRADA -> disponivel(e, Familia.LUZ, 2.0, seg);
 			case OBJETO_FORA_LUGAR -> disponivel(e, Familia.OBJETO, 2.5, seg) && (e.rastro.tamanho() >= 5 || !e.portas.isEmpty());
 			case PASSAGEM, SINAL_DISTANTE -> disponivel(e, Familia.RUIDO, 1.5, seg);
-			case VESTIGIO, TRILHA_INTERROMPIDA -> disponivel(e, Familia.VESTIGIO, 1.8, seg) && e.rastro.tamanho() >= 4;
+			case VESTIGIO -> disponivel(e, Familia.VESTIGIO, 1.8, seg) && !rastroAoAlcance(p, e, seg, 8, 150, 5, 22).isEmpty();
+			case TRILHA_INTERROMPIDA -> disponivel(e, Familia.VESTIGIO, 2.0, seg) && rastroAoAlcance(p, e, seg, 8, 180, 5, 26).size() >= 3;
 			case RUIDO_RETORNO -> disponivel(e, Familia.RUIDO, 1.8, seg) && !e.acoes.isEmpty();
 			default -> true;
 		};
@@ -541,11 +544,7 @@ final class Atmosfera {
 	@Nullable
 	private static Resultado trilhaInterrompida(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd, boolean sutil) {
 		if (!disponivel(e, Familia.VESTIGIO, sutil ? 1.2 : 2.0, seg)) return null;
-		List<Rastro.Ponto> pts = e.rastro.comIdade(seg, 8, 180);
-		pts.removeIf(pt -> {
-			double d = Math.sqrt(distanciaSqr(p, pt.x(), pt.z()));
-			return d < 5 || d > 26;
-		});
+		List<Rastro.Ponto> pts = rastroAoAlcance(p, e, seg, 8, 180, 5, 26);
 		if (pts.size() < 3) return null;
 		int qtd = Math.min(5, 3 + rnd.nextInt(3));
 		int inicio = rnd.nextInt(Math.max(1, pts.size() - Math.min(qtd, pts.size()) + 1));
@@ -604,13 +603,20 @@ final class Atmosfera {
 
 	private static Rastro.@Nullable Ponto escolherRastro(ServerPlayer p, EstadoJogador e, long seg, int idadeMin, int idadeMax,
 			double distMin, double distMax, RandomSource rnd) {
+		List<Rastro.Ponto> lista = rastroAoAlcance(p, e, seg, idadeMin, idadeMax, distMin, distMax);
+		if (lista.isEmpty()) return null;
+		return lista.get(rnd.nextInt(lista.size()));
+	}
+
+	/** Pontos do Rastro com a idade (s) e a distância horizontal (blocos) pedidas, do mais antigo para o mais novo. */
+	private static List<Rastro.Ponto> rastroAoAlcance(ServerPlayer p, EstadoJogador e, long seg, int idadeMin, int idadeMax,
+			double distMin, double distMax) {
 		List<Rastro.Ponto> lista = e.rastro.comIdade(seg, idadeMin, idadeMax);
 		lista.removeIf(pt -> {
 			double d = Math.sqrt(distanciaSqr(p, pt.x(), pt.z()));
 			return d < distMin || d > distMax;
 		});
-		if (lista.isEmpty()) return null;
-		return lista.get(rnd.nextInt(lista.size()));
+		return lista;
 	}
 
 	private static boolean disponivel(EstadoJogador e, Familia familia, double custo, long seg) {
