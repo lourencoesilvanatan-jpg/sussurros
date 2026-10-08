@@ -190,6 +190,10 @@ public final class Diretor {
 			}
 		});
 
+		// Antes de o mundo ser salvo: desfaz o que era temporário (tocha apagada, marca no caminho).
+		// No SERVER_STOPPED já é tarde: o mundo já foi gravado com a alteração.
+		ServerLifecycleEvents.SERVER_STOPPING.register(AlteracoesTemporarias::restaurarTudo);
+
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
 			Agenda.limpar();
@@ -432,7 +436,7 @@ public final class Diretor {
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
-		verificarFioVigilia(level, p, e, seg, tick);
+		verificarFioVigilia(level, p, m, e, seg, tick);
 		double queda = e.estado == EstadoDiretor.RECUANDO ? 0.8 : 0.4;
 		e.pressao = Math.max(0, e.pressao - queda + (criaturaPresente ? 0.6 : 0));
 
@@ -1222,7 +1226,9 @@ public final class Diretor {
 						Depuracao.log(p, seg, String.format(Locale.ROOT, "ISCA ignorada aprendida=sim atendidas=%d chance=%.2f", atendidas, chanceIgnorar));
 					}
 				}
-				if (rnd.nextFloat() < 0.12F) {
+				// Só tenta a rota se a isca não foi atendida: sem o !ok, um segundo Hóspede nascia
+				// por cima do primeiro, que ficava órfão (vivo, mas fora de e.criatura).
+				if (!ok && rnd.nextFloat() < 0.12F) {
 					ok = invocarNaRota(level, p, m, e, ousadia, pedido);
 					if (ok) {
 						Depuracao.log(p, seg, "lugar: presença num caminho que você usa");
@@ -2026,17 +2032,13 @@ public final class Diretor {
 		if (!(original.is(Blocks.TORCH) || original.is(Blocks.WALL_TORCH))) {
 			return null;
 		}
-		level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+		// Pelas AlteracoesTemporarias (e não pela Agenda): assim a tocha volta mesmo se o mundo fechar antes.
+		AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, "TOCHA_PISCA",
+				() -> ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
+						ModSons.Som.ESTALO, 0.25F, 1.05F));
 		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.22F, 0.72F);
 		estado(p).tochas.remove(pos);
-		agendar(level, duracaoTicks, () -> {
-			if (level.getBlockState(pos).isAir()) {
-				level.setBlock(pos, original, 3);
-				ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
-						ModSons.Som.ESTALO, 0.25F, 1.05F);
-			}
-		});
 		return pos;
 	}
 
@@ -4011,7 +4013,7 @@ public final class Diretor {
 		return true;
 	}
 
-	private static void verificarFioVigilia(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, long tick) {
+	private static void verificarFioVigilia(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, long seg, long tick) {
 		if (!e.vigiaAtiva) {
 			return;
 		}
@@ -4035,9 +4037,9 @@ public final class Diretor {
 		ModSons.tocar(level, h.getX(), h.getY() + 1.0, h.getZ(), ModSons.Som.PANO, 0.34F, 0.84F);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.fio.rompeu")
 				.withStyle(s -> s.withColor(0xDDD6C2).withItalic(true)));
-		Memoria m = Memoria.de(p);
+		// Usa a Memoria do tick: uma cópia própria aqui era sobrescrita pelo salvar() no fim de segundo(),
+		// e o fio rompido nunca chegava ao disco (nem ao Caderno).
 		m.add(Memoria.FIOS_ROMPIDOS, 1);
-		m.salvar();
 		Vestigios.de(p).registrar(BlockPos.containing(e.vigiaX, e.vigiaY, e.vigiaZ), Vestigios.Tipo.VIGILIA, seg);
 		somarObsessao(e, 1.5);
 		Depuracao.log(p, seg, String.format(Locale.ROOT,
