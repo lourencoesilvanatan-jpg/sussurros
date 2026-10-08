@@ -24,6 +24,7 @@ public enum Evento {
 	SINAL(2, Categoria.MENTE, 8, true), // falso positivo contextual: algo acontece, mas nem sempre existe criatura
 	SEGUIDOR(2, Categoria.SOM, 16, true), // passos que percorrem pontos reais do Rastro sem garantir criatura
 	PEGADAS(2, Categoria.AMBIENTE, 15, true), // vestígios visuais curtos no caminho antigo, sem garantir criatura
+	VULTO(2, Categoria.VISAO, 9, true), // silhueta parada a dezenas de blocos, de dia; some um segundo depois de mirada
 	PORTA(2, Categoria.AMBIENTE, 14, true),
 	TOCHA(2, Categoria.AMBIENTE, 12, true),
 	BATIDA(2, Categoria.AMBIENTE, 16, true),

@@ -35,6 +35,7 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
@@ -88,6 +89,16 @@ public final class Diretor {
 	 */
 	private static final float CHANCE_SILENCIO_APARICAO = 0.7F;
 	private static final float CHANCE_SILENCIO_FALSO = 0.3F;
+
+	/**
+	 * Vulto distante: faixa de distância em blocos. O teto fica abaixo do limite em que o jogo ainda desenha
+	 * uma entidade deste tamanho com a "distância de entidades" em 100% (cerca de 94 blocos).
+	 */
+	private static final double VULTO_DIST_MIN = 48;
+	private static final double VULTO_DIST_MAX = 80;
+
+	/** De dia, a céu aberto e sem cobertura, ele não nasce mais perto do que isto (blocos). */
+	private static final double DIST_MIN_EXPOSTO = 25;
 
 	private static final double DECAIMENTO_CURTO = Math.exp(-1.0 / 1200.0); // tau = 20 min de jogo
 
@@ -874,6 +885,7 @@ public final class Diretor {
 					Atmosfera.podeEvento(level, p, e, ev, level.getGameTime() / 20);
 			case SEGUIDOR -> e.rastro.tamanho() >= 8;
 			case PEGADAS -> e.rastro.tamanho() >= 6;
+			case VULTO -> podeVulto(level, p);
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
@@ -1148,6 +1160,8 @@ public final class Diretor {
 					obs = pegadas.observabilidade() * barulho;
 				}
 			}
+			// A reação ao vulto só é lida quando (e se) ele for avistado: ver criaturaAvistada.
+			case VULTO -> ok = invocarVulto(level, p, e, pedido);
 			case PORTA -> {
 				BlockPos porta = mexerNaPorta(level, p);
 				ok = porta != null;
@@ -1472,6 +1486,7 @@ public final class Diretor {
 			case ECO -> new Evento[] {Evento.ECO, Evento.RUIDO_RETORNO, Evento.PASSO_UNICO, Evento.SEGUIDOR};
 			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA};
 			case PEGADAS -> new Evento[] {Evento.SINAL, Evento.PRESENCA};
+			case VULTO -> new Evento[] {Evento.SINAL_DISTANTE, Evento.PASSO_UNICO};
 			case PORTA -> new Evento[] {Evento.BATIDA, Evento.SUSSURRO, Evento.TOCHA};
 			case BATIDA -> new Evento[] {Evento.PORTA, Evento.PASSO_UNICO};
 			case TOCHA -> new Evento[] {Evento.ATRAS, Evento.SUSSURRO};
@@ -2251,7 +2266,9 @@ public final class Diretor {
 		level.addFreshEntity(h);
 		e.criatura = h;
 		// Ele nasce fora da tela, e na maioria das vezes o mundo emudece antes de o jogador virar e ver.
-		if (level.getRandom().nextFloat() < CHANCE_SILENCIO_APARICAO) {
+		// O vulto distante é mais frequente e mais discreto: emudece na metade das vezes das outras aparições.
+		float chanceSilencio = modo == HospedeEntity.Modo.VULTO ? CHANCE_SILENCIO_APARICAO / 2 : CHANCE_SILENCIO_APARICAO;
+		if (level.getRandom().nextFloat() < chanceSilencio) {
 			emudecer(level, p, 25, "APARICAO");
 		}
 		if (Depuracao.ativo) {
@@ -2361,12 +2378,82 @@ public final class Diretor {
 			if (chao == null || naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 				continue;
 			}
+			if (expostoDemais(level, p, chao, temCobertura(level, p, chao))) {
+				continue;
+			}
 			pedido = pedido.comNota(String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
 					Math.sqrt(distanciaSqr(p, pt.x(), pt.z()))));
 			criar(level, p, e, chao, modo, duracao, 1.0, distSumir, pedido);
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * De dia, a céu aberto, sem nada na frente e de perto, a aparição parece só um boneco parado
+	 * ("looks great behind the tree but too goofy out in the open"). Nesses lugares ele não nasce.
+	 */
+	static boolean expostoDemais(ServerLevel level, ServerPlayer p, BlockPos chao, boolean cobertura) {
+		if (cobertura || ehNoite(level)) {
+			return false;
+		}
+		if (distanciaSqr(p, chao.getX() + 0.5, chao.getZ() + 0.5) >= DIST_MIN_EXPOSTO * DIST_MIN_EXPOSTO) {
+			return false;
+		}
+		return luzEfetiva(level, chao.above()) >= 12 && level.canSeeSky(chao.above());
+	}
+
+	/** O vulto distante só faz sentido de dia e com o jogador ao ar livre: à noite uma silhueta tão longe não aparece. */
+	private static boolean podeVulto(ServerLevel level, ServerPlayer p) {
+		return !ehNoite(level) && level.canSeeSky(p.blockPosition().above());
+	}
+
+	/**
+	 * Vulto distante (0.8.1): uma silhueta parada a dezenas de blocos, de preferência num ponto alto, recortada
+	 * contra o céu. Nasce fora da tela, num lugar com linha livre até o jogador. Longe e curto assim, é negável;
+	 * por isso é fraco (intensidade 9) e pode acontecer mais vezes que as outras aparições.
+	 */
+	private static boolean invocarVulto(ServerLevel level, ServerPlayer p, EstadoJogador e, PedidoManifestacao pedido) {
+		RandomSource rnd = level.getRandom();
+		BlockPos melhor = null;
+		double melhorNota = Double.NEGATIVE_INFINITY;
+		double melhorDist = 0;
+		for (int i = 0; i < 24; i++) {
+			double ang = (rnd.nextBoolean() ? 1 : -1) * (60 + rnd.nextDouble() * 80);
+			double dist = VULTO_DIST_MIN + rnd.nextDouble() * (VULTO_DIST_MAX - VULTO_DIST_MIN);
+			Vec3 alvo = pontoRelativo(p, ang, dist);
+			BlockPos coluna = BlockPos.containing(alvo.x, p.getY(), alvo.z);
+			if (!level.isLoaded(coluna)) {
+				continue;
+			}
+			// O topo do terreno (sem contar folhas) em vez do nível do jogador: a essa distância o chão pode estar bem acima ou abaixo.
+			int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, coluna.getX(), coluna.getZ());
+			BlockPos chao = new BlockPos(coluna.getX(), y, coluna.getZ());
+			BlockPos baixo = chao.below();
+			if (!level.getBlockState(chao).isAir() || !level.getBlockState(chao.above()).isAir() || !level.getBlockState(chao.above(2)).isAir()
+					|| level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty() || !level.getFluidState(baixo).isEmpty()) {
+				continue;
+			}
+			if (naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+				continue;
+			}
+			// Tem de dar para vê-lo de onde o jogador está agora.
+			if (!Aparicao.linhaLivre(level, p.getEyePosition(), new Vec3(chao.getX() + 0.5, chao.getY() + 2.6, chao.getZ() + 0.5))) {
+				continue;
+			}
+			double nota = rnd.nextDouble() + Math.max(0.0, Math.min(2.0, (chao.getY() - p.getY()) / 6.0));
+			if (nota > melhorNota) {
+				melhorNota = nota;
+				melhor = chao;
+				melhorDist = dist;
+			}
+		}
+		if (melhor == null) {
+			return false;
+		}
+		pedido = pedido.comNota(String.format(Locale.ROOT, "VULTO dist=%.0f altura=%+d", melhorDist, melhor.getY() - p.getBlockY()));
+		criar(level, p, e, melhor, HospedeEntity.Modo.VULTO, 20 * (30 + rnd.nextInt(16)), 1.0, pedido);
+		return true;
 	}
 
 	/** Começo da espreita: num ponto do seu rastro ou logo fora da tela, longe o bastante para poder se aproximar. */
@@ -2944,6 +3031,14 @@ public final class Diretor {
 		}
 		boolean confronto = "FERIDO".equals(motivo) || "ENCARADO_DEMAIS".equals(motivo);
 		boolean percebida = criatura.foiAvistadoVisual();
+		if ("VULTO_MIRADO".equals(motivo)) {
+			// O vulto mirado some sem deixar cinza. Às vezes fica só uma marca que o Olho e o Sino acham depois:
+			// "eu vi alguma coisa" ganha uma prova tardia.
+			if (percebida && p.level().getRandom().nextFloat() < 0.25F) {
+				Vestigios.de(p).registrar(criatura.blockPosition(), Vestigios.Tipo.DESAPARECIMENTO, p.level().getGameTime() / 20);
+			}
+			return;
+		}
 		boolean qualificou = confronto || (percebida && ("VISTO_DEMAIS".equals(motivo)
 				|| "CHEGOU_PERTO".equals(motivo) || "TEMPO_ESGOTADO".equals(motivo)));
 		if (!qualificou) {
@@ -3259,7 +3354,7 @@ public final class Diretor {
 
 	private static boolean usaCriatura(Evento ev) {
 		return ev == Evento.PRESENCA || ev == Evento.ATRAS || ev == Evento.TUMULO || ev == Evento.CACA
-				|| ev == Evento.ESPERA || ev == Evento.ESPREITA;
+				|| ev == Evento.ESPERA || ev == Evento.ESPREITA || ev == Evento.VULTO;
 	}
 
 	/** Por que este evento não pode ser forçado aqui? null = pode. */
@@ -3273,6 +3368,8 @@ public final class Diretor {
 					? "precisa que você tenha caminhado o suficiente para formar um Rastro." : null;
 			case PEGADAS -> e.rastro.tamanho() < 6
 					? "precisa que você tenha caminhado um pouco para formar um Rastro." : null;
+			case VULTO -> !podeVulto(level, p)
+					? "precisa ser de dia e você precisa estar ao ar livre (à noite uma silhueta tão longe não aparece)." : null;
 			case PORTA, BATIDA -> !temPorta(level, p)
 					? "precisa de uma porta de madeira a até 11 blocos (ou a porta de sempre a até 24), FORA da sua visão." : null;
 			case TOCHA -> acharTochaAtras(level, p, 12) == null

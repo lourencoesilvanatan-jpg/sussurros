@@ -98,6 +98,9 @@ final class Aparicao {
 			if (cfg.exigirCobertura() && !cobertura) {
 				continue;
 			}
+			if (Diretor.expostoDemais(level, p, chao, cobertura)) {
+				continue;
+			}
 
 			int luz = luzEfetiva(level, chao.above());
 			boolean penumbra = luz >= 2 && luz <= 8;
@@ -215,7 +218,7 @@ final class Aparicao {
 		return false;
 	}
 
-	private static boolean linhaLivre(ServerLevel level, Vec3 de, Vec3 para) {
+	static boolean linhaLivre(ServerLevel level, Vec3 de, Vec3 para) {
 		double dx = para.x - de.x;
 		double dy = para.y - de.y;
 		double dz = para.z - de.z;

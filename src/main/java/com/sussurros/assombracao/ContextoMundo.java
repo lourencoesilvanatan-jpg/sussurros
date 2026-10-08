@@ -156,6 +156,7 @@ final class ContextoMundo {
 				case PASSAGEM -> 1.20;
 				case OBJETO_FORA_LUGAR -> 0.85;
 				case PRESENCA -> 1.85;
+				case VULTO -> 1.80;
 				case SINAL -> 1.50;
 				case PEGADAS -> 0.90;
 				case SEGUIDOR -> 1.35;
@@ -171,6 +172,7 @@ final class ContextoMundo {
 				case SINAL_DISTANTE -> 1.50;
 				case VESTIGIO -> 1.35;
 				case PRESENCA -> 1.65;
+				case VULTO -> 0.70; // entre árvores quase nunca há linha livre até tão longe
 				case SEGUIDOR -> 1.70;
 				case SINAL -> 1.35;
 				case PEGADAS -> 1.75;

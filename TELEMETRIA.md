@@ -391,3 +391,13 @@ SILENCIO_REAL motivo=PRESSAGIO duracao=15s mobs=3
 ```
 
 `APARICAO` sai logo depois de `HOSPEDE ... criado`, em cerca de 70% das vezes. `SINAL` e `PRESSAGIO` são os avisos falsos: o mesmo silêncio, sem criatura.
+
+## 0.8.1 — vulto distante
+
+```
+HOSPEDE id=M004 criado origem=DIRETOR evento=VULTO modo=VULTO pos=(...) dist=63.2 motivoPosicao=VULTO dist=63 altura=+7 cena=-
+HOSPEDE id=M004 PERCEBEU n=1 dist=61.0 ang=38 luz=15 modo=VULTO
+HOSPEDE id=M004 sumiu motivo=VULTO_MIRADO viveu=6s dist=60.4 vezesNaTela=1 reposicoes=0
+```
+
+Motivos de sumiço do vulto: `VULTO_MIRADO` (o jogador mirou nele por um segundo), `CHEGOU_PERTO` (chegou a 36 blocos) e `TEMPO_ESGOTADO` (ninguém olhou). `altura` é quantos blocos ele está acima ou abaixo do jogador.

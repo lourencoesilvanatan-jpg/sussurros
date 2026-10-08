@@ -497,3 +497,18 @@ Log: `OLHO chamou aparicao usosRecentes=N chance=0.NN` e `OLHO nada usosRecentes
 - Não há acorde de susto. O contraste é o silêncio.
 
 **Sussurro.** `SUSSURRO` e `ECO_CHAT` continuam sendo texto, mas agora vêm com uma respiração "dentro da cabeça": o som fica preso ao próprio jogador, então não tem direção, e só ele ouve. É provisório, até existirem as gravações de voz.
+
+## v0.8.1 — vulto distante e regras de lugar
+
+**Vulto distante (evento `VULTO`, fase 2, categoria VISÃO, intensidade 9).** Uma silhueta parada a 48–80 blocos, só de dia e com o jogador ao ar livre. Nasce fora da tela, num lugar com linha livre até o jogador, de preferência num ponto alto (recortada contra o céu). É a "silhueta no alto do morro" da página 3 do diário.
+
+- Some sem som um segundo depois de o jogador mirar nela (cerca de 25° do centro da tela).
+- Some também se o jogador chegar a 36 blocos, ou sozinha depois de 30 a 45 s sem ninguém olhar.
+- Não conta para a ousadia. Ao ser mirada, em 25% das vezes deixa uma marca que o Olho e o Sino conseguem apontar depois. Se o jogador chega perto, vale a regra normal da Cinza Pálida.
+- Longe e curta assim, é negável. Por isso é fraca e pode acontecer mais vezes que as outras aparições (é o que o From The Fog faz).
+- É a primeira aparição antes da fase 3. A revelação de perto continua guardada para a fase 3.
+
+**Regras de lugar.**
+
+- De dia, a céu aberto e sem nada na frente, o Hóspede não nasce a menos de 25 blocos do jogador. De perto e inteiro, ele parece só um boneco parado.
+- O som de sumiço (quando o jogador chega perto ou encara demais) agora toca só em metade das vezes. Som que sempre confirma o sumiço tira a dúvida de "eu vi mesmo?".
