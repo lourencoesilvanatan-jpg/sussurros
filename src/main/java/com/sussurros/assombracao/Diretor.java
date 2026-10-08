@@ -99,9 +99,6 @@ public final class Diretor {
 	private record SinalResultado(Vec3 fonte, double observabilidade) {
 	}
 
-	private record JanelaAlvo(BlockPos vidro, BlockPos chao) {
-	}
-
 	private enum Modo {
 		NORMAL, PISO, FRACO
 	}
@@ -478,13 +475,13 @@ public final class Diretor {
 		CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
 		CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
 		CenaFoiAqui.verificarCenaMarco(p, e, fase, calma, seg, rnd);
-		verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
+		CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 			// Cena "Ele voltou com você": nada aleatório atrapalha a composição.
 			conduzirCenaCasa(level, p, m, e, fase, seg, tick, rnd);
 		} else if (e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA) {
 			// Cena "Do outro lado do vidro": presença doméstica que usa uma janela real da casa.
-			conduzirCenaJanela(level, p, e, seg, tick, rnd);
+			CenaDoOutroLadoDoVidro.conduzirCenaJanela(level, p, e, seg, tick, rnd);
 		} else if (e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA) {
 			// Cena "Algo no túnel": eco da própria ação, ruído contextual e presença no rastro.
 			CenaAlgoNoTunel.conduzirCenaTunel(level, p, m, e, fase, seg, tick, rnd);
@@ -1480,7 +1477,7 @@ public final class Diretor {
 		return Math.sqrt(dx * dx + dy * dy + dz * dz);
 	}
 
-	private static void atualizarCacheAmbiente(ServerLevel level, ServerPlayer p, EstadoJogador e) {
+	static void atualizarCacheAmbiente(ServerLevel level, ServerPlayer p, EstadoJogador e) {
 		long agora = level.getGameTime();
 		double dx = p.getX() - e.cacheX;
 		double dz = p.getZ() - e.cacheZ;
@@ -2416,7 +2413,7 @@ public final class Diretor {
 	}
 
 	/** Há algo sólido logo à frente dele, entre ele e você (tronco, parede, pilar)? */
-	private static boolean temCobertura(ServerLevel level, ServerPlayer p, BlockPos chao) {
+	static boolean temCobertura(ServerLevel level, ServerPlayer p, BlockPos chao) {
 		double dx = p.getX() - (chao.getX() + 0.5);
 		double dz = p.getZ() - (chao.getZ() + 0.5);
 		double d = Math.sqrt(dx * dx + dz * dz);
@@ -2435,7 +2432,7 @@ public final class Diretor {
 	}
 
 	/** O ponto (na altura do corpo dele) está dentro da sua tela agora? */
-	private static boolean naTela(ServerPlayer p, BlockPos chao) {
+	static boolean naTela(ServerPlayer p, BlockPos chao) {
 		// Mais largo que PERCEBEU: evita materialização na borda do FOV real em 16:9/FOV 70.
 		return pontoNaFrente(p, new Vec3(chao.getX() + 0.5, chao.getY() + 1.5, chao.getZ() + 0.5), HospedeEntity.CONE_TELA_SEGURA);
 	}
@@ -2583,203 +2580,6 @@ public final class Diretor {
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s FIM motivo=%s obsessao=%.0f->%.0f",
 				e.ameacaId, motivo, antes, e.obsessao));
 		marcarSilencioDoRecuo(p, e, seg, "POS_AMEACA", e.ameacaId);
-	}
-
-	// =====================================================================
-	// Cena "Do outro lado do vidro" (0.5.0-alpha4)
-	// =====================================================================
-
-	private static void verificarCenaJanela(ServerLevel level, ServerPlayer p, EstadoJogador e, int fase,
-			boolean noite, boolean calma, long seg, RandomSource rnd) {
-		if (e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA
-				|| e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA
-				|| e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA
-				|| e.cenaCampo != EstadoJogador.CenaCampo.NENHUMA
-				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA) {
-			return;
-		}
-		if (fase < 3 || !noite || calma || e.contexto != ContextoMundo.Tipo.CASA
-				|| e.estado == EstadoDiretor.AMEACANDO || e.estado == EstadoDiretor.RECUANDO
-				|| seg < e.cenaJanelaLiberadaEm) {
-			return;
-		}
-		if (e.criatura != null && !e.criatura.isRemoved()) {
-			return;
-		}
-		if (e.contextoDesde < 0 || seg - e.contextoDesde < 45) {
-			return;
-		}
-		atualizarCacheAmbiente(level, p, e);
-		if (e.janelas.isEmpty()) {
-			return;
-		}
-		double chance = e.cenasJanelaFeitas == 0 ? 0.48 : 0.18;
-		// Só uma oportunidade a cada ~2 minutos em casa, mesmo antes do cooldown longo.
-		if ((seg - e.contextoDesde) % 120 != 0 || rnd.nextDouble() >= chance) {
-			return;
-		}
-		iniciarCenaJanela(p, e, seg, rnd, false);
-	}
-
-	private static void iniciarCenaJanela(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd, boolean teste) {
-		e.cenaJanela = EstadoJogador.CenaJanela.ESPERA;
-		e.cenaJanelaDesde = seg;
-		e.cenaJanelaAte = seg + 7 + rnd.nextInt(10);
-		e.cenaJanelaVistaDesde = -1;
-		e.cenaJanelaTeste = teste;
-		e.cenaJanelaPos = null;
-		e.cenaJanelaId = novoIdCena();
-		if (!teste) {
-			e.cenasJanelaFeitas++;
-			e.cenaJanelaLiberadaEm = seg + 1500;
-		}
-		Depuracao.log(p, seg, String.format(Locale.ROOT,
-				"CENA id=%s tipo=DO_OUTRO_LADO_DO_VIDRO INICIO teste=%s espera=%ds",
-				e.cenaJanelaId, teste ? "sim" : "nao", e.cenaJanelaAte - seg));
-	}
-
-	private static void conduzirCenaJanela(ServerLevel level, ServerPlayer p, EstadoJogador e,
-			long seg, long tick, RandomSource rnd) {
-		HospedeEntity h = e.criatura;
-		boolean presente = h != null && !h.isRemoved();
-		switch (e.cenaJanela) {
-			case NENHUMA -> {
-			}
-			case ESPERA -> {
-				if (seg >= e.cenaJanelaAte) {
-					e.cenaJanela = EstadoJogador.CenaJanela.APARICAO;
-					e.cenaJanelaDesde = seg;
-				}
-			}
-			case APARICAO -> {
-				if (presente || bloqueado(p, e, tick)) {
-					return;
-				}
-				JanelaAlvo alvo = acharJanelaCena(level, p, e);
-				if (alvo == null) {
-					if (seg - e.cenaJanelaDesde > 25) {
-						Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=APARICAO SEM_JANELA_VALIDA");
-						silencioCenaJanela(p, e, seg, rnd);
-					}
-					return;
-				}
-				PedidoManifestacao pedido = e.cenaJanelaTeste ? PedidoManifestacao.deComando(Evento.PRESENCA) : PedidoManifestacao.doDiretor(Evento.PRESENCA);
-				pedido = pedido.comNota("JANELA vidro=" + alvo.vidro());
-				
-					criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6, pedido);
-
-				e.cenaJanelaPos = alvo.vidro();
-				e.cenaJanela = EstadoJogador.CenaJanela.OBSERVANDO;
-				e.cenaJanelaDesde = seg;
-				e.cenaJanelaAte = seg + 6 + rnd.nextInt(5);
-				Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=APARICAO manifestacao="
-						+ manifestacaoAtiva(e) + " vidro=" + alvo.vidro() + " anuncio=nenhum");
-			}
-			case OBSERVANDO -> {
-				if (!presente) {
-					silencioCenaJanela(p, e, seg, rnd);
-					return;
-				}
-				boolean naDirecao = pontoNaFrente(p, h.position().add(0, 1.4, 0), HospedeEntity.CONE_PERCEBEU);
-				if (naDirecao) {
-					if (e.cenaJanelaVistaDesde < 0) {
-						e.cenaJanelaVistaDesde = seg;
-						Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=VIU_ATRAVES_DO_VIDRO manifestacao=" + h.getIdManifestacao());
-					}
-					if (seg - e.cenaJanelaVistaDesde >= 2) {
-						if (!e.cenaJanelaTeste) {
-							Vestigios.de(p).registrar(h.blockPosition(), Vestigios.Tipo.DESAPARECIMENTO, seg);
-						}
-						h.sumir(level, false, "JANELA_VISTA");
-						silencioCenaJanela(p, e, seg, rnd);
-					}
-					return;
-				}
-				e.cenaJanelaVistaDesde = -1;
-				if (seg >= e.cenaJanelaAte) {
-					e.cenaJanela = EstadoJogador.CenaJanela.TOQUE;
-					e.cenaJanelaAte = seg + 5 + rnd.nextInt(5);
-					BlockPos vidro = e.cenaJanelaPos;
-					if (vidro != null) {
-						ModSons.tocar(level, vidro.getX() + 0.5, vidro.getY() + 0.6, vidro.getZ() + 0.5,
-								ModSons.Som.ESTALO, 0.50F, 0.58F);
-						level.sendParticles(ParticleTypes.ASH, vidro.getX() + 0.5, vidro.getY() + 0.5, vidro.getZ() + 0.5,
-								3, 0.12, 0.22, 0.12, 0.001);
-					}
-					Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " etapa=TOQUE_NO_VIDRO");
-				}
-			}
-			case TOQUE -> {
-				if (!presente) {
-					silencioCenaJanela(p, e, seg, rnd);
-					return;
-				}
-				if (pontoNaFrente(p, h.position().add(0, 1.4, 0), HospedeEntity.CONE_PERCEBEU)) {
-					if (!e.cenaJanelaTeste) {
-						Vestigios.de(p).registrar(h.blockPosition(), Vestigios.Tipo.DESAPARECIMENTO, seg);
-					}
-					h.sumir(level, false, "JANELA_VISTA");
-					silencioCenaJanela(p, e, seg, rnd);
-				} else if (seg >= e.cenaJanelaAte) {
-					h.sumir(level, false, "JANELA_NAO_VISTA");
-					silencioCenaJanela(p, e, seg, rnd);
-				}
-			}
-			case SILENCIO -> {
-				if (seg >= e.cenaJanelaAte) {
-					e.cenaJanela = EstadoJogador.CenaJanela.NENHUMA;
-					e.cenaJanelaPos = null;
-					e.cenaJanelaVistaDesde = -1;
-					e.ultimoEventoSeg = seg;
-					e.proximoEvento = Math.max(e.proximoEvento, seg + 30);
-					Depuracao.log(p, seg, "SILENCIO fim motivo=FIM_CENA_JANELA cena=" + e.cenaJanelaId);
-					Depuracao.log(p, seg, "CENA id=" + e.cenaJanelaId + " FIM");
-				}
-			}
-		}
-	}
-
-	@Nullable
-	private static JanelaAlvo acharJanelaCena(ServerLevel level, ServerPlayer p, EstadoJogador e) {
-		atualizarCacheAmbiente(level, p, e);
-		JanelaAlvo melhor = null;
-		double melhorNota = -999;
-		int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-		for (BlockPos vidro : e.janelas) {
-			Vec3 centroVidro = Vec3.atCenterOf(vidro);
-			double dv = distancia(p, centroVidro);
-			if (dv < 3 || dv > 16 || pontoNaFrente(p, centroVidro, HospedeEntity.CONE_TELA_SEGURA)) {
-				continue;
-			}
-			for (int[] d : dirs) {
-				double x = vidro.getX() + 0.5 + d[0] * 1.35;
-				double z = vidro.getZ() + 0.5 + d[1] * 1.35;
-				BlockPos chao = acharChao(level, x, vidro.getY(), z);
-				if (chao == null || Math.abs(chao.getY() - vidro.getY()) > 3 || naTela(p, chao)
-						|| emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
-					continue;
-				}
-				double dc = Math.sqrt(distanciaSqr(p, chao.getX() + 0.5, chao.getZ() + 0.5));
-				if (dc < dv - 0.3 || dc > 19) {
-					continue; // prefere o lado de fora: um pouco mais longe do jogador que o vidro
-				}
-				double nota = (temCobertura(level, p, chao) ? 1.0 : 0.0) - Math.abs(dc - 8.0) * 0.04;
-				if (nota > melhorNota) {
-					melhorNota = nota;
-					melhor = new JanelaAlvo(vidro, chao);
-				}
-			}
-		}
-		return melhor;
-	}
-
-	private static void silencioCenaJanela(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd) {
-		e.cenaJanela = EstadoJogador.CenaJanela.SILENCIO;
-		e.cenaJanelaAte = seg + 55 + rnd.nextInt(46);
-		Depuracao.log(p, seg, String.format(Locale.ROOT,
-				"CENA id=%s etapa=SILENCIO duracao=%ds silencioAte=%ds", e.cenaJanelaId,
-				e.cenaJanelaAte - seg, e.cenaJanelaAte));
-		logSilencioInicio(p, seg, "FIM_CENA_JANELA", e.cenaJanelaId, e.cenaJanelaAte - seg);
 	}
 
 	// =====================================================================
@@ -3762,7 +3562,7 @@ public final class Diretor {
 		if (e.janelas.isEmpty()) {
 			return "Não encontrei vidro por perto. Faça o teste dentro de uma casa com janela.";
 		}
-		iniciarCenaJanela(p, e, seg, p.level().getRandom(), true);
+		CenaDoOutroLadoDoVidro.iniciarCenaJanela(p, e, seg, p.level().getRandom(), true);
 		return "Cena \"Do outro lado do vidro\" iniciada (teste: não aprende). Fique dentro de uma casa com janela e jogue normalmente.";
 	}
 
@@ -3839,7 +3639,7 @@ public final class Diretor {
 		return "-";
 	}
 
-	private static String manifestacaoAtiva(EstadoJogador e) {
+	static String manifestacaoAtiva(EstadoJogador e) {
 		HospedeEntity h = e.criatura;
 		return h != null && !h.isRemoved() ? h.getIdManifestacao() : "-";
 	}
@@ -3936,7 +3736,7 @@ public final class Diretor {
 		return dx * dx + dz * dz > 80 * 80;
 	}
 
-	private static double distanciaSqr(ServerPlayer p, double x, double z) {
+	static double distanciaSqr(ServerPlayer p, double x, double z) {
 		double dx = p.getX() - x;
 		double dz = p.getZ() - z;
 		return dx * dx + dz * dz;
@@ -4007,7 +3807,7 @@ public final class Diretor {
 
 	/** Procura um chão firme com 3 blocos de ar em cima (a criatura é alta). */
 	@Nullable
-	private static BlockPos acharChao(ServerLevel level, double x, double yBase, double z) {
+	static BlockPos acharChao(ServerLevel level, double x, double yBase, double z) {
 		for (int dy = 6; dy >= -12; dy--) {
 			BlockPos pos = BlockPos.containing(x, yBase + dy, z);
 			BlockPos baixo = pos.below();
