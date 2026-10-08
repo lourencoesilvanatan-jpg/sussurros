@@ -76,6 +76,10 @@ public final class Diretor {
 	/** Piso: depois de tanto tempo sem nada, algo bem fraco acontece (segurança nunca desliga o mod). */
 	private static final int[] PISO = {0, 420, 420, 480, 480};
 
+	/** Olho Sussurrante: por quantos segundos um uso conta como "recente", e a recarga depois de ele chamar uma aparição. */
+	private static final int OLHO_JANELA = 300;
+	private static final int OLHO_RECARGA = 300;
+
 	private static final double DECAIMENTO_CURTO = Math.exp(-1.0 / 1200.0); // tau = 20 min de jogo
 
 	/** Confiança mínima de uma reação para o Diretor concluir "isso funciona" e escalar (0.4: 0,5). */
@@ -2777,7 +2781,11 @@ public final class Diretor {
 			e.proximoEvento = seg + 20 + p.level().getRandom().nextInt(26);
 		}
 		Memoria m = Memoria.de(p);
-		m.add(Memoria.VEZES_VISTO, 1);
+		// Só as aparições que o Diretor montou deixam ele mais ousado. As chamadas pelo Olho não contam:
+		// senão usar o Olho em sequência virava um jeito de aumentar a ousadia.
+		if (criatura.getOrigem() == HospedeEntity.Origem.DIRETOR) {
+			m.add(Memoria.VEZES_VISTO, 1);
+		}
 		m.add(Memoria.INQUIETACAO, 15);
 		m.limitar(Memoria.INQUIETACAO, 0, Memoria.MAX_INQUIETACAO);
 		m.salvar();
@@ -3069,10 +3077,22 @@ public final class Diretor {
 					.withStyle(s -> s.withColor(0xB01818)));
 		} else {
 			long agora = level.getGameTime() / 20;
+			// Usar o Olho em sequência não pode virar um botão de chamar a criatura (um log real mostrou três
+			// aparições em dois minutos). A chance cai pela metade a cada uso recente, e depois de chamar
+			// uma aparição ele fica um tempo sem poder chamar outra.
+			while (!e.olhoUsos.isEmpty() && agora - e.olhoUsos.peekFirst() > OLHO_JANELA) {
+				e.olhoUsos.removeFirst();
+			}
+			int usosRecentes = e.olhoUsos.size();
+			e.olhoUsos.addLast(agora);
+			float chance = 0.4F / (1 << Math.min(usosRecentes, 4));
+			boolean emRecarga = agora < e.olhoRecargaAte;
 			Vestigios.Marca marca = Vestigios.de(p).maisPerto(p.getX(), p.getY(), p.getZ(), 48, agora);
 			if (marca != null) {
 				revelarVestigio(level, p, marca, agora);
-			} else if (m.get(Memoria.FASE) >= 3 && level.getRandom().nextFloat() < 0.4F) {
+			} else if (m.get(Memoria.FASE) >= 3 && !emRecarga && level.getRandom().nextFloat() < chance) {
+			e.olhoRecargaAte = agora + OLHO_RECARGA;
+			Depuracao.log(p, agora, String.format(Locale.ROOT, "OLHO chamou aparicao usosRecentes=%d chance=%.2f", usosRecentes, chance));
 			// Você olhou. Ele sentiu.
 			p.sendOverlayMessage(Component.translatable("message.sussurros.olho.atencao").withStyle(s -> s.withColor(0xB01818).withItalic(true)));
 			agendar(level, 60 + level.getRandom().nextInt(80), () -> {
@@ -3085,6 +3105,10 @@ public final class Diretor {
 				}
 			});
 			} else {
+				if (m.get(Memoria.FASE) >= 3) {
+					Depuracao.log(p, agora, String.format(Locale.ROOT, "OLHO nada usosRecentes=%d chance=%.2f recarga=%s",
+							usosRecentes, chance, emRecarga ? "sim" : "nao"));
+				}
 				p.sendOverlayMessage(Component.translatable("message.sussurros.olho.nada").withStyle(s -> s.withColor(0x5A5A5A).withItalic(true)));
 			}
 		}

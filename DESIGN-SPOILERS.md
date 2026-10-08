@@ -476,3 +476,14 @@ Estados internos da busca: `ULTIMA_POSICAO`, `INVESTIGANDO`, `PROCURANDO`, `DESI
 A criatura continua sendo uma `PathfinderMob` e usa a `Navigation` vanilla para pathfinding. Não foi adicionada SmartBrainLib.
 
 O log de debug pode registrar `BUSCA id=...` com transições, confiança e pontos visitados.
+
+## v0.8.1 — o Olho deixa de ser botão
+
+Na fase 3+, usar o Olho sem criatura e sem vestígio por perto pode chamar uma aparição. Isso continua, com dois freios:
+
+- a chance começa em 40% e cai pela metade a cada uso nos últimos 5 minutos;
+- depois de chamar uma aparição, o Olho fica 5 minutos sem poder chamar outra.
+
+Aparições chamadas pelo Olho não contam para a ousadia (`VEZES_VISTO`). Pressão e inquietação continuam subindo.
+
+Log: `OLHO chamou aparicao usosRecentes=N chance=0.NN` e `OLHO nada usosRecentes=N chance=0.NN recarga=sim|nao`.
