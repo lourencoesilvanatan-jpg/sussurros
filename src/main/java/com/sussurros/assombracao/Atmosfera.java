@@ -252,7 +252,7 @@ final class Atmosfera {
 				Vec3 pt = pontoRelativo(p, 100 + rnd.nextDouble() * 160, 9 + rnd.nextInt(10));
 				ModSons.tocar(level, pt.x, p.getY() + 0.5, pt.z,
 						rnd.nextBoolean() ? ModSons.Som.MADEIRA : ModSons.Som.ESTALO,
-						Diretor.volumePara(p, pt.x, pt.z, 0.36F), 0.88F);
+						Diretor.volumePara(p, pt.x, pt.y, pt.z, 0.36F), 0.88F);
 				yield gastar(e, Familia.RUIDO, 1.0, seg, rnd, 120, 240);
 			}
 		};
@@ -471,8 +471,8 @@ final class Atmosfera {
 		if (porta == null) return false;
 		Vec3 fonte = Vec3.atCenterOf(porta);
 		// Volume abaixo de 1 só alcança 16 blocos e já chega quase mudo perto disso: escala com a distância.
-		float volumePorta = Diretor.volumePara(p, fonte.x, fonte.z, 0.75F);
-		float volumeEstalo = Diretor.volumePara(p, fonte.x, fonte.z, 0.38F);
+		float volumePorta = Diretor.volumePara(p, fonte.x, fonte.y, fonte.z, 0.75F);
+		float volumeEstalo = Diretor.volumePara(p, fonte.x, fonte.y, fonte.z, 0.38F);
 		level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
 				rnd.nextBoolean() ? SoundEvents.WOODEN_DOOR_OPEN : SoundEvents.WOODEN_DOOR_CLOSE,
 				SoundSource.BLOCKS, volumePorta, 0.88F);
@@ -491,7 +491,7 @@ final class Atmosfera {
 		for (int i = 0; i < 4; i++) {
 			int n = i;
 			Vec3 pt = pontoRelativo(p, (110 - n * 35) * lado, 10 + n * 2);
-			float volume = Diretor.volumePara(p, pt.x, pt.z, 0.38F);
+			float volume = Diretor.volumePara(p, pt.x, pt.y, pt.z, 0.38F);
 			Agenda.agendar(level, i * (7 + rnd.nextInt(5)), () -> ModSons.tocar(level, pt.x, p.getY(), pt.z,
 					n % 2 == 0 ? ModSons.Som.PANO : ModSons.Som.ESTALO, volume, 0.88F));
 		}
@@ -523,7 +523,7 @@ final class Atmosfera {
 				: pontoRelativo(p, 100 + rnd.nextDouble() * 160, 24 + rnd.nextInt(17)).add(0, 0.7, 0);
 		// O ponto fica a 18-42 blocos: sem escalar o volume, o servidor nem chega a enviar o som (alcance de 16).
 		ModSons.tocar(level, v.x, v.y, v.z, rnd.nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.PANO,
-				Diretor.volumePara(p, v.x, v.z, sutil ? 0.32F : 0.45F), 0.86F + rnd.nextFloat() * 0.10F);
+				Diretor.volumePara(p, v.x, v.y, v.z, sutil ? 0.32F : 0.45F), 0.86F + rnd.nextFloat() * 0.10F);
 		if (!gastar(e, Familia.RUIDO, sutil ? 0.8 : 1.5, seg, rnd, 150, 330)) return null;
 		Depuracao.log(p, seg, "SINAL_DISTANTE pos=" + pos(v) + " dist=" + String.format(Locale.ROOT, "%.1f", distancia(p, v)) + " semCriatura=sim");
 		return new Resultado(v, 0.35, "SINAL_DISTANTE");
@@ -539,7 +539,7 @@ final class Atmosfera {
 		// Sem ponto do Rastro, o lugar da ação antiga só serve se ainda estiver ao alcance do ouvido.
 		if (pt == null && distancia(p, v) > Diretor.ALCANCE_ACAO_ANTIGA) return null;
 		level.playSound(null, v.x, v.y, v.z, acao.som(), SoundSource.HOSTILE,
-				Diretor.volumePara(p, v.x, v.z, sutil ? 0.34F : 0.52F), 0.80F);
+				Diretor.volumePara(p, v.x, v.y, v.z, sutil ? 0.34F : 0.52F), 0.80F);
 		if (!gastar(e, Familia.RUIDO, sutil ? 1.0 : 1.8, seg, rnd, 210, 420)) return null;
 		Depuracao.log(p, seg, "RUIDO_RETORNO origemAcao=" + acao.tipo() + " idade=" + (seg - acao.seg()) + "s pos=" + pos(v));
 		return new Resultado(v, 0.55, "RUIDO_RETORNO");
