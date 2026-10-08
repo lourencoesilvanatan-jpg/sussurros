@@ -53,7 +53,8 @@ public class HospedeEntity extends PathfinderMob {
 		OBSERVAR,  // fica parado, olhando. Some quando é visto por tempo demais.
 		ESPREITAR, // quando você tira os olhos dele, muda de lugar (mais perto, outro lado, fica, ou some)
 		ESPERAR,   // fica na borda da luz da vela, esperando ela apagar.
-		CACAR      // procura pela última posição conhecida e só se aproxima quando não está vendo.
+		CACAR,     // procura pela última posição conhecida e só se aproxima quando não está vendo.
+		VULTO      // parado a dezenas de blocos. Some um segundo depois de você mirar nele, ou se você chegar perto.
 	}
 
 	/** Quem criou esta criatura. Fica gravado nela (0.4.1 guardava no jogador e confundia aparições). */
@@ -68,6 +69,10 @@ public class HospedeEntity extends PathfinderMob {
 	public static final double CONE_PERCEBEU = 0.70;
 	public static final double CONE_TELA_SEGURA = 0.57;
 	public static final double CONE_ENCAROU = 0.965;
+
+	/** Vulto distante: cone em que o jogador está "mirando" nele (~25° do centro) e a distância em que deixa de ser um vulto. */
+	public static final double CONE_MIROU = 0.90;
+	public static final double DIST_SUMIR_VULTO = 36.0;
 
 	@Nullable
 	private ServerPlayer alvo;
@@ -324,6 +329,28 @@ public class HospedeEntity extends PathfinderMob {
 			case ESPREITAR -> this.tickEspreitar(level, percebido, encarado, distSqr);
 			case ESPERAR -> this.tickEsperar(level, encarado, distSqr);
 			case CACAR -> this.tickCacar(level, percebido, encarado, distSqr);
+			case VULTO -> this.tickVulto(level, distSqr);
+		}
+	}
+
+	/**
+	 * Vulto distante: longe e curto, para ser negável ("eu vi alguma coisa?"). Some sem som um segundo depois
+	 * de o jogador mirar nele, e some antes de dar para ver de perto. Não conta para a ousadia.
+	 */
+	private void tickVulto(ServerLevel level, double distSqr) {
+		this.ficarParadoOlhando();
+
+		if (distSqr < DIST_SUMIR_VULTO * DIST_SUMIR_VULTO) {
+			this.sumir(level, false, "CHEGOU_PERTO");
+			return;
+		}
+
+		if (Diretor.estaVendo(this.alvo, this, CONE_MIROU)) {
+			if (++this.vistoTicks > 20) {
+				this.sumir(level, false, "VULTO_MIRADO");
+			}
+		} else {
+			this.vistoTicks = Math.max(0, this.vistoTicks - 1);
 		}
 	}
 
@@ -508,8 +535,9 @@ public class HospedeEntity extends PathfinderMob {
 				ModSons.tocar(level, this.getX(), this.getY() + 1.0, this.getZ(), ModSons.Som.GRAVE, 0.45F, 1.05F);
 			} else if ("ZONA_CALMA".equals(motivo)) {
 				ModSons.tocar(level, this.getX(), this.getY() + 1.0, this.getZ(), ModSons.Som.PANO, 0.30F, 0.95F);
-			} else if ("CHEGOU_PERTO".equals(motivo) || "VISTO_DEMAIS".equals(motivo)
-					|| "ENCARADO_DEMAIS".equals(motivo)) {
+			} else if (("CHEGOU_PERTO".equals(motivo) || "VISTO_DEMAIS".equals(motivo)
+					|| "ENCARADO_DEMAIS".equals(motivo)) && this.random.nextBoolean()) {
+				// Só em metade das vezes: som que sempre confirma o sumiço tira a dúvida de "eu vi mesmo?".
 				ModSons.tocar(level, this.getX(), this.getY() + 1.4, this.getZ(), ModSons.Som.PANO, 0.18F, 0.82F);
 			}
 		}

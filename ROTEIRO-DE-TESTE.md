@@ -95,3 +95,14 @@ Para ter música tocando: `/playsound minecraft:music.creative music @s`.
 - `/sussurros evento sussurro`: o texto de sempre, agora com uma respiração sem direção.
 
 Perguntas: o corte da música dá medo ou parece defeito? A respiração junto do texto ajuda ou atrapalha?
+
+## 8. Vulto distante e regras de lugar
+
+De dia, ao ar livre, num lugar com vista (campo, praia, alto de um morro):
+
+- `/sussurros evento vulto`, e depois girar a câmera devagar até achar a silhueta, a 50–80 blocos. Ela some um segundo depois de você mirar nela.
+- Repetir e, em vez de mirar, andar na direção dela: some quando você chega a uns 36 blocos.
+- No log: `evento=VULTO modo=VULTO` e `sumiu motivo=VULTO_MIRADO` ou `CHEGOU_PERTO`.
+- `/sussurros evento presenca` de dia em campo aberto, várias vezes: ele não aparece mais a menos de 25 blocos sem algo na frente (tronco, parede).
+
+Perguntas: dá para ver a silhueta a essa distância? Ela some rápido ou devagar demais? Sumir de um quadro para o outro incomoda de longe? Se a sua "distância de entidades" (opções de vídeo) estiver abaixo de 100%, o vulto pode nem ser desenhado: anotar o valor.
