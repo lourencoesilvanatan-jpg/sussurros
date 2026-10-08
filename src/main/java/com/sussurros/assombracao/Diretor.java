@@ -90,6 +90,9 @@ public final class Diretor {
 	/** Uma reação forte vale por este tempo mesmo que o estado mude no meio (segundos). */
 	private static final int MEMORIA_REACAO = 120;
 
+	/** Só conta como "ele ignorou" um evento com pelo menos esta chance de ter sido percebido. */
+	private static final double OBS_INDIFERENCA = 0.7;
+
 	/** Obsessão necessária (0-100) para ele montar a sequência de ameaça (v0.4.2). */
 	private static final double OBSESSAO_AMEACA = 60;
 
@@ -238,7 +241,9 @@ public final class Diretor {
 		if (tick % 5 == 0) {
 			for (ServerPlayer jogador : level.getPlayers(j -> !j.isSpectator())) {
 				EstadoJogador e = estado(jogador);
-				e.leitura.amostrar(jogador, tick);
+				if (e.leitura.amostrar(jogador, tick)) {
+					aoSaltar(jogador, e, tick / 20);
+				}
 				if (e.leitura.pronta(tick)) {
 					concluirLeitura(level, jogador, e, tick / 20);
 				}
@@ -256,6 +261,16 @@ public final class Diretor {
 				Sussurros.LOGGER.error("Erro no Diretor", ex);
 			}
 		}
+	}
+
+	/**
+	 * Teleporte, respawn ou volta de outra dimensão. A leitura em andamento já foi cancelada pela própria
+	 * Leitura; aqui ele esquece o caminho, que deixou de descrever "por onde você veio".
+	 */
+	private static void aoSaltar(ServerPlayer p, EstadoJogador e, long seg) {
+		e.rastro.limpar();
+		e.temUltimo = false;
+		Depuracao.log(p, seg, "SALTO: teleporte, respawn ou portal; leitura cancelada e Rastro esquecido");
 	}
 
 	private static void segundo(ServerLevel level, ServerPlayer p, long seg, long tick) {
@@ -1370,7 +1385,11 @@ public final class Diretor {
 			m.set(Memoria.SEM_REACAO, 0);
 			somarObsessao(e, 2.0 * c); // funcionou: ele quer mais
 		} else if (c < 0.15 && o >= 0.5) {
-			m.add(Memoria.SEM_REACAO, 1);
+			// Para a punição por indiferença só vale o que quase certamente foi percebido. Um log real mostrou
+			// ela disparando por cinza no chão e passos baixos no meio da mineração.
+			if (o >= OBS_INDIFERENCA) {
+				m.add(Memoria.SEM_REACAO, 1);
+			}
 			somarObsessao(e, 1.5); // ignorado: isso o fixa ainda mais em você
 			// Indiferença não resolve: a assombração avança, em silêncio.
 			if (m.get(Memoria.SEM_REACAO) >= 6 && fase >= 2) {
