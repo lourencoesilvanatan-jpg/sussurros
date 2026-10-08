@@ -424,3 +424,35 @@ O critério de corte é "isso assusta o dono e os amigos?", não "isso é legal"
 | Etapa 5 | 0.8.2 (alterações reversíveis) e 0.11 (mundo reativo) |
 | Etapa 7 | Não está no roadmap |
 | Etapa 8 | Não está no roadmap; atende a "poder decidir não fazer nada" da 0.8.2 |
+
+---
+
+## Situação em 08/10/2026
+
+O que já está na `main` (PRs #2 a #16), com o que o dono achou depois de jogar:
+
+| Etapa | Situação |
+|---|---|
+| 0. Destravar o git | Feita |
+| 1. Ouvir e ver de verdade | Feita (#6 a #9). O dono gostou dos sons |
+| 3. Aparições "vi coisa" | Em parte: vulto distante, regras de lugar e sumiço rápido (#12, #13). O dono aprovou: "tem como perceber algo piscando, e é justamente isso que eu queria" |
+| 4. Som que perturba | Em parte: silêncio de verdade e respiração no sussurro (#11), volume pela distância real (#14) |
+| 5. Miragens | Em parte: sistema de miragem e as luzes (#16) |
+| 2, 6, 7, 8 | Não começadas |
+
+**O que os experimentos responderam**
+
+- Tocha falsa: ilumina, e some ao clicar nela.
+- Tocha escondida por miragem: a luz some junto.
+- Som preso ao jogador e arquivo estéreo: os dois soam no meio, sem lado. Qualquer um serve para o sussurro com voz.
+- Sósia em pé: aparece, sem rótulo visível. As poses agachado e deitado ficaram sem resposta.
+
+**Próximos passos, em ordem**
+
+1. **Luz no fim dentro de caverna.** O dono não conseguiu fazer a cena acontecer numa caverna. A busca do lugar sorteia ângulos para os lados e para trás, e num túnel só o eixo do túnel tem chão. Procurar o lugar nos pontos do Rastro.
+2. **Trocar por miragem as tochas que ainda somem de verdade** (a que pisca, as apagadas ao acordar e as da caça). Como a luz some junto, o efeito é o mesmo e o mundo deixa de ser tocado. Resolve o item 3.10 da análise.
+3. **Sussurro com voz.** A técnica está resolvida; falta o dono gravar as frases (decisão 3).
+4. **Som e criatura só para o alvo** (3d e 4a). `ModSons.tocarPara` já existe; falta trocar as chamadas.
+5. **Etapa 2**, a parte do cliente: sumir aos poucos, campo de visão real, relance.
+
+As sete decisões do dono, mais acima, continuam sem resposta.
