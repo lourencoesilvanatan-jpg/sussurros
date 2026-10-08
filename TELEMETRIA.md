@@ -401,3 +401,25 @@ HOSPEDE id=M004 sumiu motivo=VULTO_MIRADO viveu=6s dist=60.4 vezesNaTela=1 repos
 ```
 
 Motivos de sumiço do vulto: `VULTO_MIRADO` (o jogador mirou nele por um segundo), `CHEGOU_PERTO` (chegou a 36 blocos) e `TEMPO_ESGOTADO` (ninguém olhou). `altura` é quantos blocos ele está acima ou abaixo do jogador.
+
+## 0.8.1 — sumiço rápido e avistamento
+
+Motivos novos de sumiço:
+
+| Motivo | Quando |
+|---|---|
+| `VULTO_MIRADO` | o vulto entrou no miolo da tela (30° do centro) |
+| `VULTO_VISTO` | o vulto ficou 0,5 a 0,8 s na borda da tela |
+| `VULTO_DESVIOU` | o vulto foi visto e saiu da tela |
+| `SUMIU_NO_DESVIO` | presença com ousadia menor que 4: foi olhada direto e o jogador desviou |
+
+Para conferir o pedido "não dar tempo de focar": entre `PERCEBEU` e `sumiu` de um vulto ou de uma presença com ousadia baixa deve passar, no máximo, um segundo.
+
+Linhas novas:
+
+```
+avistamento encarado: conta como reação (c 0.00 -> 0.35)
+OLHO usado fase=1 tempo=742 (+90)
+```
+
+A linha de cada minuto ganhou `tempo=NNN` (segundos de assombração acumulados), logo depois de `fase=`. As fases começam em 600, 1800, 3300 e 5400. Usar o Olho soma 90, ler uma página soma 60 e a punição por indiferença soma 300.

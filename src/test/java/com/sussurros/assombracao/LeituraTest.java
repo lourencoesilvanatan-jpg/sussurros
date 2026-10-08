@@ -158,6 +158,20 @@ class LeituraTest {
 	}
 
 	@Test
+	void quemJaCorriaEPassaAPularNaoFugiu() {
+		// Log de 08/10, 4089 s: PASSOS, "vel 5.1->6.7", fugiu=true daFonte=true, c=0.52, e o Diretor escalou.
+		// Ele já corria; só começou a correr pulando.
+		Jogador j = new Jogador().andar(12, 5.6, 0, 1, 0, true);
+		j.evento(j.x, j.z - 4);
+		j.andar(12, 7.2, 0, 1, 0, true);
+
+		Leitura.Resultado r = j.leitura.avaliar();
+
+		assertFalse(r.fugiu(), r.sinais());
+		assertEquals(0.0, r.confianca(), 1.0E-9);
+	}
+
+	@Test
 	void pararDeRepenteContaComoCongelar() {
 		Jogador j = new Jogador().andar(12, 4.0, 0, 1, 0, false);
 		j.evento(j.x + 10, j.z);
