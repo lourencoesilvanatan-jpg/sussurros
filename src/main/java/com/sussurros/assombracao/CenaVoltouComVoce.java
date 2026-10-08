@@ -224,7 +224,7 @@ final class CenaVoltouComVoce {
 			piso = level.getBlockState(chao.below());
 		}
 		SoundEvent passo = piso.getSoundType().getStepSound();
-		float volume = Diretor.volumePara(p, lugar.x, lugar.z, 0.8F);
+		float volume = Diretor.volumePara(p, lugar.x, lugar.y, lugar.z, 0.8F);
 		int n = 2 + rnd.nextInt(2);
 		for (int i = 0; i < n; i++) {
 			Diretor.agendar(level, i * (9 + rnd.nextInt(4)), () ->

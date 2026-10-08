@@ -123,7 +123,7 @@ final class CenaFoiAqui {
 					default -> ModSons.Som.RESPIRACAO;
 				};
 				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som,
-						Diretor.volumePara(p, lugar.x, lugar.z, 0.48F), 0.80F + rnd.nextFloat() * 0.12F);
+						Diretor.volumePara(p, lugar.x, lugar.y, lugar.z, 0.48F), 0.80F + rnd.nextFloat() * 0.12F);
 				Depuracao.log(p, seg, String.format(Locale.ROOT,
 						"CENA id=%s etapa=ECO memoriaDoLugar=sim som=%s motivoPosicao=%s pos=%s dist=%.1f",
 						e.cenaMarcoId, som, motivoLugar, Diretor.pos(lugar.x, lugar.y, lugar.z), Diretor.distancia(p, lugar)));

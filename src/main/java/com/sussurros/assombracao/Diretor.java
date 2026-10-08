@@ -1667,7 +1667,7 @@ public final class Diretor {
 				if (estado.isAir()) {
 					estado = level.getBlockState(chao.below());
 				}
-				float volume = volumePara(p, pt.x(), pt.z(), 0.34F + n * 0.03F);
+				float volume = volumePara(p, pt.x(), pt.y(), pt.z(), 0.34F + n * 0.03F);
 				level.playSound(null, pt.x(), pt.y(), pt.z(), estado.getSoundType().getStepSound(),
 						SoundSource.HOSTILE, volume, 0.76F + n * 0.025F);
 			});
@@ -1723,7 +1723,7 @@ public final class Diretor {
 						st = level.getBlockState(chao.below());
 					}
 					level.playSound(null, pt.x(), pt.y(), pt.z(), st.getSoundType().getStepSound(),
-							SoundSource.HOSTILE, volumePara(p, pt.x(), pt.z(), 0.18F), 0.67F + n * 0.025F);
+							SoundSource.HOSTILE, volumePara(p, pt.x(), pt.y(), pt.z(), 0.18F), 0.67F + n * 0.025F);
 				}
 			});
 		}
@@ -1763,7 +1763,7 @@ public final class Diretor {
 		}
 		double y = lugarFixo != null ? lugarFixo.y : p.getY() - 3 + rnd.nextInt(4);
 		// Volume acima de 1 aumenta o ALCANCE (16 blocos x volume), não a altura do som.
-		float volume = volumePara(p, lugar.x, lugar.z, 0.9F);
+		float volume = volumePara(p, lugar.x, lugar.y, lugar.z, 0.9F);
 		if (porta) {
 			level.playSound(null, lugar.x, y, lugar.z, SoundEvents.WOODEN_DOOR_OPEN, SoundSource.BLOCKS, volume, 0.95F);
 			agendar(level, 18 + rnd.nextInt(14), () ->
@@ -1848,7 +1848,7 @@ public final class Diretor {
 			return null;
 		}
 		// A porta de sempre pode estar a até 24 blocos: o volume escala com a distância para a batida chegar.
-		float volume = volumePara(p, porta.getX() + 0.5, porta.getZ() + 0.5, 0.35F);
+		float volume = volumePara(p, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5, 0.35F);
 		for (int i = 0; i < 3; i++) {
 			agendar(level, i * 9, () -> level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
 					SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, volume, 1.4F));
@@ -1919,7 +1919,7 @@ public final class Diretor {
 				if (porta != null && rnd.nextFloat() < 0.72F) {
 					lugar = Vec3.atCenterOf(porta);
 					tipo = "PORTA_SEM_MOVER";
-					float vol = volumePara(p, lugar.x, lugar.z, 0.55F);
+					float vol = volumePara(p, lugar.x, lugar.y, lugar.z, 0.55F);
 					ModSons.tocar(level, lugar.x, lugar.y, lugar.z, ModSons.Som.MADEIRA, vol, 0.88F);
 					if (rnd.nextFloat() < 0.28F) {
 						agendar(level, 16 + rnd.nextInt(18), () -> ModSons.tocar(level, lugar.x, lugar.y, lugar.z,
@@ -1930,7 +1930,7 @@ public final class Diretor {
 					tipo = "RESPIRACAO_DA_CASA";
 					ModSons.tocar(level, lugar.x, p.getY() + 1.0, lugar.z,
 						rnd.nextBoolean() ? ModSons.Som.RESPIRACAO : ModSons.Som.PANO,
-						volumePara(p, lugar.x, lugar.z, 0.45F), 0.9F);
+						volumePara(p, lugar.x, lugar.y, lugar.z, 0.45F), 0.9F);
 				}
 			}
 			case SUBSOLO -> {
@@ -1952,14 +1952,14 @@ public final class Diretor {
 				if (ecoCurto != null) {
 					lugar = ecoCurto;
 					tipo = "ECO_CURTO_DA_ACAO";
-					float vol = volumePara(p, lugar.x, lugar.z, 0.55F);
+					float vol = volumePara(p, lugar.x, lugar.y, lugar.z, 0.55F);
 					level.playSound(null, lugar.x, lugar.y, lugar.z, acao.som(), SoundSource.HOSTILE, vol, 0.82F);
 				} else {
 					lugar = pontoRelativo(p, 130 + rnd.nextDouble() * 100, 12 + rnd.nextInt(12));
 					tipo = "COISA_NO_TUNEL";
 					ModSons.tocar(level, lugar.x, p.getY(), lugar.z,
 						rnd.nextBoolean() ? ModSons.Som.ARRASTO : ModSons.Som.MADEIRA,
-						volumePara(p, lugar.x, lugar.z, 0.6F), 0.84F);
+						volumePara(p, lugar.x, lugar.y, lugar.z, 0.6F), 0.84F);
 				}
 			}
 			case ABERTO -> {
@@ -1973,7 +1973,7 @@ public final class Diretor {
 				}
 				ModSons.Som som = rnd.nextFloat() < 0.18F ? ModSons.Som.RESPIRACAO
 						: (rnd.nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.PANO);
-				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.z, 0.5F), 0.9F);
+				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.5F), 0.9F);
 			}
 			case FLORESTA -> {
 				Rastro.Ponto pt = pontoDoRastro(p, e, seg, 12, 220, 10, 30, true);
@@ -1985,7 +1985,7 @@ public final class Diretor {
 					tipo = "GALHO_FORA_DA_VISAO";
 				}
 				ModSons.Som som = rnd.nextFloat() < 0.55F ? ModSons.Som.ESTALO : ModSons.Som.PANO;
-				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.z, 0.46F),
+				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.46F),
 						0.86F + rnd.nextFloat() * 0.10F);
 			}
 			case OUTRO -> {
@@ -1993,7 +1993,7 @@ public final class Diretor {
 				tipo = "RUIDO_SEM_FONTE";
 				ModSons.tocar(level, lugar.x, p.getY() + 0.8, lugar.z,
 					rnd.nextBoolean() ? ModSons.Som.PANO : ModSons.Som.ESTALO,
-					volumePara(p, lugar.x, lugar.z, 0.45F), 0.92F);
+					volumePara(p, lugar.x, lugar.y, lugar.z, 0.45F), 0.92F);
 			}
 			default -> throw new IllegalStateException("Contexto desconhecido: " + e.contexto);
 		}
@@ -2598,7 +2598,7 @@ public final class Diretor {
 		double novaDist = Math.sqrt(h.distanceToSqr(p));
 		if (rnd.nextFloat() < 0.3F) {
 			// Às vezes o deslocamento faz barulho. Baixinho, vindo exatamente de onde ele foi parar.
-			float vol = volumePara(p, h.getX(), h.getZ(), 0.5F);
+			float vol = volumePara(p, h.getX(), h.getY(), h.getZ(), 0.5F);
 			if (rnd.nextBoolean()) {
 				BlockState piso = level.getBlockState(melhor.below());
 				level.playSound(null, h.getX(), h.getY(), h.getZ(), piso.getSoundType().getStepSound(), SoundSource.HOSTILE, vol, 0.7F);
@@ -2664,9 +2664,17 @@ public final class Diretor {
 		return distanciaSqr(p, chao.getX() + 0.5, chao.getZ() + 0.5) < 20 * 20 || luzEfetiva(level, chao.above()) >= 4;
 	}
 
-	/** Volume acima de 1 só aumenta o alcance do som (16 blocos x volume). Garante que ele chegue até você. */
-	static float volumePara(ServerPlayer p, double x, double z, float base) {
-		double d = Math.sqrt(distanciaSqr(p, x, z));
+	/**
+	 * Volume acima de 1 só aumenta o alcance do som (16 blocos x volume). Garante que ele chegue até você.
+	 * Usa a distância de verdade, com a altura. Numa caverna a fonte pode estar "perto" no mapa e 20 blocos
+	 * abaixo; com a distância só horizontal o som saía sem alcance para chegar (num log real, um eco a 36 blocos
+	 * saiu com alcance de 32).
+	 */
+	static float volumePara(ServerPlayer p, double x, double y, double z, float base) {
+		double dx = p.getX() - x;
+		double dy = p.getY() - y;
+		double dz = p.getZ() - z;
+		double d = Math.sqrt(dx * dx + dy * dy + dz * dz);
 		return (float) Math.max(base, (d + 4) / 16.0);
 	}
 
@@ -2681,7 +2689,7 @@ public final class Diretor {
 		RandomSource rnd = level.getRandom();
 		long seg = level.getGameTime() / 20;
 		float r = rnd.nextFloat();
-		float volume = volumePara(p, h.getX(), h.getZ(), 1.0F);
+		float volume = volumePara(p, h.getX(), h.getY(), h.getZ(), 1.0F);
 		if (r < 0.30F) {
 			Depuracao.log(p, seg, "anúncio: nenhum");
 			return;
@@ -3216,7 +3224,7 @@ public final class Diretor {
 			boolean enganar = hospedePerto && level.getRandom().nextDouble() < chanceEnganar;
 			if (hospedePerto && !enganar) {
 				ModSons.Som som = level.getRandom().nextBoolean() ? ModSons.Som.RESPIRACAO : ModSons.Som.PANO;
-				float volume = volumePara(p, h.getX(), h.getZ(), 0.65F);
+				float volume = volumePara(p, h.getX(), h.getY(), h.getZ(), 0.65F);
 				ModSons.tocar(level, h.getX(), h.getY() + 1.2, h.getZ(), som, volume, 0.78F + level.getRandom().nextFloat() * 0.18F);
 				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=HOSPEDE manifestacao=" + h.getIdManifestacao()
 						+ " dist=" + String.format(Locale.ROOT, "%.1f", Math.sqrt(h.distanceToSqr(p))));
@@ -3228,7 +3236,7 @@ public final class Diretor {
 				BlockPos mp = marca.pos();
 				ModSons.Som som = marca.tipo() == Vestigios.Tipo.VIGILIA ? ModSons.Som.ESTALO : ModSons.Som.PANO;
 				ModSons.tocar(level, mp.getX() + 0.5, mp.getY() + 0.7, mp.getZ() + 0.5, som,
-						volumePara(p, mp.getX() + 0.5, mp.getZ() + 0.5, 0.52F), 0.72F);
+						volumePara(p, mp.getX() + 0.5, mp.getY() + 0.5, mp.getZ() + 0.5, 0.52F), 0.72F);
 				Depuracao.log(p, agora, "SINO resposta=VESTIGIO tipo=" + marca.tipo() + " idade=" + marca.idade(agora)
 						+ "s pos=" + pos(mp.getX(), mp.getY(), mp.getZ()));
 				return;
@@ -3236,7 +3244,7 @@ public final class Diretor {
 			Rastro.Ponto pt = pontoDoRastro(p, e, level.getGameTime() / 20, 18, 300, 10, 38, true);
 			if (pt != null && (enganar || level.getRandom().nextFloat() < 0.62F)) {
 				ModSons.Som som = level.getRandom().nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.MADEIRA;
-				ModSons.tocar(level, pt.x(), pt.y() + 0.8, pt.z(), som, volumePara(p, pt.x(), pt.z(), 0.55F), 0.82F);
+				ModSons.tocar(level, pt.x(), pt.y() + 0.8, pt.z(), som, volumePara(p, pt.x(), pt.y(), pt.z(), 0.55F), 0.82F);
 				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=" + (enganar ? "ISCA_RASTRO" : "RASTRO") + " idade="
 						+ (level.getGameTime() / 20 - pt.seg()) + "s pos=" + pos(pt.x(), pt.y(), pt.z()));
 			} else {
