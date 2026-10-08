@@ -100,6 +100,9 @@ public final class Diretor {
 	/** De dia, a céu aberto e sem cobertura, ele não nasce mais perto do que isto (blocos). */
 	private static final double DIST_MIN_EXPOSTO = 25;
 
+	/** Uma aparição num ponto do Rastro só vale se estiver, no máximo, tantos blocos acima ou abaixo do jogador. */
+	private static final double DESNIVEL_MAX_APARICAO = 12;
+
 	private static final double DECAIMENTO_CURTO = Math.exp(-1.0 / 1200.0); // tau = 20 min de jogo
 
 	/** Confiança mínima de uma reação para o Diretor concluir "isso funciona" e escalar (0.4: 0,5). */
@@ -510,8 +513,8 @@ public final class Diretor {
 
 		if (seg % 60 == 0) {
 			Depuracao.log(p, seg, String.format(Locale.ROOT,
-					"estado=%s V=%d pressao=%.0f obsessao=%.0f inq=%d fase=%d contexto=%s cena=%s rastro=%d atm=%.1f manifestacaoAtiva=%s cenaAtiva=%s | %s",
-					e.estado, v, e.pressao, e.obsessao, inq, fase, e.contexto, e.cena, e.rastro.tamanho(), e.atmosfera.orcamento, manifestacaoAtiva(e), cenaAtiva(e),
+					"estado=%s V=%d pressao=%.0f obsessao=%.0f inq=%d fase=%d tempo=%d contexto=%s cena=%s rastro=%d atm=%.1f manifestacaoAtiva=%s cenaAtiva=%s | %s",
+					e.estado, v, e.pressao, e.obsessao, inq, fase, m.get(Memoria.TEMPO), e.contexto, e.cena, e.rastro.tamanho(), e.atmosfera.orcamento, manifestacaoAtiva(e), cenaAtiva(e),
 					Perfil.resumo(m)));
 		}
 
@@ -1372,6 +1375,16 @@ public final class Diretor {
 			return; // parado no chat/menu: não ensina nada (0.4 contava como "não reagiu")
 		}
 
+		// Avistamento: a reação mais comum é virar e olhar direto para ele, e esse giro acontece ANTES de a
+		// leitura começar (é ele que põe a criatura na tela). Sem isto, todo avistamento era lido como
+		// "não reagiu", ensinava que aparições não funcionam e contava para a punição por indiferença.
+		double eng = r.engajamento();
+		if ("avistada".equals(r.origem()) && seg - e.encarouSeg <= 4 && c < 0.35) {
+			Depuracao.log(p, seg, String.format(Locale.ROOT, "avistamento encarado: conta como reação (c %.2f -> 0.35)", c));
+			c = 0.35;
+			eng = Math.max(eng, 0.5);
+		}
+
 		// Se ele virou para a fonte ou foi até ela, ele percebeu, não importa o que a distância dizia.
 		if (r.percebeu() && o < 0.8) {
 			Depuracao.log(p, seg, String.format(Locale.ROOT, "percepção confirmada pela reação: obs %.2f -> 0.80", o));
@@ -1384,7 +1397,7 @@ public final class Diretor {
 
 		// O quanto aprende depende de quão provável é que ele tenha percebido.
 		double d = (c - 0.3) / 0.7 * o;
-		aprender(m, e, ev, d, r.engajamento());
+		aprender(m, e, ev, d, eng);
 
 		if (o >= 0.5) {
 			Perfil.puxar(m, Perfil.Traco.FUGA, r.fugiu() ? 100 : 0, 0.05);
@@ -2381,6 +2394,11 @@ public final class Diretor {
 			if (expostoDemais(level, p, chao, temCobertura(level, p, chao))) {
 				continue;
 			}
+			// O Rastro guarda por onde ele andou, inclusive a caverna embaixo dos pés dele. Um ponto assim fica
+			// "perto" no mapa, mas a aparição nasce onde não dá para ver (um log real mostrou duas a 30 blocos abaixo).
+			if (Math.abs(chao.getY() - p.getY()) > DESNIVEL_MAX_APARICAO) {
+				continue;
+			}
 			pedido = pedido.comNota(String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
 					Math.sqrt(distanciaSqr(p, pt.x(), pt.z()))));
 			criar(level, p, e, chao, modo, duracao, 1.0, distSumir, pedido);
@@ -2526,7 +2544,7 @@ public final class Diretor {
 			long idadeRastro = -1;
 			if (!trocarLado && i < 6) {
 				Rastro.Ponto pt = pontoDoRastro(p, e, seg, 5, 300, Math.max(10, distAtual - 12), distAtual - 3, true);
-				if (pt == null) {
+				if (pt == null || Math.abs(pt.y() - p.getY()) > DESNIVEL_MAX_APARICAO) {
 					continue;
 				}
 				x = pt.x();
@@ -2958,6 +2976,16 @@ public final class Diretor {
 		}
 	}
 
+	/**
+	 * O jogador olhou direto para a criatura pela primeira vez. Guarda o momento para a leitura do
+	 * avistamento (ver concluirLeitura): encarar já é uma reação.
+	 */
+	public static void criaturaEncarada(ServerPlayer p, HospedeEntity criatura) {
+		if (!criatura.ehTeste()) {
+			estado(p).encarouSeg = p.level().getGameTime() / 20;
+		}
+	}
+
 	public static void criaturaFoiVista(ServerPlayer p, HospedeEntity criatura) {
 		if (criatura.ehTeste()) {
 			return; // criatura de comando: não deixa ele mais ousado nem soma pressão
@@ -3031,15 +3059,15 @@ public final class Diretor {
 		}
 		boolean confronto = "FERIDO".equals(motivo) || "ENCARADO_DEMAIS".equals(motivo);
 		boolean percebida = criatura.foiAvistadoVisual();
-		if ("VULTO_MIRADO".equals(motivo)) {
-			// O vulto mirado some sem deixar cinza. Às vezes fica só uma marca que o Olho e o Sino acham depois:
+		if (motivo.startsWith("VULTO_")) {
+			// O vulto visto some sem deixar cinza. Às vezes fica só uma marca que o Olho e o Sino acham depois:
 			// "eu vi alguma coisa" ganha uma prova tardia.
 			if (percebida && p.level().getRandom().nextFloat() < 0.25F) {
 				Vestigios.de(p).registrar(criatura.blockPosition(), Vestigios.Tipo.DESAPARECIMENTO, p.level().getGameTime() / 20);
 			}
 			return;
 		}
-		boolean qualificou = confronto || (percebida && ("VISTO_DEMAIS".equals(motivo)
+		boolean qualificou = confronto || (percebida && ("VISTO_DEMAIS".equals(motivo) || "SUMIU_NO_DESVIO".equals(motivo)
 				|| "CHEGOU_PERTO".equals(motivo) || "TEMPO_ESGOTADO".equals(motivo)));
 		if (!qualificou) {
 			return;
@@ -3268,6 +3296,8 @@ public final class Diretor {
 		EstadoJogador e = estado(p);
 		m.add(Memoria.OLHOS, 1);
 		m.add(Memoria.TEMPO, 90);
+		// Sempre no log: usar o Olho adianta a assombração, e sem esta linha as fases chegavam "cedo" sem explicação.
+		Depuracao.log(p, level.getGameTime() / 20, "OLHO usado fase=" + m.get(Memoria.FASE) + " tempo=" + m.get(Memoria.TEMPO) + " (+90)");
 
 		HospedeEntity c = e.criatura;
 		if (c != null && !c.isRemoved()) {

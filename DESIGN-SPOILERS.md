@@ -512,3 +512,24 @@ Log: `OLHO chamou aparicao usosRecentes=N chance=0.NN` e `OLHO nada usosRecentes
 
 - De dia, a céu aberto e sem nada na frente, o Hóspede não nasce a menos de 25 blocos do jogador. De perto e inteiro, ele parece só um boneco parado.
 - O som de sumiço (quando o jogador chega perto ou encara demais) agora toca só em metade das vezes. Som que sempre confirma o sumiço tira a dúvida de "eu vi mesmo?".
+
+## v0.8.1 — sumir mais rápido ("será que eu vi?")
+
+Pedido do dono depois do primeiro teste: nas aparições de observação dava para focar na criatura e ter certeza de que ela estava ali. O log confirmou: o vulto pedia um segundo inteiro de mira, e a presença pedia 0,75 s de olhar direto. Quem olhava por menos tempo e desviava encontrava a criatura no mesmo lugar ao olhar de novo.
+
+**Vulto distante.** Agora some:
+
+- 2 a 5 ticks (0,1 a 0,25 s) depois de entrar no miolo da tela (30° do centro), ou seja, enquanto o jogador ainda está virando para ele;
+- depois de 0,5 a 0,8 s na borda da tela, mesmo sem ser mirado;
+- assim que sai da tela depois de ter sido visto. Quando o jogador olha de novo, não há nada.
+
+**Presença (modo de observação).**
+
+- O tempo que ele aguenta ser visto passou a ser 12 + 6 por ponto de ousadia (em ticks; olhar direto conta em dobro). Com ousadia 0 é um relance: 0,3 s de olhar direto ou 0,6 s de canto. Com ousadia 3 é o que era antes; com ousadia 10 chega a 1,8 s.
+- Enquanto a ousadia é menor que 4, basta olhar direto e desviar: ele some fora da tela (`SUMIU_NO_DESVIO`). Conta como "foi visto", então a ousadia sobe e, com o tempo, ele passa a ficar.
+
+A progressão continua a mesma ideia do design original (cada vez que é visto, fica mais ousado), só que começa de um ponto bem mais tímido.
+
+**Leitura do avistamento.** A reação mais comum a uma aparição é virar e olhar direto para ela, e esse giro acontece antes de a leitura começar (é ele que põe a criatura na tela). Todo avistamento estava sendo lido como "não reagiu": ensinava ao Diretor que aparições não funcionam e contava para a punição por indiferença. Agora, se o jogador encarou a criatura, o avistamento vale pelo menos 0,35 de confiança.
+
+**Aparições no Rastro.** O Rastro guarda por onde o jogador andou, inclusive a caverna embaixo dos pés dele. Aparições nesses pontos nasciam a 30 blocos de profundidade, onde ninguém vê. Agora o ponto precisa estar a até 12 blocos acima ou abaixo do jogador.

@@ -246,7 +246,9 @@ final class Leitura {
 		// Fuga: acelerou ou começou a correr. Mas acelerar NA DIREÇÃO da fonte não é fuga, e acelerar sem se
 		// afastar dela é evidência fraca (muita gente liga a corrida o tempo todo).
 		boolean comecouCorrer = this.baseCorrendo < 0.3 && fracao(j, true) > 0.6;
-		boolean acelerou = velJ - this.baseVel > 1.5;
+		// Quem já vinha correndo e passou a correr pulando também ganha uns 1,5 bloco por segundo. Isso não é
+		// reação (um log real mostrou o Diretor escalando por causa disso): só conta acelerar a partir de um passo normal.
+		boolean acelerou = velJ - this.baseVel > 1.5 && this.baseVel < 4.0;
 		boolean fugiu = (acelerou || comecouCorrer) && !(deslocou && rumo > 0.3);
 		boolean afastou = deslocou && rumo < -0.2;
 		double sFugiu = !fugiu ? 0 : ((!temDirecao || afastou) ? 0.40 : 0.25);

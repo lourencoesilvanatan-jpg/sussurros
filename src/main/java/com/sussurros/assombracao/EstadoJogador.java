@@ -245,6 +245,9 @@ final class EstadoJogador {
 	/** Depois de o Olho chamar uma aparição, ele só pode chamar outra a partir daqui. */
 	long olhoRecargaAte = -1;
 
+	/** Segundo em que o jogador olhou direto para a criatura pela última vez (para a leitura do avistamento). */
+	long encarouSeg = -1000;
+
 	// --- Cache do ambiente (portas e tochas por perto) ---
 	long cacheTick = -100000;
 	double cacheX;

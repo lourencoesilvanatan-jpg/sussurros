@@ -70,9 +70,12 @@ public class HospedeEntity extends PathfinderMob {
 	public static final double CONE_TELA_SEGURA = 0.57;
 	public static final double CONE_ENCAROU = 0.965;
 
-	/** Vulto distante: cone em que o jogador está "mirando" nele (~25° do centro) e a distância em que deixa de ser um vulto. */
-	public static final double CONE_MIROU = 0.90;
+	/** Vulto distante: cone em que o jogador está "mirando" nele (~30° do centro) e a distância em que deixa de ser um vulto. */
+	public static final double CONE_MIROU = 0.866;
 	public static final double DIST_SUMIR_VULTO = 36.0;
+
+	/** Até esta ousadia ele ainda é tímido: basta olhar direto e desviar para ele não estar mais lá. */
+	public static final int OUSADIA_FICA = 4;
 
 	@Nullable
 	private ServerPlayer alvo;
@@ -95,6 +98,13 @@ public class HospedeEntity extends PathfinderMob {
 	private int vezesPercebida = 0;
 	private int ticksSemPerceber = 0;
 	private boolean jaEncarada = false;
+
+	// Sumiço rápido (0.8.1): isto é comportamento, não telemetria.
+	private boolean foiEncarado = false; // já foi olhado direto alguma vez
+	private int foraDaTelaTicks = 0;     // há quantos ticks seguidos não está na tela
+	private int naTelaTicks = 0;         // vulto: quantos ticks já passou na tela
+	private int limiteNaTela = -1;       // vulto: quanto aguenta na borda da tela (sorteado na primeira vez)
+	private int atrasoMirado = -1;       // vulto: ticks entre ser mirado e sumir (sorteado na hora)
 
 	// Espreita
 	private int reposicoes = 0;
@@ -301,6 +311,10 @@ public class HospedeEntity extends PathfinderMob {
 
 		boolean percebido = Diretor.estaVendo(this.alvo, this, CONE_PERCEBEU);
 		boolean encarado = percebido && Diretor.estaVendo(this.alvo, this, CONE_ENCAROU);
+		this.foraDaTelaTicks = percebido ? 0 : this.foraDaTelaTicks + 1;
+		if (encarado) {
+			this.marcarEncarado();
+		}
 		if (percebido && !this.jaAvistada) {
 			this.jaAvistada = true;
 			this.entityData.set(AVISTADO_VISUAL, true);
@@ -329,15 +343,27 @@ public class HospedeEntity extends PathfinderMob {
 			case ESPREITAR -> this.tickEspreitar(level, percebido, encarado, distSqr);
 			case ESPERAR -> this.tickEsperar(level, encarado, distSqr);
 			case CACAR -> this.tickCacar(level, percebido, encarado, distSqr);
-			case VULTO -> this.tickVulto(level, distSqr);
+			case VULTO -> this.tickVulto(level, percebido, distSqr);
+		}
+	}
+
+	/** A primeira vez que o jogador olha direto para ele. Para o Diretor, encarar já é uma reação. */
+	private void marcarEncarado() {
+		if (!this.foiEncarado) {
+			this.foiEncarado = true;
+			Diretor.criaturaEncarada(this.alvo, this);
 		}
 	}
 
 	/**
-	 * Vulto distante: longe e curto, para ser negável ("eu vi alguma coisa?"). Some sem som um segundo depois
-	 * de o jogador mirar nele, e some antes de dar para ver de perto. Não conta para a ousadia.
+	 * Vulto distante: longe e curto, para ser negável ("será que eu vi alguma coisa?"). O jogador não pode
+	 * conseguir focar nele. Some sem som, e não conta para a ousadia:
+	 *  - 2 a 5 ticks depois de entrar no miolo da tela (o jogador está virando para ele);
+	 *  - depois de 0,5 a 0,8 s na borda da tela, mesmo sem ser mirado;
+	 *  - assim que sai da tela depois de ter sido visto: quando o jogador olha de novo, não há nada;
+	 *  - antes de dar para ver de perto.
 	 */
-	private void tickVulto(ServerLevel level, double distSqr) {
+	private void tickVulto(ServerLevel level, boolean percebido, double distSqr) {
 		this.ficarParadoOlhando();
 
 		if (distSqr < DIST_SUMIR_VULTO * DIST_SUMIR_VULTO) {
@@ -345,12 +371,28 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
-		if (Diretor.estaVendo(this.alvo, this, CONE_MIROU)) {
-			if (++this.vistoTicks > 20) {
-				this.sumir(level, false, "VULTO_MIRADO");
+		if (!percebido) {
+			if (this.jaAvistada && this.foraDaTelaTicks >= 3) {
+				this.sumir(level, false, "VULTO_DESVIOU");
 			}
-		} else {
-			this.vistoTicks = Math.max(0, this.vistoTicks - 1);
+			return;
+		}
+
+		if (this.limiteNaTela < 0) {
+			this.limiteNaTela = 10 + this.random.nextInt(7);
+		}
+		if (Diretor.estaVendo(this.alvo, this, CONE_MIROU)) {
+			this.marcarEncarado();
+			if (this.atrasoMirado < 0) {
+				this.atrasoMirado = 2 + this.random.nextInt(4);
+			}
+			if (--this.atrasoMirado <= 0) {
+				this.sumir(level, false, "VULTO_MIRADO");
+				return;
+			}
+		}
+		if (++this.naTelaTicks > this.limiteNaTela) {
+			this.sumir(level, false, "VULTO_VISTO");
 		}
 	}
 
@@ -379,8 +421,17 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
-		// Quanto mais ousado, mais tempo ele aguenta ser visto (1,5 s olhando direto, 3 s de canto).
-		if (this.contarVisto(percebido, encarado, 30 + this.ousadia * 4)) {
+		// Enquanto ele é tímido, basta olhar direto e desviar: quando o jogador olha de novo, ele não está
+		// mais lá. Sumir fora da tela é o que deixa a dúvida ("será que eu vi?").
+		if (this.foiEncarado && !percebido && this.foraDaTelaTicks >= 4 && this.ousadia < OUSADIA_FICA) {
+			Diretor.criaturaFoiVista(this.alvo, this);
+			this.sumir(level, false, "SUMIU_NO_DESVIO");
+			return;
+		}
+
+		// Quanto mais ousado, mais tempo ele aguenta ser visto. No começo é um relance: 0,3 s olhando direto
+		// ou 0,6 s de canto (era 0,75 s e 1,5 s, e dava para focar nele). Com ousadia 10 chega a 1,8 s.
+		if (this.contarVisto(percebido, encarado, 12 + this.ousadia * 6)) {
 			Diretor.criaturaFoiVista(this.alvo, this);
 			this.sumir(level, true, "VISTO_DEMAIS");
 		}
