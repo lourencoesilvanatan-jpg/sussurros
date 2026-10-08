@@ -228,6 +228,10 @@ final class Atmosfera {
 			if (ok) {
 				lembrar(e, chave);
 				Depuracao.log(p, seg, "PRESSAGIO tipo=" + pr + " fase=" + fase + " contexto=" + e.contexto + " semAprendizado=sim");
+				// De vez em quando o presságio vem com o mesmo silêncio que anuncia uma aparição.
+				if (!e.forcando && rnd.nextFloat() < 0.2F) {
+					Diretor.emudecer(level, p, 15, "PRESSAGIO");
+				}
 				return true;
 			}
 		}

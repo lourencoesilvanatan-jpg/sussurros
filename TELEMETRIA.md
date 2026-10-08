@@ -379,3 +379,15 @@ SELECAO sem lugar: nada coube agora; tenta de novo em 22s
 ```
 
 Para conferir: toda linha `SELECAO ... escolhido=` é seguida de `EVENTO` ou de `SELECAO falhou`.
+
+## 0.8.1 — silêncio de verdade
+
+Quando o mundo emudece para um jogador (música e som ambiente cortados, mobs em volta sem som de fundo por alguns segundos):
+
+```
+SILENCIO_REAL motivo=APARICAO duracao=25s mobs=6
+SILENCIO_REAL motivo=SINAL duracao=15s mobs=0
+SILENCIO_REAL motivo=PRESSAGIO duracao=15s mobs=3
+```
+
+`APARICAO` sai logo depois de `HOSPEDE ... criado`, em cerca de 70% das vezes. `SINAL` e `PRESSAGIO` são os avisos falsos: o mesmo silêncio, sem criatura.
