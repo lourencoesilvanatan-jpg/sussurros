@@ -25,6 +25,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.diretor.Agenda;
@@ -63,6 +64,7 @@ final class Atmosfera {
 
 	static void tickRapido(ServerLevel level, long tick) {
 		AlteracoesTemporarias.tick(level, tick);
+		Miragem.tick(level, tick);
 		if (OLHARES.isEmpty() || tick % 5 != 0) {
 			return;
 		}
@@ -106,6 +108,7 @@ final class Atmosfera {
 	static void limpar() {
 		OLHARES.clear();
 		AlteracoesTemporarias.limpar();
+		Miragem.limpar();
 	}
 
 	static void atualizar(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase,
@@ -290,7 +293,7 @@ final class Atmosfera {
 		boolean ok = switch (pt) {
 			case TODOS_OLHANDO -> animaisComTipo(level, p, e, seg, tick, rnd, "VAZIO", teste) != null;
 			case HA_ALGO_NO_CURRAL -> animaisComTipo(level, p, e, seg, tick, rnd, "MOVIMENTO", teste) != null;
-			case LUZ_NO_FIM -> luzFantasma(level, p, e, seg, tick, rnd, teste);
+			case LUZ_NO_FIM -> luzFantasma(level, p, e, seg, tick, rnd, false); // a mesma cena no teste e no jogo normal
 			case PASSOU_PELA_MINA -> sequenciaLuzes(level, p, e, seg, tick, rnd, teste);
 			case O_CAMINHO_MUDOU -> marcaTemporaria(level, p, e, seg, tick, rnd, false, teste);
 			case MARCA_IMPOSSIVEL -> marcaTemporaria(level, p, e, seg, tick, rnd, true, teste);
@@ -348,20 +351,33 @@ final class Atmosfera {
 		String tipo;
 		Vec3 fonte;
 		boolean ok;
-		if (!tochas.isEmpty() && escolha < 42) {
+		if (!tochas.isEmpty() && escolha < 30) {
 			BlockPos pos = tochas.get(rnd.nextInt(tochas.size()));
 			ok = AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), 40 + rnd.nextInt(81), "LUZ_PISCA");
 			fonte = Vec3.atCenterOf(pos);
 			tipo = "PISCA";
 			level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
 					SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.55F, 0.9F);
+		} else if (!tochas.isEmpty() && escolha < 45) {
+			// Miragem: uma tocha dele passa a ser de redstone, só para ele. Volta ao normal quando ele chega
+			// perto para conferir, quando clica nela ou depois de meio minuto. O mundo não muda.
+			BlockPos pos = tochas.get(rnd.nextInt(tochas.size()));
+			BlockState real = level.getBlockState(pos);
+			BlockState vermelha = real.is(Blocks.WALL_TORCH)
+					? Blocks.REDSTONE_WALL_TORCH.defaultBlockState()
+							.setValue(BlockStateProperties.HORIZONTAL_FACING, real.getValue(BlockStateProperties.HORIZONTAL_FACING))
+					: Blocks.REDSTONE_TORCH.defaultBlockState();
+			ok = Miragem.mostrar(level, p, pos, vermelha, 20L * (25 + rnd.nextInt(21)), 3.0, "TOCHA_VERMELHA");
+			fonte = Vec3.atCenterOf(pos);
+			tipo = "VERMELHA miragem=sim";
 		} else if (!tochas.isEmpty() && escolha < 67) {
 			BlockPos origem = tochas.get(rnd.nextInt(tochas.size()));
 			BlockPos destino = acharPontoParaTocha(level, p, rnd, 8, 22);
 			if (destino == null) return null;
 			long duracao = 100 + rnd.nextInt(101);
+			// A tocha de origem some de verdade por alguns segundos (e volta); a de destino é miragem.
 			ok = AlteracoesTemporarias.substituir(level, origem, Blocks.AIR.defaultBlockState(), duracao, "LUZ_MIGRA_ORIGEM")
-					&& AlteracoesTemporarias.substituir(level, destino, Blocks.TORCH.defaultBlockState(), duracao, "LUZ_MIGRA_DESTINO");
+					&& Miragem.mostrar(level, p, destino, Blocks.TORCH.defaultBlockState(), duracao, 4.0, "LUZ_MIGRA_DESTINO");
 			fonte = Vec3.atCenterOf(destino);
 			tipo = "MIGRA";
 			level.playSound(null, origem.getX() + 0.5, origem.getY() + 0.5, origem.getZ() + 0.5,
@@ -375,9 +391,11 @@ final class Atmosfera {
 		} else {
 			BlockPos destino = acharPontoParaTocha(level, p, rnd, 10, 28);
 			if (destino == null) return null;
-			ok = AlteracoesTemporarias.substituir(level, destino, Blocks.TORCH.defaultBlockState(), 140 + rnd.nextInt(181), "LUZ_APARECE");
+			// Miragem: uma tocha que ele não colocou. Como o mundo não muda, pode durar o bastante para ele
+			// ir conferir; a cinco blocos ela não está mais lá (página 19 do diário).
+			ok = Miragem.mostrar(level, p, destino, Blocks.TORCH.defaultBlockState(), 20L * (20 + rnd.nextInt(26)), 5.0, "LUZ_APARECE");
 			fonte = Vec3.atCenterOf(destino);
-			tipo = "APARECE";
+			tipo = "APARECE miragem=sim";
 		}
 		if (!ok || !gastar(e, Familia.LUZ, sutil ? 1.3 : 2.0, seg, rnd, 360, 720)) return null;
 		Depuracao.log(p, seg, "LUZ_ERRADA tipo=" + tipo + " pos=" + pos(fonte) + " semCriatura=sim");
@@ -390,12 +408,14 @@ final class Atmosfera {
 		if (!disponivel(e, Familia.LUZ, custo, seg)) return false;
 		BlockPos destino = acharPontoParaTocha(level, p, rnd, sutil ? 12 : 14, sutil ? 28 : 34);
 		if (destino == null) return false;
-		long duracao = sutil ? 80 + rnd.nextInt(101) : 120 + rnd.nextInt(161);
-		if (!AlteracoesTemporarias.substituir(level, destino, Blocks.TORCH.defaultBlockState(), duracao, "LUZ_FANTASMA")) {
+		// Miragem: só ele vê, e o mundo não muda. O presságio (sutil) é um brilho curto ao longe. A cena
+		// "luz no fim" dura o bastante para ele andar até lá; a seis blocos a luz não está mais lá.
+		long duracao = sutil ? 80 + rnd.nextInt(101) : 20L * (25 + rnd.nextInt(21));
+		if (!Miragem.mostrar(level, p, destino, Blocks.TORCH.defaultBlockState(), duracao, sutil ? 0.0 : 6.0, "LUZ_FANTASMA")) {
 			return false;
 		}
 		if (!gastar(e, Familia.LUZ, custo, seg, rnd, sutil ? 300 : 480, sutil ? 600 : 900)) return false;
-		Depuracao.log(p, seg, "LUZ_ERRADA tipo=FANTASMA pos=" + pos(Vec3.atCenterOf(destino))
+		Depuracao.log(p, seg, "LUZ_ERRADA tipo=FANTASMA miragem=sim pos=" + pos(Vec3.atCenterOf(destino))
 				+ " duracao=" + (duracao / 20) + "s semCriatura=sim");
 		return true;
 	}

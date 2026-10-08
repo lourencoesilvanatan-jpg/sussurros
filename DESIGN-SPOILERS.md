@@ -533,3 +533,19 @@ A progressão continua a mesma ideia do design original (cada vez que é visto, 
 **Leitura do avistamento.** A reação mais comum a uma aparição é virar e olhar direto para ela, e esse giro acontece antes de a leitura começar (é ele que põe a criatura na tela). Todo avistamento estava sendo lido como "não reagiu": ensinava ao Diretor que aparições não funcionam e contava para a punição por indiferença. Agora, se o jogador encarou a criatura, o avistamento vale pelo menos 0,35 de confiança.
 
 **Aparições no Rastro.** O Rastro guarda por onde o jogador andou, inclusive a caverna embaixo dos pés dele. Aparições nesses pontos nasciam a 30 blocos de profundidade, onde ninguém vê. Agora o ponto precisa estar a até 12 blocos acima ou abaixo do jogador.
+
+## v0.8.1 — miragens
+
+Uma miragem é um bloco que só um jogador vê. O servidor manda para ele um bloco que não existe; o mundo de verdade não muda. Não há o que restaurar ao fechar o mundo, a construção de ninguém é tocada, e quem está ao lado não vê nada.
+
+O experimento `/sussurros teste miragem` confirmou em jogo (08/10/2026): a tocha falsa ilumina, e some quando o jogador clica nela, porque o próprio jogo reenvia o bloco de verdade. Tocar na coisa faz ela sumir.
+
+O que passou a ser miragem:
+
+- **Luz no fim** (cena `LUZ_NO_FIM`): uma tocha a 14–34 blocos, por 25 a 45 s. Quando o jogador chega a 6 blocos, ela não está mais lá. É a página 19 do diário. Antes era uma tocha de verdade que durava 6 a 14 s.
+- **Luz distante** (presságio): continua um brilho curto, de 4 a 9 s, agora sem mexer no mundo.
+- **Tocha que aparece** (`LUZ_ERRADA`, tipo `APARECE`): 20 a 45 s; some a 5 blocos.
+- **Tocha que muda de lugar** (tipo `MIGRA`): a de origem ainda some de verdade por alguns segundos e volta; a de destino é miragem.
+- **Tocha vermelha** (tipo novo, `VERMELHA`): uma tocha do jogador passa a ser de redstone, só para ele, por 25 a 45 s. Volta ao normal quando ele chega a 3 blocos ou clica nela. A luz em volta fica mais fraca.
+
+O que continua mexendo no mundo de verdade, por enquanto: a tocha que pisca, as tochas apagadas ao acordar e as que o Hóspede apaga na caça. Falta saber se, ao esconder uma tocha por miragem, a luz dela some junto.

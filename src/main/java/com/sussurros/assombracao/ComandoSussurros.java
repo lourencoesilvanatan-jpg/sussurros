@@ -29,7 +29,9 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
  *   /sussurros cena eco          toca um eco de ação do lugar onde você fez / do rastro (teste: não aprende)
  *   /sussurros cena parar        interrompe a cena em andamento (inclusive o silêncio do fim) e tira o Hóspede
  *   /sussurros teste sussurro estereo|cabeca|folego|lado   experimento: som sem direção (ver ROTEIRO-DE-TESTE.md)
- *   /sussurros teste miragem [apagar]                      experimento: bloco que só você vê
+ *   /sussurros teste sussurro tudo                         os três sons em sequência, numerados no chat
+ *   /sussurros teste miragem [apagar|vermelha]             experimento: bloco que só você vê
+ *   /sussurros cena luzfim                                 a luz no fim do túnel (miragem)
  *   /sussurros teste sosia <jogador> [agachado|deitado]    experimento: manequim com a pele de um jogador
  *   /sussurros memoria           mostra o que o mod lembra sobre você (SPOILER)
  *   /sussurros esquecer          apaga tudo e recomeça do zero
@@ -108,6 +110,12 @@ public final class ComandoSussurros {
 					.then(Commands.literal("animais").executes(ctx -> {
 						ServerPlayer p = ctx.getSource().getPlayerOrException();
 						String msg = Diretor.testarPerturbacao(p, Perturbacao.TODOS_OLHANDO);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("luzfim").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarPerturbacao(p, Perturbacao.LUZ_NO_FIM);
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
 					}))
@@ -200,7 +208,7 @@ public final class ComandoSussurros {
 			// Experimentos do PLANO-MECANICAS.md: cada um responde a uma pergunta que só dá para ver jogando.
 			LiteralArgumentBuilder<CommandSourceStack> teste = Commands.literal("teste");
 			LiteralArgumentBuilder<CommandSourceStack> testeSussurro = Commands.literal("sussurro");
-			for (String modo : new String[] {"estereo", "cabeca", "folego", "lado"}) {
+			for (String modo : new String[] {"tudo", "estereo", "cabeca", "folego", "lado"}) {
 				testeSussurro.then(Commands.literal(modo).executes(ctx -> {
 					String msg = Experimentos.sussurro(ctx.getSource().getPlayerOrException(), modo);
 					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
@@ -216,6 +224,11 @@ public final class ComandoSussurros {
 					})
 					.then(Commands.literal("apagar").executes(ctx -> {
 						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), true);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("vermelha").executes(ctx -> {
+						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), "vermelha");
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
 					})));
