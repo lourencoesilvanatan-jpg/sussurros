@@ -138,6 +138,7 @@ Do mais grave ao menos grave. Os itens 1 e 8 foram conferidos no bytecode do Min
 - O `Diretor` tem 4.719 linhas na `main` e 3.615 depois do passo 3. Ainda guarda os eventos, a lógica dos itens, a cama e os helpers de comando.
 - Só o `Seletor` tem teste. A `Leitura` é matemática pura e foi onde apareceram mais defeitos.
 - Os números de ajuste estão fixos no código.
+- O repositório é público no GitHub, com o `DESIGN-SPOILERS.md`, esta pesquisa e o plano. Qualquer amigo que abrir o link lê tudo.
 
 ---
 
@@ -364,10 +365,19 @@ Conferido com `javap` em `~/.gradle/caches/fabric-loom/26.2/`. "Existe" quer diz
 | Respawn, entrada, saída, troca de dimensão | `ServerPlayerEvents.AFTER_RESPAWN/JOIN/LEAVE`, `ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL` |
 | Livro escrito, placa, conquista | `DataComponents.WRITTEN_BOOK_CONTENT`, `SignBlockEntity.setText`, `PlayerAdvancements.award` |
 | Mensagem de saída de jogador | chave de tradução `multiplayer.player.left` |
-| Figura com a pele de um jogador | `net.minecraft.world.entity.decoration.Mannequin`, com um perfil (`ResolvableProfile`). O `setProfile` é privado, então falta testar como definir o perfil pelo código |
+| Figura com a pele de um jogador | `net.minecraft.world.entity.decoration.Mannequin`. Lido no código-fonte: o perfil vem dos dados salvos (campo `profile`, um `ResolvableProfile`) e o `setProfile` é privado; por padrão mostra um rótulo, que só some com `hide_description`; as poses aceitas são em pé, agachado, nadando, planando e deitado |
 | Respiração sem gravar nada | `SoundEvents.PLAYER_BREATH` (som do jogo que quase nunca toca) e `SoundEvents.AMBIENT_CAVE` |
 
 **Não existe pronto:** um evento do Fabric para "o jogador colocou um bloco". Há `ItemEvents.USE_ON` e `BlockEvents.USE_ITEM_ON`; falta conferir se servem ou se é preciso um mixin.
+
+**Bibliotecas conferidas no Modrinth em 08/10/2026**
+
+| Biblioteca | Situação na 26.2 |
+|---|---|
+| Simple Voice Chat | Existe para Fabric 26.2 (versão 2.6.24, de 20/09/2026) |
+| GeckoLib | Existe para Fabric 26.2 (versão 5.5.5, de 06/09/2026) |
+| Revervox (terror em grupo que usa a voz dos jogadores) | Só Forge e NeoForge, 1.20.1 e 1.21.1; GPL-3.0. Serve de referência, não de dependência |
+| Veil (efeitos de tela) | Só 1.21.1, segundo uma revisão externa; não conferido aqui |
 
 ---
 

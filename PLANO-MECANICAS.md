@@ -38,6 +38,29 @@ Tamanho: pequeno é uma sessão de trabalho, médio são duas ou três, grande s
 
 ---
 
+## O primeiro marco: a primeira noite com os amigos
+
+Servidor de amigos dura umas duas semanas, e o plano inteiro leva bem mais que isso para construir. Então a ordem não é "fazer tudo e depois jogar". É chegar a um conjunto pequeno que já funciona em grupo, jogar com eles e deixar o resto ser guiado pelo que funcionou.
+
+**Entra no marco**
+
+- Etapas 0, 1 e 2 inteiras, com o arquivo de configuração.
+- Da etapa 3: o relance (3a), só o alvo vê (3d), as regras de lugar (3f) e a silhueta (3g).
+- Da etapa 4: som privado (4a), silêncio de verdade (4c) e o chat de voz por proximidade (4g). O sussurro com voz (4b) entra se já estiver gravado.
+- Da etapa 5: o sistema de miragem e duas ou três miragens.
+- Da etapa 7: quem é assombrado (7a).
+
+**Fica para depois do marco:** os sustos grandes (etapa 6), o sósia, a voz roubada, o isolamento e o baralho da sessão.
+
+**Antes de chamar os amigos**
+
+1. Tornar o repositório privado. Hoje ele é público, com todos os spoilers.
+2. Montar um pacote só com o que eles instalam: Sussurros, Fabric API e Simple Voice Chat.
+3. Combinar que a voz é a do jogo, não a do Discord.
+4. Não contar o que o mod faz.
+
+---
+
 ## Como vamos trabalhar
 
 1. Cada parte vira uma branch e um PR para a `main`.
@@ -48,6 +71,12 @@ Tamanho: pequeno é uma sessão de trabalho, médio são duas ou três, grande s
 Quem programa não joga. Build e testes verdes não provam que algo funciona dentro do jogo, então cada etapa abaixo diz o que conferir.
 
 Técnica que nunca foi testada na 26.2 ganha primeiro um comando de experimento (`/sussurros teste ...`). Só depois que ele funcionar em jogo é que uma mecânica é construída em cima.
+
+**Os três primeiros experimentos** vão juntos num PR pequeno, logo depois da etapa 1. Cada um decide se uma etapa inteira segue como planejada:
+
+1. `/sussurros teste sussurro`: um arquivo estéreo toca sem direção?
+2. `/sussurros teste miragem`: a tocha falsa ilumina? O que acontece ao clicar nela?
+3. `/sussurros teste sosia <jogador>`: a pele aparece e o rótulo some?
 
 ---
 
@@ -118,7 +147,7 @@ Corrige o que o log mostrou. São PRs pequenos e separados, porque cada um muda 
 - `/sussurros debug visao`: mostra "NA TELA" ou "FORA" acima da hotbar, ao vivo. Conferir atrás de vidro, entre folhas, na borda da tela, com FOV 110 e correndo.
 - `/sussurros evento presenca` várias vezes com FOV alto: ele nunca aparece do nada dentro da tela.
 
-**Opcional nesta etapa:** tirar os números de ajuste do código e pôr num arquivo de configuração, com `/sussurros recarregar`. Encurta cada rodada de ajuste, porque dispensa recompilar.
+**Arquivo de configuração (faz parte desta etapa):** os números de ajuste saem do código e vão para um arquivo, com `/sussurros recarregar`. O método de trabalho é jogar, ler o log e ajustar; sem isso cada ajuste exige recompilar. Quase todos os números são do servidor, então ajustar entre uma noite e outra não obriga os amigos a baixar nada.
 
 ---
 
@@ -170,6 +199,15 @@ Vêm do que os jogadores dizem ("looks great behind the tree but just looks too 
 - **Som de sumiço:** no máximo em metade das vezes.
 - **Duração na tela:** de 2 a 5 s para as aparições paradas, salvo o Relance, que é mais curto.
 
+### 3g. Silhueta
+
+**O que você vai sentir:** de longe, um recorte preto contra a paisagem. De perto, nenhum detalhe para se acostumar.
+
+- **Por quê:** o veredito da análise é que o ponto fraco é som e imagem, e os sustos grandes mostram a criatura de perto. O mod The Hollow resolve isso desenhando a entidade sem luz, como uma silhueta chapada com dois olhos pálidos.
+- **Como funciona:** o `HospedeRenderer` passa a desenhar o corpo sem a iluminação do lugar (sempre escuro, até de dia). Em uma minoria das aparições, os olhos brilham.
+- **Muda uma decisão antiga:** o `DESIGN-SPOILERS.md` registra os olhos como não emissivos de propósito. Por isso entra primeiro como experimento (`/sussurros teste silhueta`), para o dono comparar as duas formas em jogo.
+- **Animação de verdade:** o GeckoLib tem versão para Fabric 26.2 (5.5.5). Continua fora até a silhueta se mostrar insuficiente.
+
 ---
 
 ## Etapa 4 — Som que perturba
@@ -214,6 +252,15 @@ Vêm do que os jogadores dizem ("looks great behind the tree but just looks too 
 - **Por quê:** aviso que sempre acerta "perde os dentes com veteranos"; aviso nenhum é lido como injusto. O aviso que mente fica no meio.
 - **O que já existe:** o anúncio de dois passos (`Diretor.anunciar`) e os falsos positivos (`SINAL`). Esta parte junta os dois num som só.
 
+### 4g. Chat de voz por proximidade
+
+**O que você vai sentir:** quem se afasta do grupo deixa de ouvir os amigos de verdade.
+
+- **Como funciona:** não é código do Sussurros. É instalar o Simple Voice Chat (existe para Fabric 26.2) e combinar de usar só a voz do jogo.
+- **Por quê:** a regra "separação é o gatilho, reunião é o alívio" (7a) vira física.
+- **Voz roubada (depois do primeiro marco):** o Hóspede repetir, do escuro, uma frase que um amigo disse minutos antes. A API do Simple Voice Chat tem as peças: ouvir o microfone no servidor e tocar áudio a partir de uma entidade. Para estudar, sem copiar: Revervox (Forge e NeoForge 1.20.1 e 1.21.1, GPL-3.0) e Mimicked. Precisa de uma pesquisa própria antes de começar.
+- **Combinado com os amigos:** se o mod for guardar trechos de voz no servidor, eles são avisados antes. Não precisa dizer para quê.
+
 ---
 
 ## Etapa 5 — Miragens: o mundo que só você vê
@@ -225,6 +272,7 @@ Vêm do que os jogadores dizem ("looks great behind the tree but just looks too 
 - **Como funciona:** classe nova `Miragem`. Envia `ClientboundBlockUpdatePacket(pos, estadoFalso)` para um jogador e guarda a lista. Desfaz reenviando o estado real quando o jogador chega perto, depois de um tempo ou quando ele sai do mundo.
 - **O mundo real não muda.** Não precisa de restauração ao fechar o servidor.
 - **Experimento antes:** `/sussurros teste miragem`. Conferir se a tocha falsa ilumina no cliente e o que acontece quando o jogador clica nela.
+- **A miragem se desfaz sozinha:** o jogo reenvia o estado real quando o jogador clica no bloco ou quando o chunk recarrega. Faz parte do efeito (tocar na coisa faz ela sumir), mas nenhuma mecânica pode depender de a miragem durar.
 - **Migração:** `LUZ_ERRADA`, `TOCHA` (piscar), `OBJETO_FORA_LUGAR` e as tochas apagadas ao acordar passam a ser miragens. Isso resolve o item 3.10 da análise sem perder o efeito.
 
 ### 5b. Miragens novas
@@ -283,7 +331,7 @@ A ideia central vem de Lethal Company e Phasmophobia: entre amigos, o alvo não 
 
 ### 7b. Mentir com a interface e com os amigos
 
-- **"Fulano saiu do jogo":** a linha amarela de saída, enviada só para um jogador, com o amigo ainda lá. Ou a entrada de alguém que não está online.
+- **"Fulano saiu do jogo":** a linha amarela de saída, enviada só para um jogador. Ou a entrada de alguém que não está online. A versão simples é só a linha, e funciona melhor quando o amigo está longe da vista. Ele continua na lista de jogadores (Tab); tirá-lo de lá sem quebrar o desenho dele precisa de experimento.
 - **Eco de amigo:** uma frase antiga de um jogador reaparece só para outro. Faz duvidar do amigo, não do jogo.
 - **Voz de amigo:** se eles gravarem, o sussurro pode vir na voz de quem não está por perto.
 - **Batida só com um em casa:** quando os outros voltam, não há nada.
@@ -293,13 +341,17 @@ A ideia central vem de Lethal Company e Phasmophobia: entre amigos, o alvo não 
 **O que você vai sentir:** seu amigo parado na linha das árvores, de costas. Ele está do outro lado do mapa.
 
 - **Como funciona:** uma figura com a pele de um amigo que está longe. Fica parada ou de costas, encara de 2 a 5 s quando é notada e some ao ser abordada.
-- **Caminho mais curto:** a entidade `Mannequin` do próprio jogo, que mostra a pele de um jogador. Existe na 26.2; falta testar como definir o perfil pelo código.
+- **Caminho mais curto:** a entidade `Mannequin` do próprio jogo, que mostra a pele de um jogador. Conferido no código da 26.2:
+  - o perfil entra pelos dados salvos (campo `profile`). O método que o define é privado, então o caminho é criar a entidade a partir desses dados;
+  - por padrão aparece um rótulo embaixo do nome. O campo `hide_description` tem de ir ligado, senão o susto vira piada;
+  - as poses aceitas são em pé, agachado, nadando, planando e deitado. Não há "inclinar a cabeça";
+  - para um amigo online, o servidor já tem o perfil com a pele.
 - **Caminho alternativo:** o do mod Existence (código aberto): um mob comum cujo renderizador usa o modelo de jogador e a textura do amigo, e não desenha nada para quem não é o alvo.
-- **Experimento antes:** `/sussurros teste sosia <jogador>`.
+- **Experimento antes:** `/sussurros teste sosia <jogador>`. Conferir a pele, o rótulo escondido e as poses.
 
 ### 7d. Carta grande de grupo
 
-- **Isolamento:** por um a três minutos, um jogador fica invisível e mudo para os outros. O grupo acha que ele saiu; ele acha que foi ignorado. Entra no baralho da etapa 6.
+- **Isolamento:** por um a três minutos, um jogador fica invisível e mudo para os outros. O grupo acha que ele saiu; ele acha que foi ignorado. Entra no baralho da etapa 6. São três coisas a esconder: o corpo, o chat e a voz. A voz sai pela API do Simple Voice Chat; o corpo é a parte difícil.
 
 ---
 
@@ -309,6 +361,7 @@ A ideia central vem de Lethal Company e Phasmophobia: entre amigos, o alvo não 
 - **Cabe em duas semanas:** servidores de amigos costumam durar umas duas semanas. A escalada inteira tem de caber em cerca de dez a quinze sessões, com alguma coisa nova destravando em quase todas.
 - **Um jogador desavisado vale ouro:** o relato mais forte da pesquisa é de alguém que não sabia que o mod estava instalado. Para os amigos, não contar o que o mod faz.
 - **Variantes escondidas:** quem programa pode criar variações sem descrevê-las, registrando-as num arquivo de spoilers que o dono escolhe não abrir. A explicação depois de cada entrega diz o que testar, não o que acontece.
+- **Quem dá para surpreender de verdade são os amigos.** O dono já leu o catálogo inteiro; o sorteio ajuda com o "quando" e o "qual", não com o "o quê". Proteger os amigos dos spoilers (repositório privado, não contar) vale mais do que esconder coisas do dono.
 
 ---
 
@@ -316,7 +369,8 @@ A ideia central vem de Lethal Company e Phasmophobia: entre amigos, o alvo não 
 
 - **Cópia torta da casa:** é a ideia mais fiel ao tema e a mais cara. Só depois da etapa 6.
 - **Falsa desconexão, erro falso, título da janela, brilho resetado:** são a maior fonte de reclamação em outros mods. Se entrarem, entram como cartas do baralho, desligadas por padrão.
-- **GeckoLib e SmartBrainLib:** continuam valendo as regras do `ARQUITETURA.md`. Nada neste plano precisa delas.
+- **GeckoLib e SmartBrainLib:** continuam valendo as regras do `ARQUITETURA.md`. O GeckoLib existe para Fabric 26.2 e fica reservado para o caso de a silhueta (3g) não bastar.
+- **Efeitos de tela com biblioteca:** a Veil só existe para a 1.21.1. O que o próprio jogo permite na 26.2 ainda não foi verificado.
 - **Registro de blocos colocados pelo jogador:** o Fabric não tem um evento pronto para isso; falta investigar. As miragens dispensam esse registro na maior parte dos casos.
 
 ---
@@ -339,6 +393,23 @@ Jogar outros mods é a melhor medida, porque o público deste mod é o próprio 
 3. **Voz.** Topa gravar as frases? E os amigos? Recomendação: sim; é o que mais separa este mod dos outros.
 4. **Entre amigos.** Cada um vê só o seu Hóspede? Recomendação: sim.
 5. **Quarta parede.** A falsa saída de amigo entra? Recomendação: sim. Falsa desconexão: não por enquanto.
+6. **Repositório privado.** Hoje ele é público. Recomendação: tornar privado antes de chamar os amigos, conferindo antes se o ChatGPT continua com acesso.
+7. **Voz do jogo.** Usar o Simple Voice Chat com os amigos desde a primeira noite? Recomendação: sim. Gravar a voz deles fica para depois, e só com aviso.
+
+---
+
+## Pesquisa daqui para a frente
+
+Nenhuma pesquisa nova antes da etapa 1. Depois, uma por tema, só quando a etapa correspondente estiver para começar, e cada uma termina com uma recomendação curta: o que fazer primeiro e o que não fazer.
+
+| Pesquisa | Antes de |
+|---|---|
+| Ler o código do TheWatcher | etapa 3 |
+| API do Simple Voice Chat na 26.2; Revervox e Mimicked | voz roubada (4g) |
+| Efeitos de tela do próprio jogo na 26.2 | cartas "neblina que fecha" e "salto de aproximação" |
+| Blockbench e GeckoLib | só se a silhueta não bastar |
+
+O critério de corte é "isso assusta o dono e os amigos?", não "isso é legal".
 
 ---
 
