@@ -46,6 +46,9 @@ public final class JogadorDeTeste {
 	/** O primeiro bloco de ar acima do chão, numa coluna relativa à origem da estrutura do teste. */
 	public static BlockPos chao(GameTestHelper helper, int dx, int dz) {
 		BlockPos coluna = helper.absolutePos(new BlockPos(dx, 0, dz));
+		// Carrega o chunk antes de perguntar a altura: num chunk ainda não carregado a resposta é o fundo do
+		// mundo, e o jogador nasceria dentro da rocha-mãe (acontecia às vezes, longe da estrutura do teste).
+		helper.getLevel().getChunk(coluna);
 		int y = helper.getLevel().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, coluna.getX(), coluna.getZ());
 		return new BlockPos(coluna.getX(), y, coluna.getZ());
 	}

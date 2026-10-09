@@ -46,6 +46,27 @@ final class Miragem {
 		return true;
 	}
 
+	/** Quantas miragens deste motivo este jogador tem agora. */
+	static int ativas(ServerPlayer p, String motivo) {
+		int n = 0;
+		for (Ativa a : ATIVAS) {
+			if (a.jogador().equals(p.getUUID()) && a.motivo().equals(motivo)) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** Este jogador já tem uma miragem nesta posição? */
+	static boolean tem(ServerPlayer p, BlockPos pos) {
+		for (Ativa a : ATIVAS) {
+			if (a.jogador().equals(p.getUUID()) && a.pos().equals(pos)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** Desfaz o que venceu ou aquilo de que o jogador chegou perto. Desfazer é reenviar o bloco de verdade. */
 	static void tick(ServerLevel level, long tick) {
 		if (ATIVAS.isEmpty() || tick % 5 != 0) {

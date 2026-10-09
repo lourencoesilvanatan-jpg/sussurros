@@ -4,13 +4,18 @@ import java.util.List;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -304,7 +309,9 @@ public class TestesDosItens {
 		BlockPos pe = jogador.blockPosition();
 		helper.runAfterDelay(5, () -> {
 			Diretor.acenderVela(jogador);
-			helper.assertTrue(level.getBlockState(pe).is(ModBlocos.VELA_ACESA), "deveria haver uma vela de verdade aos pés dele");
+			helper.assertTrue(level.getBlockState(pe).is(ModBlocos.VELA_ACESA), "deveria haver uma vela de verdade aos pés dele; há "
+					+ level.getBlockState(pe) + " sobre " + level.getBlockState(pe.below()) + ", ele em " + jogador.blockPosition().toShortString()
+					+ " (era " + pe.toShortString() + ")");
 			helper.assertTrue(Diretor.temZonaCalma(jogador), "a zona de calma deveria estar valendo");
 			level.setBlockAndUpdate(pe, Blocks.AIR.defaultBlockState());
 		});
@@ -313,6 +320,55 @@ public class TestesDosItens {
 			JogadorDeTeste.remover(jogador);
 			helper.succeed();
 		});
+	}
+
+	/**
+	 * As receitas carregam, e as que usam Cinza Pálida aparecem no livro de receitas de quem pega a primeira
+	 * cinza: é assim que o jogador descobre o que dá para fazer, sem ler nada fora do jogo.
+	 */
+	@GameTest(maxTicks = 200)
+	public void asReceitasAparecem(GameTestHelper helper) {
+		MinecraftServer server = helper.getLevel().getServer();
+		String[] nomes = {"lampiao_palido", "tigela_oferenda", "caixa_de_musica", "ossos_de_agouro", "vela_palida", "sino_oco",
+				"fio_vigilia", "isca_palida", "caderno_vestigios"};
+		for (String nome : nomes) {
+			helper.assertTrue(server.getRecipeManager().byKey(receita(nome)).isPresent(), "a receita " + nome + " não carregou");
+			helper.assertTrue(server.getAdvancements().get(Identifier.fromNamespaceAndPath("sussurros", "recipes/" + nome)) != null,
+					"falta o desbloqueio da receita " + nome);
+		}
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -250, 0);
+		helper.assertFalse(jogador.getRecipeBook().contains(receita("lampiao_palido")), "não deveria conhecer a receita antes da cinza");
+		helper.runAfterDelay(5, () -> jogador.getInventory().add(new ItemStack(ModItems.CINZA_PALIDA)));
+		helper.succeedWhen(() -> {
+			for (String nome : new String[] {"lampiao_palido", "tigela_oferenda", "ossos_de_agouro", "vela_palida"}) {
+				helper.assertTrue(jogador.getRecipeBook().contains(receita(nome)), "com a cinza na mochila, deveria conhecer " + nome);
+			}
+			helper.assertFalse(jogador.getRecipeBook().contains(receita("caixa_de_musica")), "a receita da caixa só vem com a caixa");
+			JogadorDeTeste.remover(jogador);
+		});
+	}
+
+	/** Da fase 2 em diante, uma tocha fora da tela passa a queimar pálida só para ele. O mundo não muda. */
+	@GameTest(maxTicks = 900)
+	public void asChamasEmpalidecem(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -280, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 2);
+		ServerLevel level = helper.getLevel();
+		Vec3 olhar = jogador.getLookAngle();
+		BlockPos atras = jogador.blockPosition().offset((int) Math.round(-olhar.x * 4), 0, (int) Math.round(-olhar.z * 4));
+		level.setBlockAndUpdate(atras, Blocks.TORCH.defaultBlockState());
+		helper.assertTrue(Diretor.miragensParaTeste(jogador, "CHAMA_PALIDA") == 0, "não deveria haver chama pálida antes da hora");
+		helper.succeedWhen(() -> {
+			helper.assertTrue(Diretor.miragensParaTeste(jogador, "CHAMA_PALIDA") == 1, "a tocha atrás dele deveria ter empalidecido");
+			helper.assertTrue(level.getBlockState(atras).is(Blocks.TORCH), "no mundo de verdade a tocha continua a mesma");
+			level.removeBlock(atras, false);
+			JogadorDeTeste.remover(jogador);
+		});
+	}
+
+	private static ResourceKey<Recipe<?>> receita(String nome) {
+		return ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("sussurros", nome));
 	}
 
 	/** Uma criatura qualquer por perto não quebra nada do que foi posto: sanidade do que é só registro. */

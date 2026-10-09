@@ -170,7 +170,10 @@ public class LampiaoPalidoBlock extends LanternBlock {
 		}
 	}
 
-	/** Uma vez por segundo, enquanto aceso: olha em volta e ajusta a chama. */
+	/**
+	 * Enquanto aceso, olha em volta e ajusta a chama: uma vez por segundo com tudo calmo, cinco vezes por segundo
+	 * quando já há algo por perto (na caçada ele anda seis blocos por segundo, e passaria entre duas olhadas).
+	 */
 	@Override
 	protected void tick(BlockState estado, ServerLevel level, BlockPos pos, RandomSource random) {
 		Chama atual = estado.getValue(CHAMA);
@@ -185,7 +188,7 @@ public class LampiaoPalidoBlock extends LanternBlock {
 				return;
 			}
 		}
-		level.scheduleTick(pos, this, 20);
+		level.scheduleTick(pos, this, nova == Chama.CALMA ? 20 : 4);
 	}
 
 	private Chama chamaPara(ServerLevel level, BlockPos pos) {

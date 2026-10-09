@@ -1,6 +1,7 @@
 package com.sussurros.assombracao;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -266,6 +267,11 @@ public final class Diretor {
 		return estado(p);
 	}
 
+
+	/** Quantas miragens deste motivo este jogador tem agora (para os testes). */
+	public static int miragensParaTeste(ServerPlayer p, String motivo) {
+		return Miragem.ativas(p, motivo);
+	}
 
 	/** O que o cliente deste jogador foi mandado sentir por último (para os testes e para o comando memoria). */
 	public static PacoteSentidos sentidos(ServerPlayer p) {
@@ -584,6 +590,7 @@ public final class Diretor {
 		Cantiga.segundo(level, p, m, e, seg, tick);
 		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
 		Conta.segundo(level, p, m, e, seg, tick);
+		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
@@ -3156,8 +3163,12 @@ public final class Diretor {
 			BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, pos, 12);
 			if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
 				boolean pegada = false;
-				for (Direction d : Direction.Plane.HORIZONTAL.shuffledCopy(rnd)) {
-					if (Oferenda.pegada(level, linha.relative(d, 2)) || Oferenda.pegada(level, linha.relative(d))) {
+				// Do lado de fora: primeiro o lado da linha mais longe da cama. A pegada aponta para a linha.
+				List<Direction> lados = new ArrayList<>(Direction.Plane.HORIZONTAL.stream().toList());
+				lados.sort(Comparator.comparingDouble((Direction d) -> -linha.relative(d, 2).distSqr(pos)));
+				for (Direction d : lados) {
+					if (Oferenda.pegada(level, linha.relative(d, 2), d.getOpposite())
+							|| Oferenda.pegada(level, linha.relative(d), d.getOpposite())) {
 						pegada = true;
 						break;
 					}
@@ -3165,6 +3176,11 @@ public final class Diretor {
 				Depuracao.log(p, level.getGameTime() / 20, "LINHA testada de noite pos=" + linha.toShortString()
 						+ " ficou=" + CinzaEspalhadaBlock.estadoEm(level, linha) + " pegada=" + (pegada ? "sim" : "nao"));
 			}
+		}
+
+		// 0.9: quem dormiu a noite inteira pulou a hora da oferenda; ele passou pela tigela enquanto isso.
+		if (p.isSleepingLongEnough()) {
+			Oferenda.aoAcordar(level, p, m, estado(p), fase, level.getGameTime());
 		}
 
 		// Ele deixou algo ao lado da cama enquanto você dormia.

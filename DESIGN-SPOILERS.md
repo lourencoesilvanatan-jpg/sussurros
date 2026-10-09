@@ -637,3 +637,127 @@ A tocha que pisca, a tocha "levada" na fase 4, as luzes apagadas ao acordar, as 
 ## Diário
 
 Três páginas novas (23 a 25 de 25) ensinam, na voz de quem escreveu, que encarar só compra tempo, que ele atravessa o que não tem caminho e como a marca sai.
+
+---
+# Versão 0.9.0-alpha2 — "Trocar"
+
+Segunda entrega da expansão: os itens novos e a dívida escondida que os une. As pesquisas que embasam as escolhas estão em `pesquisa/2026-10-08-itens-e-sentidos.md`.
+
+## A Conta
+
+Um número escondido por jogador, salvo com o personagem. É o que permite aos itens serem bons de verdade: o preço não está em cada uso, está em se apoiar demais.
+
+| Uso | Soma |
+|---|---|
+| Vela, Sino, Fio, Ossos, um bloco de Linha de Cinza, uma carga no Lampião | 1 |
+| Isca, Caixa de Música | 2 |
+| Olho | 3 |
+| Ossos com o desfecho "a conta sobe" | 4 |
+
+- Cai 1 a cada 10 minutos (não cai enquanto uma cobrança está marcada).
+- O limite é sorteado a cada ciclo, de 6 a 10. O jogador nunca o vê.
+- **Três avisos sem texto**, um por degrau, quando faltam 3, 2 e 1 para o limite: (1) os lampiões a até 16 blocos ficam inquietos e uma ou duas luzes perto falham por alguns segundos; (2) a cantiga toca falhada, ao longe (para quem nunca deu corda na caixa, um sino distante); (3) um zumbido no ouvido e 20 s de sensação de vigia.
+- **Estourou:** a cobrança não vem na hora. Vem de 30 a 120 s depois, quando ele já não liga uma coisa à outra. Depois tudo zera e sorteia outro limite.
+- **A cobrança vem na moeda do item em que ele mais se apoiou** (uso × peso):
+
+| Item mais usado | Cobrança |
+|---|---|
+| Vela | A próxima vela dura a metade |
+| Olho | No próximo uso, dez segundos de escuridão e ele vem (na fase 3 ou mais) |
+| Isca | A próxima isca é ignorada: ele não vem para onde foi chamado |
+| Ossos | A próxima jogada é "presença", sem sorteio |
+| Sino | O sino toca sozinho três vezes, espaçadas |
+| Fio | Três estalos de fio dedilhado, sem rompimento |
+| Caixa | A caixa toca sozinha, arruinada, de dentro da mochila |
+| Linha | Uma linha a até 16 blocos é gasta de uma vez, até romper |
+| Lampião | Todos os lampiões a até 24 blocos ficam com a chama fria por um minuto |
+
+Nunca mata e nunca estraga a construção. Uso por comando de teste não soma.
+
+## Caixa de Música
+
+Item com 12 voltas de corda. É **deixada para o jogador na passagem para a fase 2** (como a página e o Olho); a receita só aparece depois de ele ter uma.
+
+- Toca o tema por uns 20 s, no lugar onde ele deu corda (é som do mundo: quem está perto ouve). Enquanto toca, não dá para dar corda de novo.
+- A até 10 blocos da caixa, a inquietação cai 3 por segundo.
+- Se o Hóspede existe e está a até 20 blocos da caixa, depois de 5 s **algo cantarola junto, dentro da cabeça do dono**: confirma que ele está por ali, não onde.
+- **Na caçada é isca:** ele vai até a música. Funciona bem na primeira vez da caçada (certeza 0,7), mal na segunda (0,45), quase nada depois (0,2); e não adianta se ele acabou de ver o jogador.
+- **O preço é ele aprender.** Com 3 usos a caixa soa gasta e passam a existir o evento `CANTIGA` e o assobio no aviso da caçada. Com 6, soa arruinada. A corda arrebenta no 12º uso.
+
+## Linha de Cinza
+
+Cinza Pálida usada no chão vira um bloco fino (`cinza_espalhada`). A faixa atravessa na frente de quem a põe, ou continua a linha vizinha.
+
+- **Na caçada ele não cruza uma linha que segura.** A cada tentativa (ele a um bloco dela) a linha perde um estágio, arrasta e o deixa parado 3 s: intacta, riscada, gasta, rompida. Quem está atrás da linha não é pego enquanto ela dura. Uma linha de três blocos numa porta compra perto de meio minuto.
+- **Na porta:** a batida e a maçaneta, se há linha segurando a até 2 blocos da porta, não mexem na porta; gastam um estágio da linha.
+- **Dormindo:** na fase 2 ou mais, em 45% das manhãs uma linha a até 12 blocos da cama amanhece um estágio mais gasta, com uma pegada de cinza do lado de fora, virada para ela. Sem som. A pegada some em um dia de jogo.
+- Aparições não nascem a menos de 2 blocos de uma linha que segura.
+- Só a linha intacta devolve a Cinza ao ser quebrada.
+
+O mesmo bloco, no estado `pegada`, é a marca que ele deixa. Não segura nada.
+
+## Lampião Pálido
+
+Bloco de luz (no chão ou pendurado) que queima Cinza Pálida: até 3 cargas, em média uma a cada sete minutos. Sai da bancada aceso e com uma carga. Cinza na mão recarrega; mão vazia apaga ou reacende.
+
+| Chama | Luz | Quando |
+|---|---|---|
+| calma | 12 | nada por perto |
+| inquieta | 8 | ele a até 20 blocos |
+| fria | 4 | ele a até 9 blocos |
+| apagada | 0 | ele passou a até 4 blocos, ou acabou a cinza |
+
+Vale para qualquer Hóspede, visto ou não: é o "sinal preso a um objeto" que a pesquisa pede no lugar de um medidor na tela. Olha em volta uma vez por segundo, e cinco vezes por segundo quando já há algo perto. Apagado por ele, só reacende na mão.
+
+## Tigela de Oferenda
+
+Bloco com um item dentro (aparece deitado na tigela). O jogador põe uma coisa; uma vez por noite, depois da meia-noite e sem ninguém olhando, ele decide. Quem dorme a noite inteira tem a decisão tomada ao acordar.
+
+- **Chance de aceitar:** 45% + 15% × valor (comida 1, Cinza Pálida 2, ouro/diamante/esmeralda/ametista/maçã ou cenoura dourada 3, o resto 0,5), até 92%. Repetir o mesmo item multiplica por 0,6 a cada vez.
+- **Aceita:** o item some, ficam cinzas na tigela e até três pegadas saem dela para o lado oposto ao da cama. A inquietação cai 30, a obsessão cai 3 × valor, e **até amanhecer nada começa enquanto o jogador está em casa**. Fora de casa tudo continua.
+- **Depois de duas aceitas**, em 25% das vezes ele deixa algo na tigela: uma página do diário enquanto houver, depois cinza ou um osso.
+- **Recusada:** nada muda.
+- **Afronta:** oferecer Vela, Olho, Sino, Fio ou Isca. Ele não leva, e por quatro minutos a batida e a porta ficam quatro vezes mais prováveis.
+- **Desfeita:** depois de três noites seguidas aceitas, uma noite com a tigela vazia tem o mesmo efeito da afronta.
+
+Não pode virar "seja bonzinho e está salvo": a trégua vale só dentro de casa e só até amanhecer.
+
+## Ossos de Agouro
+
+Consumível. Três ossos caem no chão à frente e ficam 15 s. O desfecho não é dito; lê-se em como caíram.
+
+| Desfecho | Peso | O que faz | Como caem |
+|---|---|---|---|
+| nada | 25 | nada | espalhados |
+| silêncio | 15 | o mundo emudece por 25 s | três em paralelo |
+| trégua | 15 | dez minutos sem nada novo começar | em triângulo |
+| apontam | 15 | alinham-se para o vestígio mais próximo (ou para ele) | em fila |
+| presença | 15 | ele aparece em 3 a 6 s | dois cruzados, um afastado |
+| amigo | 10 | ele aparece para o jogador mais próximo | em fila, apontando para o amigo |
+| conta | 5 | a Conta sobe 4 | só dois: o terceiro se desfaz em cinza |
+
+Cada jogada no mesmo dia tira 6 pontos de cada desfecho bom e os dá à presença (até 12). Sem alvo, "apontam" vira "nada" e "amigo" vira "presença".
+
+## Ajustes nos itens antigos
+
+- **Vela:** enquanto a zona dura há uma vela acesa de verdade no chão (se couber). Tirar o bloco acaba com a zona; soprada na caçada, o bloco some junto.
+- **Fio:** vibra antes de romper. Com a coisa a até 7 blocos da borda, range baixo a cada 2 s e o tom sobe conforme ela chega. Dá antecedência e distância, não direção.
+
+## Chamas Pálidas
+
+Não é evento. Da fase 2 em diante, uma tocha do próprio jogador (duas na fase 4; mais uma com obsessão de 60 ou mais) passa a queimar como tocha de almas, só para ele, por 2 a 5 minutos. A troca só acontece com a tocha fora da tela, a até 24 blocos; dentro da vela nenhuma empalidece. É miragem: clicar nela a desfaz.
+
+## Receitas
+
+Aparecem sozinhas no livro de receitas do jogo: todas as que levam Cinza Pálida, quando ele pega a primeira cinza; a da Vela, com a primeira cinza ou a primeira página; a da Caixa, quando ele tem uma caixa.
+
+| Item | Receita (sem forma) |
+|---|---|
+| Lampião Pálido | lanterna + cinza pálida + resina |
+| Tigela de Oferenda | tigela + bola de argila + cinza pálida |
+| Ossos de Agouro (2) | 2 ossos + linha + cinza pálida |
+| Caixa de Música | bloco musical + pepita de ferro + cinza pálida |
+
+## Diário
+
+Três páginas novas (26 a 28 de 28) ensinam a linha na soleira, a oferenda e o que acontece ao esquecê-la, e a caixa que ele aprende.

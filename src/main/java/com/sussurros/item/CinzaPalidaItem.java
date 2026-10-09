@@ -19,6 +19,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import com.sussurros.assombracao.Conta;
+import com.sussurros.bloco.CinzaEspalhadaBlock;
 import com.sussurros.registro.ModBlocos;
 
 /**
@@ -43,7 +44,8 @@ public class CinzaPalidaItem extends Item {
 			return InteractionResult.PASS;
 		}
 		BlockPos alvo = sobre ? clicado : clicado.above();
-		BlockState linha = ModBlocos.CINZA_ESPALHADA.defaultBlockState();
+		BlockState linha = ModBlocos.CINZA_ESPALHADA.defaultBlockState().setValue(CinzaEspalhadaBlock.FRENTE,
+				CinzaEspalhadaBlock.frentePara(level, alvo, contexto.getHorizontalDirection()));
 		BlockState atual = level.getBlockState(alvo);
 		if (!atual.canBeReplaced() || atual.is(ModBlocos.CINZA_ESPALHADA) || !atual.getFluidState().isEmpty()
 				|| !linha.canSurvive(level, alvo)) {

@@ -108,6 +108,34 @@ public final class Oferenda {
 	}
 
 	/**
+	 * Quem dorme ao anoitecer pula a hora em que ele passaria pela tigela. Ao acordar de uma noite dormida,
+	 * a decisão daquela noite é tomada ali: de manhã a tigela já está como ele a deixou.
+	 * Recebe a Memoria de quem chamou e não a salva.
+	 */
+	static void aoAcordar(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase, long tick) {
+		if (m.get(TEM_TIGELA) != 1 || fase < 1) {
+			return;
+		}
+		long relogio = level.getDefaultClockTime();
+		long hora = Math.floorMod(relogio, 24000L);
+		// A noite pertence ao dia em que começou: de manhã, é a do dia anterior.
+		int dia = (int) (relogio / 24000L) - (hora < 12000 ? 1 : 0);
+		if (m.get(DIA, -1) == dia) {
+			return;
+		}
+		BlockPos pos = new BlockPos(m.get(TIGELA_X), m.get(TIGELA_Y), m.get(TIGELA_Z));
+		if (!level.isLoaded(pos)) {
+			return;
+		}
+		if (!(level.getBlockEntity(pos) instanceof TigelaBlockEntity tigela)) {
+			m.set(TEM_TIGELA, 0);
+			return;
+		}
+		m.set(DIA, dia);
+		resolver(level, p, m, e, tigela, pos, p.getRandom(), tick, null);
+	}
+
+	/**
 	 * A decisão dele. aceitar: null no jogo normal; true ou false nos testes, para tirar o sorteio.
 	 * Recebe a Memoria de quem chamou e não a salva.
 	 */
@@ -213,17 +241,18 @@ public final class Oferenda {
 		int postas = 0;
 		for (int passo = 1; passo <= 5 && postas < 3; passo++) {
 			BlockPos pos = tigela.relative(lado, passo);
-			if (pegada(level, pos) || pegada(level, pos.below()) || pegada(level, pos.above())) {
+			if (pegada(level, pos, lado) || pegada(level, pos.below(), lado) || pegada(level, pos.above(), lado)) {
 				postas++;
 			}
 		}
 		return postas;
 	}
 
-	/** Põe uma pegada de cinza, se couber. É temporária e não substitui nada. */
-	static boolean pegada(ServerLevel level, BlockPos pos) {
+	/** Põe uma pegada de cinza virada para "rumo", se couber. É temporária e não substitui nada. */
+	static boolean pegada(ServerLevel level, BlockPos pos, Direction rumo) {
 		BlockState marca = ModBlocos.CINZA_ESPALHADA.defaultBlockState()
-				.setValue(CinzaEspalhadaBlock.ESTADO, CinzaEspalhadaBlock.Estado.PEGADA);
+				.setValue(CinzaEspalhadaBlock.ESTADO, CinzaEspalhadaBlock.Estado.PEGADA)
+				.setValue(CinzaEspalhadaBlock.FRENTE, rumo);
 		if (!level.getBlockState(pos).isAir() || !marca.canSurvive(level, pos)) {
 			return false;
 		}

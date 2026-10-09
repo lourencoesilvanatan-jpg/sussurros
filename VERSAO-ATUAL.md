@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha2
+
+Segunda parte da expansão. Entram itens e blocos novos, ajustes em itens antigos e um detalhe de ambiente. As receitas do mod passam a aparecer sozinhas no livro de receitas do jogo.
+
 ## 0.9.0-alpha1
 
 Primeira parte de uma expansão grande. Entram sons e trilha próprios, uma camada nova do lado do cliente, acontecimentos novos e uma caçada refeita. O mod também deixou de remover blocos do mundo do jogador.

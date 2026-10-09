@@ -18,6 +18,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -49,11 +50,16 @@ public class CinzaEspalhadaBlock extends Block {
 
 	public static final MapCodec<CinzaEspalhadaBlock> CODEC = simpleCodec(CinzaEspalhadaBlock::new);
 	public static final EnumProperty<Estado> ESTADO = EnumProperty.create("estado", Estado.class);
+	/**
+	 * Para onde a marca está virada. Na linha, a faixa atravessa essa direção (virada para o norte ou para o sul,
+	 * corre de oeste a leste). Na pegada, é para onde os dedos apontam.
+	 */
+	public static final EnumProperty<Direction> FRENTE = BlockStateProperties.HORIZONTAL_FACING;
 	private static final VoxelShape FORMA = Block.box(0.0, 0.0, 0.0, 16.0, 1.0, 16.0);
 
 	public CinzaEspalhadaBlock(Properties propriedades) {
 		super(propriedades);
-		this.registerDefaultState(this.stateDefinition.any().setValue(ESTADO, Estado.INTACTA));
+		this.registerDefaultState(this.stateDefinition.any().setValue(ESTADO, Estado.INTACTA).setValue(FRENTE, Direction.NORTH));
 	}
 
 	@Override
@@ -63,7 +69,7 @@ public class CinzaEspalhadaBlock extends Block {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(ESTADO);
+		builder.add(ESTADO, FRENTE);
 	}
 
 	@Override
@@ -81,6 +87,19 @@ public class CinzaEspalhadaBlock extends Block {
 	protected BlockState updateShape(BlockState estado, LevelReader level, ScheduledTickAccess ticks, BlockPos pos,
 			Direction direcao, BlockPos vizinho, BlockState estadoVizinho, RandomSource random) {
 		return estado.canSurvive(level, pos) ? estado : Blocks.AIR.defaultBlockState();
+	}
+
+	/**
+	 * Para onde virar uma linha nova: ela continua a linha vizinha, se há vizinhas numa direção só; senão
+	 * atravessa na frente de quem a faz.
+	 */
+	public static Direction frentePara(BlockGetter level, BlockPos pos, Direction olhando) {
+		boolean lesteOeste = estadoEm(level, pos.east()) != null || estadoEm(level, pos.west()) != null;
+		boolean norteSul = estadoEm(level, pos.north()) != null || estadoEm(level, pos.south()) != null;
+		if (lesteOeste != norteSul && (olhando.getAxis() == Direction.Axis.X) == lesteOeste) {
+			return olhando.getClockWise();
+		}
+		return olhando;
 	}
 
 	/** O estado desta posição, se houver cinza espalhada ali. */

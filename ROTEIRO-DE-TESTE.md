@@ -4,7 +4,13 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
-Versão 0.9.0-alpha1, primeira parte da expansão:
+Versão 0.9.0-alpha2, segunda parte da expansão:
+
+- itens e blocos novos, e mudanças em alguns dos antigos;
+- as receitas do mod agora aparecem sozinhas no livro de receitas do jogo, conforme você joga. Não precisa procurar em lugar nenhum;
+- um detalhe novo no ambiente.
+
+Da versão 0.9.0-alpha1, que você ainda não jogou:
 
 - sons novos e uma trilha;
 - uma camada nova no jogo, do lado do cliente;
@@ -22,6 +28,8 @@ Versão 0.9.0-alpha1, primeira parte da expansão:
 
 Se quiser adiantar o relógio do mod em vez de esperar, `/sussurros fase 2`, `3` ou `4` continua valendo.
 
+Vale a pena jogar em **sobrevivência**, e não em criativo: boa parte do que é novo você encontra, recebe ou fabrica. Experimente o que aparecer, do jeito que parecer natural. Nada do que é novo mata você nem estraga a sua construção.
+
 Se algum efeito de tela incomodar, dá para desligar sem perder o resto: `/sussurros_tela cor nao` e `/sussurros_tela borda nao` (`sim` liga de volta).
 
 ## O que mandar de volta
@@ -33,6 +41,8 @@ Se quiser ajudar mais, responda sem descrever o que viu:
 - Teve algum momento que pareceu **defeito** do jogo, e não parte do mod?
 - Teve algum som **alto demais** ou irritante?
 - Teve algum momento em que você ficou **preso**, sem saber o que fazer, e isso irritou em vez de assustar?
+- Teve algum item que você **não entendeu para que serve**, mesmo depois de usar algumas vezes?
+- Algum item pareceu **forte demais** (resolve tudo) ou **inútil**?
 - Em algum momento pareceu **injusto**?
 - De 0 a 10, quanto a sessão te deixou desconfortável?
 
@@ -47,5 +57,7 @@ Você não precisa repetir isto. Fica registrado para quem programa.
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
 - A caçada foi exercitada contra um jogador de mentira em cinco situações, e o desfecho foi o esperado em todas.
 - Cada efeito de tela foi fotografado no máximo, dentro do jogo, numa máquina do GitHub.
+- Cada item e bloco novo foi usado por um jogador de mentira (nove situações) e fotografado dentro do jogo.
+- As receitas carregam e aparecem no livro na hora certa.
 
 O que nenhum teste automático mede: se assusta, e como soa. Isso é com você.
