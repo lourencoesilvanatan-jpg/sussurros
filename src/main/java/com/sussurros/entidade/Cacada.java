@@ -19,6 +19,7 @@ import com.sussurros.assombracao.ApoioCaca;
 import com.sussurros.assombracao.Depuracao;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Percepcao;
+import com.sussurros.bloco.CinzaEspalhadaBlock;
 
 /**
  * Uma caçada, do aviso ao desfecho (0.9).
@@ -89,6 +90,11 @@ final class Cacada {
 	private int fingeRestante;
 	private double velocidade = VELOCIDADE_INICIAL;
 	private boolean encerrada;
+	/** Uma Linha de Cinza o segurou: ticks parado antes de tentar de novo. */
+	private int barrado;
+	/** Quantas vezes a Caixa de Música o chamou nesta caçada. Cada vez ele acredita menos. */
+	private int iscas;
+	private long ultimaIscaTick = -1000;
 
 	@Nullable
 	private BlockPos avisoBloco;
@@ -179,6 +185,24 @@ final class Cacada {
 		if (Diretor.emZonaCalma(alvo, alvo.getX(), alvo.getY(), alvo.getZ())) {
 			this.iniciarEsperaVela(level, alvo);
 			return;
+		}
+
+		// A Linha de Cinza: ele não cruza uma linha que ainda segura. Cada tentativa a desgasta e o deixa
+		// parado três segundos; na terceira ela rompe. Vem antes do toque: quem está atrás da linha está a salvo
+		// enquanto ela durar.
+		if (this.barrado > 0) {
+			this.barrado--;
+			this.h.pararEOlhar();
+			return;
+		}
+		if (this.h.tickCount % 5 == 0) {
+			BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, this.h.blockPosition(), 1);
+			if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
+				this.barrado = 60;
+				this.h.getNavigation().stop();
+				ApoioCaca.linhaSegurou(level, alvo, this.h, linha);
+				return;
+			}
 		}
 
 		// O toque exige linha de visão (nada de ser pego através da parede), mas não depende de ele estar sendo
@@ -365,6 +389,26 @@ final class Cacada {
 			}
 		}
 		return melhor;
+	}
+
+	/**
+	 * A Caixa de Música está tocando: ele vai até a música em vez de ir até o jogador. Funciona bem na
+	 * primeira vez da caçada, mal na segunda e quase nada depois. Se ele acabou de ver o jogador, não adianta.
+	 */
+	void iscar(ServerLevel level, Vec3 onde) {
+		long tick = level.getGameTime();
+		if (tick - this.ultimaIscaTick > 200) {
+			this.iscas++;
+		}
+		this.ultimaIscaTick = tick;
+		if (this.estagio != Estagio.PERSEGUE || this.naTela > 0) {
+			return;
+		}
+		double certeza = this.iscas <= 1 ? 0.7 : this.iscas == 2 ? 0.45 : 0.2;
+		if (this.busca.confianca() > certeza + 0.25 && this.busca.idadeDoConhecimento(tick) < 40) {
+			return;
+		}
+		this.busca.ouvirAcao(level, this.h, onde, certeza, "CAIXA");
 	}
 
 	// ===== Portas =====

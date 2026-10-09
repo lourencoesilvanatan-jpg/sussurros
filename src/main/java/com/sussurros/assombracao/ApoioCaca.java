@@ -16,6 +16,7 @@ import net.minecraft.world.phys.Vec3;
 
 import org.jspecify.annotations.Nullable;
 
+import com.sussurros.bloco.CinzaEspalhadaBlock;
 import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.rede.PacoteEfeito;
 import com.sussurros.rede.Rede;
@@ -172,8 +173,19 @@ public final class ApoioCaca {
 			return;
 		}
 		e.zonaAteTick = level.getGameTime();
+		if (e.velaBloco != null) {
+			AlteracoesTemporarias.restaurarAgora(level, e.velaBloco);
+			e.velaBloco = null;
+		}
 		ModSons.tocarPara(p, e.zonaX, e.zonaY + 0.5, e.zonaZ, ModSons.Som.SOPRO, 0.9F, 1.0F);
 		Depuracao.log(p, level.getGameTime() / 20, "CACA id=" + h.getIdManifestacao() + " soprou a vela");
+	}
+
+	/** Uma Linha de Cinza o barrou: o arrastar na soleira é do mundo (quem está na casa ouve). */
+	public static void linhaSegurou(ServerLevel level, ServerPlayer p, HospedeEntity h, BlockPos linha) {
+		ModSons.tocar(level, linha.getX() + 0.5, linha.getY() + 0.2, linha.getZ() + 0.5, ModSons.Som.ARRASTO, 0.8F, 0.85F);
+		Depuracao.log(p, level.getGameTime() / 20, "LINHA segurou manifestacao=" + h.getIdManifestacao()
+				+ " pos=" + linha.toShortString() + " ficou=" + CinzaEspalhadaBlock.estadoEm(level, linha));
 	}
 
 	public static void capturar(ServerLevel level, ServerPlayer p, HospedeEntity h) {

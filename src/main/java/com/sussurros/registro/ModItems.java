@@ -7,6 +7,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -17,10 +18,12 @@ import net.fabricmc.fabric.api.creativetab.v1.FabricCreativeModeTab;
 
 import com.sussurros.Sussurros;
 import com.sussurros.item.CadernoVestigiosItem;
+import com.sussurros.item.CaixaDeMusicaItem;
 import com.sussurros.item.CinzaPalidaItem;
 import com.sussurros.item.FioVigiliaItem;
 import com.sussurros.item.IscaPalidaItem;
 import com.sussurros.item.OlhoSussurranteItem;
+import com.sussurros.item.OssosDeAgouroItem;
 import com.sussurros.item.SinoOcoItem;
 import com.sussurros.item.PaginaRasgadaItem;
 import com.sussurros.item.VelaPalidaItem;
@@ -50,6 +53,19 @@ public class ModItems {
 	public static final Item ISCA_PALIDA = register("isca_palida", IscaPalidaItem::new,
 			new Item.Properties().stacksTo(8).rarity(Rarity.UNCOMMON));
 
+	// --- 0.9 ---
+	public static final Item CAIXA_DE_MUSICA = register("caixa_de_musica", CaixaDeMusicaItem::new,
+			new Item.Properties().durability(12).rarity(Rarity.UNCOMMON));
+
+	public static final Item OSSOS_DE_AGOURO = register("ossos_de_agouro", OssosDeAgouroItem::new,
+			new Item.Properties().stacksTo(16));
+
+	public static final Item LAMPIAO_PALIDO = register("lampiao_palido", p -> new BlockItem(ModBlocos.LAMPIAO_PALIDO, p),
+			new Item.Properties().useBlockDescriptionPrefix());
+
+	public static final Item TIGELA_OFERENDA = register("tigela_oferenda", p -> new BlockItem(ModBlocos.TIGELA_OFERENDA, p),
+			new Item.Properties().useBlockDescriptionPrefix());
+
 	public static final Item OVO_HOSPEDE = register("ovo_hospede", SpawnEggItem::new,
 			new Item.Properties().spawnEgg(ModEntidades.HOSPEDE));
 
@@ -68,6 +84,10 @@ public class ModItems {
 				output.accept(ISCA_PALIDA);
 				output.accept(SINO_OCO);
 				output.accept(VELA_PALIDA);
+				output.accept(LAMPIAO_PALIDO);
+				output.accept(TIGELA_OFERENDA);
+				output.accept(CAIXA_DE_MUSICA);
+				output.accept(OSSOS_DE_AGOURO);
 				output.accept(OLHO_SUSSURRANTE);
 				output.accept(OVO_HOSPEDE);
 			})

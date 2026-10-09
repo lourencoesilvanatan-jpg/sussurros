@@ -43,3 +43,6 @@ replay_*.log
 
 .venv/
 __pycache__/
+
+# pastas de trabalho temporárias de agentes
+.claude/worktrees/

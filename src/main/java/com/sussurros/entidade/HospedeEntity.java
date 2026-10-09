@@ -164,6 +164,13 @@ public class HospedeEntity extends PathfinderMob {
 		}
 	}
 
+	/** A Caixa de Música do alvo está tocando neste lugar: na caça, ele pode ir até ela. */
+	public void ouvirIsca(Vec3 onde) {
+		if (this.modo == Modo.CACAR && this.cacada != null && this.level() instanceof ServerLevel level) {
+			this.cacada.iscar(level, onde);
+		}
+	}
+
 	/** O quanto o alvo deve "sentir" esta criatura como perseguição, de 0 a 1 (ver Sentidos). */
 	public float intensidadeDaCaca(ServerPlayer p, double dist) {
 		if (this.modo == Modo.ESPERAR) {

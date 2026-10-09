@@ -8,7 +8,8 @@
 	"entrypoints": {
 		"fabric-gametest": [
 			"com.sussurros.teste.TestesDeServidor",
-			"com.sussurros.teste.TestesDaCacada"
+			"com.sussurros.teste.TestesDaCacada",
+			"com.sussurros.teste.TestesDosItens"
 		],
 		"fabric-client-gametest": [
 			"com.sussurros.teste.TestesDeCliente"

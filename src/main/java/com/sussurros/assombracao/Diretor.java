@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -49,6 +50,9 @@ import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 
 import com.sussurros.Sussurros;
+import com.sussurros.bloco.CinzaEspalhadaBlock;
+import com.sussurros.bloco.LampiaoPalidoBlock;
+import com.sussurros.bloco.TigelaBlockEntity;
 import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.assombracao.diretor.Agenda;
@@ -56,6 +60,7 @@ import com.sussurros.assombracao.selecao.Seletor;
 import com.sussurros.rede.PacoteEfeito;
 import com.sussurros.rede.PacoteSentidos;
 import com.sussurros.rede.Rede;
+import com.sussurros.registro.ModBlocos;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -244,6 +249,7 @@ public final class Diretor {
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
 			Percepcao.limpar();
+			LampiaoPalidoBlock.limpar();
 			Agenda.limpar();
 			Atmosfera.limpar();
 			contadorManifestacao = 0;
@@ -291,6 +297,39 @@ public final class Diretor {
 			prenunciar(level, p, e, level.getGameTime(), level.getRandom(), true);
 		}
 		return ok;
+	}
+
+	/** Teste: joga os Ossos de Agouro com o desfecho escolhido. */
+	public static String testarOssos(ServerPlayer p, String desfecho) {
+		Ossos.Desfecho d;
+		try {
+			d = Ossos.Desfecho.valueOf(desfecho.toUpperCase(Locale.ROOT));
+		} catch (IllegalArgumentException ex) {
+			return "Desfecho desconhecido.";
+		}
+		return Ossos.jogar(p, d) ? "Ossos jogados: " + d + "." : "Não há chão à frente para os ossos caírem.";
+	}
+
+	/** Teste: ele passa agora pela tigela deste jogador e aceita (ou recusa) o que estiver nela. */
+	public static String testarOferenda(ServerPlayer p, boolean aceitar) {
+		ServerLevel level = p.level();
+		Memoria m = Memoria.de(p);
+		if (m.get(Oferenda.TEM_TIGELA) != 1) {
+			return "Você ainda não pôs nada numa Tigela de Oferenda.";
+		}
+		BlockPos pos = new BlockPos(m.get(Oferenda.TIGELA_X), m.get(Oferenda.TIGELA_Y), m.get(Oferenda.TIGELA_Z));
+		if (!(level.getBlockEntity(pos) instanceof TigelaBlockEntity tigela)) {
+			return "A tigela não está mais lá.";
+		}
+		String r = Oferenda.resolver(level, p, m, estado(p), tigela, pos, p.getRandom(), level.getGameTime(), aceitar);
+		m.salvar();
+		return "Oferenda: " + r + ".";
+	}
+
+	/** Teste: o estado da Conta deste jogador (SPOILER). */
+	public static String resumoDaConta(ServerPlayer p) {
+		Memoria m = Memoria.de(p);
+		return "Conta " + m.get(Conta.TOTAL) + " de " + m.get(Conta.LIMITE) + ", avisos " + m.get(Conta.AVISOS) + ".";
 	}
 
 	public static String testarSentidos(ServerPlayer p, float peso, float vigia, float caca, float neblina, int flags) {
@@ -371,8 +410,14 @@ public final class Diretor {
 		}
 
 		// --- Zona da vela acabou? ---
+		// 0.9: a vela é um bloco de verdade. Se alguém a quebrou (ou a tirou do lugar), a zona acaba junto.
+		if (e.zonaAteTick > tick && e.velaBloco != null && !level.getBlockState(e.velaBloco).is(ModBlocos.VELA_ACESA)) {
+			e.zonaAteTick = tick;
+			Depuracao.log(p, seg, "VELA apagada antes da hora (o bloco saiu do lugar)");
+		}
 		if (e.zonaAteTick > 0 && tick >= e.zonaAteTick) {
 			e.zonaAteTick = -1;
+			e.velaBloco = null;
 			p.sendOverlayMessage(Component.translatable("message.sussurros.vela.apagou").withStyle(s -> s.withColor(0x8A8A8A).withItalic(true)));
 			level.playSound(null, e.zonaX, e.zonaY, e.zonaZ, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.5F, 0.8F);
 		}
@@ -535,6 +580,11 @@ public final class Diretor {
 		EstruturasSussurros.verificar(level, p, m, e, fase, subterraneo, seg, rnd);
 		Atmosfera.atualizar(level, p, m, e, fase, subterraneo, noite, seg, tick, rnd);
 
+		// --- Itens (0.9): a caixa tocando, a oferenda da noite e a Conta ---
+		Cantiga.segundo(level, p, m, e, seg, tick);
+		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
+		Conta.segundo(level, p, m, e, seg, tick);
+
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
 		verificarFioVigilia(level, p, m, e, seg, tick);
@@ -576,11 +626,16 @@ public final class Diretor {
 		}
 
 		// --- Eventos ---
-		CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
-		CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
-		CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
-		CenaFoiAqui.verificarCenaMarco(p, e, fase, calma, seg, rnd);
-		CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
+		// 0.9: trégua comprada (os ossos, ou a oferenda aceita enquanto ele está em casa). O que já começou
+		// termina; nada novo começa.
+		boolean tregua = tick < e.treguaAte || Oferenda.emTregua(e, tick);
+		if (!tregua) {
+			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
+			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
+			CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
+			CenaFoiAqui.verificarCenaMarco(p, e, fase, calma, seg, rnd);
+			CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
+		}
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 			// Cena "Ele voltou com você": nada aleatório atrapalha a composição.
 			CenaVoltouComVoce.conduzirCenaCasa(level, p, m, e, fase, seg, tick, rnd);
@@ -596,10 +651,10 @@ public final class Diretor {
 		} else if (e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA) {
 			// Cena "Foi aqui": um lugar que já funcionou volta a ser usado como memória.
 			CenaFoiAqui.conduzirCenaMarco(level, p, m, e, fase, seg, tick, rnd);
-		} else if (e.estado == EstadoDiretor.AMEACANDO) {
+		} else if (e.estado == EstadoDiretor.AMEACANDO && (!tregua || e.cena != EstadoJogador.Cena.NENHUMA)) {
 			// Sequência de ameaça: nada aleatório atrapalha a composição.
 			conduzirAmeaca(level, p, m, e, fase, escuro, v, seg, tick, rnd);
-		} else if (fase >= 1 && !criaturaPresente) {
+		} else if (fase >= 1 && !criaturaPresente && !tregua) {
 			decidir(level, p, m, e, fase, escuro, inq, calma, v, seg, tick, rnd);
 		}
 
@@ -625,13 +680,18 @@ public final class Diretor {
 	private static void transicao(ServerLevel level, ServerPlayer p, Memoria m, int fase) {
 		boolean darPagina = m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS;
 		boolean darOlho = fase >= 3 && m.get(Memoria.RECEBEU_OLHO) == 0;
+		// 0.9: a Caixa de Música é deixada para ele na fase 2. É por ela que ele (e o Hóspede) aprende a cantiga.
+		boolean darCaixa = fase >= 2 && m.get(Memoria.RECEBEU_CAIXA) == 0;
+		if (darCaixa) {
+			m.set(Memoria.RECEBEU_CAIXA, 1);
+		}
 		if (darPagina) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
 		}
 		if (darOlho) {
 			m.set(Memoria.RECEBEU_OLHO, 1);
 		}
-		if (!darPagina && !darOlho) {
+		if (!darPagina && !darOlho && !darCaixa) {
 			return;
 		}
 		passos(level, p, 4);
@@ -644,6 +704,9 @@ public final class Diretor {
 			}
 			if (darOlho) {
 				soltarAtras(level, p, new ItemStack(ModItems.OLHO_SUSSURRANTE), 2.5);
+			}
+			if (darCaixa) {
+				soltarAtras(level, p, new ItemStack(ModItems.CAIXA_DE_MUSICA), 3.0);
 			}
 		});
 	}
@@ -958,7 +1021,8 @@ public final class Diretor {
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
-			case BATIDA -> (m.get(Memoria.CASEIRO) >= 300 || Perfil.get(m, Perfil.Traco.CASEIRO) >= 60) && temPorta(level, p);
+			case BATIDA -> (Oferenda.emDesfeita(e, level.getGameTime()) || m.get(Memoria.CASEIRO) >= 300
+					|| Perfil.get(m, Perfil.Traco.CASEIRO) >= 60) && temPorta(level, p);
 			case ECO_CHAT -> !e.falas.isEmpty();
 			case ATRAS -> escuro;
 			case TUMULO -> {
@@ -1025,6 +1089,10 @@ public final class Diretor {
 			}
 			if (ev == Evento.TUMULO) {
 				peso *= 1.5;
+			}
+			// Ele veio cobrar a oferenda que faltou: é na porta que ele cobra.
+			if ((ev == Evento.BATIDA || ev == Evento.PORTA) && Oferenda.emDesfeita(e, level.getGameTime())) {
+				peso *= 4.0;
 			}
 			candidatos.add(ev);
 			pesos.add(peso);
@@ -1314,6 +1382,9 @@ public final class Diretor {
 				if (e.iscaAtiva && tick < e.iscaAteTick) {
 					int atendidas = m.get(Memoria.ISCAS_ATENDIDAS);
 					double chanceIgnorar = atendidas < 3 ? 0.0 : Math.min(0.45, 0.15 + (atendidas - 3) * 0.07);
+					if (!e.forcando && Conta.cobrarNoUso(m, Conta.Item.ISCA)) {
+						chanceIgnorar = 1.0; // a Conta, cobrada na isca: desta vez ele não vem para onde foi chamado
+					}
 					if (rnd.nextDouble() >= chanceIgnorar) {
 						ok = invocarPertoDaIsca(level, p, m, e, duracao, pedido);
 					} else {
@@ -1951,6 +2022,9 @@ public final class Diretor {
 			return null;
 		}
 		// A porta de sempre pode estar a até 24 blocos: o volume escala com a distância para a batida chegar.
+		if (testarLinhaNaPorta(level, p, porta)) {
+			return porta;
+		}
 		float volume = volumePara(p, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5, 0.35F);
 		for (int i = 0; i < 3; i++) {
 			agendar(level, i * 9, () -> level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
@@ -2150,8 +2224,29 @@ public final class Diretor {
 		if (pos == null) {
 			return null;
 		}
+		if (testarLinhaNaPorta(level, p, pos)) {
+			return pos;
+		}
 		alternarPorta(level, pos);
 		return pos;
+	}
+
+	/**
+	 * Há uma Linha de Cinza segurando junto a esta porta? Então a porta não se mexe: é a linha que é testada.
+	 * Ela perde um estágio e arrasta. De manhã, a linha riscada é a prova de que algo tentou entrar.
+	 */
+	private static boolean testarLinhaNaPorta(ServerLevel level, ServerPlayer p, BlockPos porta) {
+		BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, porta, 2);
+		if (linha == null || !CinzaEspalhadaBlock.desgastar(level, linha)) {
+			return false;
+		}
+		double x = linha.getX() + 0.5;
+		double y = linha.getY() + 0.2;
+		double z = linha.getZ() + 0.5;
+		ModSons.tocar(level, x, y, z, ModSons.Som.ARRASTO, volumePara(p, x, y, z, 0.6F), 0.85F);
+		Depuracao.log(p, level.getGameTime() / 20, "LINHA testada na porta pos=" + linha.toShortString()
+				+ " ficou=" + CinzaEspalhadaBlock.estadoEm(level, linha));
+		return true;
 	}
 
 	/** Abre a porta se está fechada, fecha se está aberta. Com o som de sempre. */
@@ -3055,6 +3150,23 @@ public final class Diretor {
 		// Dormir de verdade com uma vela acesa tira a marca da captura. Sair da cama no meio não conta.
 		Captura.tentarCurar(p, m, p.isSleepingLongEnough());
 
+		// 0.9: enquanto ele dormia, uma das linhas de cinza perto da cama foi testada. Sem som: ele só descobre
+		// de manhã, pela linha riscada e por uma pegada do lado de fora.
+		if (fase >= 2 && rnd.nextFloat() < 0.45F) {
+			BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, pos, 12);
+			if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
+				boolean pegada = false;
+				for (Direction d : Direction.Plane.HORIZONTAL.shuffledCopy(rnd)) {
+					if (Oferenda.pegada(level, linha.relative(d, 2)) || Oferenda.pegada(level, linha.relative(d))) {
+						pegada = true;
+						break;
+					}
+				}
+				Depuracao.log(p, level.getGameTime() / 20, "LINHA testada de noite pos=" + linha.toShortString()
+						+ " ficou=" + CinzaEspalhadaBlock.estadoEm(level, linha) + " pegada=" + (pegada ? "sim" : "nao"));
+			}
+		}
+
 		// Ele deixou algo ao lado da cama enquanto você dormia.
 		if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS && rnd.nextFloat() < 0.45F) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
@@ -3329,6 +3441,7 @@ public final class Diretor {
 		e.iscaAtiva = true;
 		Memoria m = Memoria.de(p);
 		m.add(Memoria.ISCAS_ARMADAS, 1);
+		Conta.somar(p, m, Conta.Item.ISCA, 1);
 		m.salvar();
 		ModSons.tocar(p.level(), e.iscaX, e.iscaY + 0.2, e.iscaZ, ModSons.Som.PANO, 0.28F, 0.66F);
 		p.level().sendParticles(ParticleTypes.ASH, e.iscaX, e.iscaY + 0.08, e.iscaZ, 10, 0.35, 0.03, 0.35, 0.002);
@@ -3356,6 +3469,7 @@ public final class Diretor {
 		e.vigiaAtiva = true;
 		Memoria m = Memoria.de(p);
 		m.add(Memoria.FIOS_ARMADOS, 1);
+		Conta.somar(p, m, Conta.Item.FIO, 1);
 		m.salvar();
 		ModSons.tocar(p.level(), p.getX(), p.getY() + 0.4, p.getZ(), ModSons.Som.PANO, 0.32F, 1.18F);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.fio.armado")
@@ -3382,6 +3496,14 @@ public final class Diretor {
 		double dy = h.getY() - e.vigiaY;
 		double dz = h.getZ() - e.vigiaZ;
 		if (dx * dx + dy * dy + dz * dz > e.vigiaRaio * e.vigiaRaio) {
+			// 0.9: o fio vibra antes de romper. A até sete blocos da borda ele range baixo, e o tom sobe
+			// conforme a coisa chega. Dá segundos de antecedência e noção de distância, sem direção.
+			double aviso = e.vigiaRaio + 7;
+			if (dx * dx + dy * dy + dz * dz <= aviso * aviso && seg % 2 == 0) {
+				double perto = 1.0 - (Math.sqrt(dx * dx + dy * dy + dz * dz) - e.vigiaRaio) / 7.0;
+				ModSons.tocarPara(p, e.vigiaX, e.vigiaY + 0.3, e.vigiaZ, ModSons.Som.MADEIRA,
+						volumePara(p, e.vigiaX, e.vigiaY, e.vigiaZ, 0.4F), (float) (0.6 + 0.7 * perto));
+			}
 			return;
 		}
 		e.vigiaAtiva = false;
@@ -3418,6 +3540,7 @@ public final class Diretor {
 		m.limitar(Memoria.INQUIETACAO, 0, Memoria.MAX_INQUIETACAO);
 		somarObsessao(e, 2.0);
 		m.set(Memoria.OBSESSAO, (int) Math.round(e.obsessao * 10));
+		Conta.somar(p, m, Conta.Item.SINO, 1);
 		m.salvar();
 
 		ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.38F, 1.35F);
@@ -3492,12 +3615,27 @@ public final class Diretor {
 		EstadoJogador e = estado(p);
 		int velas = m.get(Memoria.VELAS);
 		int segundos = Math.max(30, 90 - 12 * (velas / 2));
+		// 0.9: a Conta. Quem se apoiou demais na vela paga nela: esta dura a metade.
+		if (Conta.cobrarNoUso(m, Conta.Item.VELA)) {
+			segundos = Math.max(15, segundos / 2);
+			Depuracao.log(p, level.getGameTime() / 20, "CONTA cobrada na VELA: dura " + segundos + "s");
+		}
+		Conta.somar(p, m, Conta.Item.VELA, 1);
 
 		e.zonaX = p.getX();
 		e.zonaY = p.getY();
 		e.zonaZ = p.getZ();
 		e.zonaRaio = 8;
 		e.zonaAteTick = level.getGameTime() + segundos * 20L;
+		// 0.9: enquanto a zona dura, há uma vela de verdade no chão, se couber. Ela some com a zona, e a
+		// zona some com ela.
+		e.velaBloco = null;
+		BlockPos pe = p.blockPosition();
+		BlockState vela = ModBlocos.VELA_ACESA.defaultBlockState();
+		if (level.getBlockState(pe).isAir() && vela.canSurvive(level, pe)
+				&& AlteracoesTemporarias.substituir(level, pe, vela, segundos * 20L, "VELA_PALIDA")) {
+			e.velaBloco = pe.immutable();
+		}
 
 		m.add(Memoria.VELAS, 1);
 		m.add(Memoria.INQUIETACAO, -60);
@@ -3515,6 +3653,13 @@ public final class Diretor {
 		EstadoJogador e = estado(p);
 		m.add(Memoria.OLHOS, 1);
 		m.add(Memoria.TEMPO, 90);
+		// 0.9: a Conta. Quem se apoiou demais no Olho paga nele: a escuridão dobra e ele vem.
+		boolean olhoCobrado = Conta.cobrarNoUso(m, Conta.Item.OLHO);
+		if (olhoCobrado) {
+			p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 20 * 10));
+			Depuracao.log(p, level.getGameTime() / 20, "CONTA cobrada no OLHO");
+		}
+		Conta.somar(p, m, Conta.Item.OLHO, 1);
 		// Sempre no log: usar o Olho adianta a assombração, e sem esta linha as fases chegavam "cedo" sem explicação.
 		Depuracao.log(p, level.getGameTime() / 20, "OLHO usado fase=" + m.get(Memoria.FASE) + " tempo=" + m.get(Memoria.TEMPO) + " (+90)");
 
@@ -3540,7 +3685,7 @@ public final class Diretor {
 			Vestigios.Marca marca = Vestigios.de(p).maisPerto(p.getX(), p.getY(), p.getZ(), 48, agora);
 			if (marca != null) {
 				revelarVestigio(level, p, marca, agora);
-			} else if (m.get(Memoria.FASE) >= 3 && !emRecarga && level.getRandom().nextFloat() < chance) {
+			} else if (m.get(Memoria.FASE) >= 3 && (olhoCobrado || (!emRecarga && level.getRandom().nextFloat() < chance))) {
 			e.olhoRecargaAte = agora + OLHO_RECARGA;
 			Depuracao.log(p, agora, String.format(Locale.ROOT, "OLHO chamou aparicao usosRecentes=%d chance=%.2f", usosRecentes, chance));
 			// Você olhou. Ele sentiu.

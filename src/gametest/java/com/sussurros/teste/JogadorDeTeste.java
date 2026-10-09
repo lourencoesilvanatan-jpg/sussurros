@@ -71,6 +71,8 @@ public final class JogadorDeTeste {
 		Connection conexao = new Connection(PacketFlow.SERVERBOUND);
 		new EmbeddedChannel(conexao);
 		level.getServer().getPlayerList().placeNewPlayer(conexao, jogador, cookie);
+		// O modo de jogo de verdade, não só o que a criatura consulta: em criativo os itens não são gastos.
+		jogador.setGameMode(modo);
 		modo.updatePlayerAbilities(jogador.getAbilities());
 		Vec3 pos = helper.absoluteVec(new Vec3(x, y, z));
 		jogador.teleportTo(level, pos.x, pos.y, pos.z, java.util.Set.of(), 0.0F, 0.0F, false);

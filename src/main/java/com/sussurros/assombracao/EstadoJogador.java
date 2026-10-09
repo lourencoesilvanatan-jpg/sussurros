@@ -274,6 +274,28 @@ final class EstadoJogador {
 	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
 	long cacaAvisoAte = -1;
 
+	// --- Itens da 0.9 ---
+	/** A Caixa de Música: onde está tocando e até quando. */
+	double caixaX;
+	double caixaY;
+	double caixaZ;
+	long caixaDesdeTick;
+	long caixaAteTick = -1;
+	boolean caixaCantarolou;
+	/** Trégua comprada pelos ossos: nenhum acontecimento até aqui. */
+	long treguaAte = -1;
+	/** Trégua da oferenda aceita: dentro de casa, nada até aqui. */
+	long treguaCasaAte = -1;
+	/** Ele veio cobrar a oferenda que faltou (ou a afronta): as batidas na porta ganham peso até aqui. */
+	long desfeitaAte = -1;
+	/** A Conta estourou: a cobrança sai neste tick. */
+	long cobrancaEm = -1;
+	/** Ossos de Agouro: quantas vezes jogou hoje (o dia do relógio do mundo). */
+	long ossosDia = -1;
+	int ossosNoDia;
+	/** Onde está a vela de verdade da zona de calma, se coube colocar uma. */
+	@Nullable BlockPos velaBloco;
+
 	// --- Lugar atual ---
 	long ultimoChunk = Long.MIN_VALUE;
 	boolean chunkEhMarco;

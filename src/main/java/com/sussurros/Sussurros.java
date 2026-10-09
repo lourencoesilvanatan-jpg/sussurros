@@ -13,6 +13,9 @@ import com.sussurros.assombracao.Lugares;
 import com.sussurros.assombracao.LootDoDiario;
 import com.sussurros.assombracao.Memoria;
 import com.sussurros.assombracao.Vestigios;
+import com.sussurros.registro.ModBlocos;
+import com.sussurros.registro.ModBlocos;
+import com.sussurros.registro.ModBlocos;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -29,6 +32,7 @@ public class Sussurros implements ModInitializer {
 	public void onInitialize() {
 		// A ordem importa: a criatura antes dos itens (o ovo de spawn usa a criatura).
 		ModEntidades.inicializar();
+		ModBlocos.inicializar(); // antes dos itens: alguns itens colocam blocos
 		ModItems.inicializar();
 		ModSons.inicializar();
 		Rede.inicializar();
