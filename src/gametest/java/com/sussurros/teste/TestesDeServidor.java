@@ -12,6 +12,7 @@ import net.minecraft.world.level.GameType;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import com.sussurros.Sussurros;
+import com.sussurros.assombracao.Atencao;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
 import com.sussurros.rede.PacoteSentidos;
@@ -25,6 +26,42 @@ import com.sussurros.registro.ModItems;
  * jogador de mentira e que as regras básicas valem. O que só o olho vê fica para os testes de cliente.
  */
 public class TestesDeServidor {
+	/**
+	 * O orçamento de atenção: gastar baixa o saldo e impõe um respiro; com o saldo no chão nada começa; o saldo
+	 * volta com o tempo; e o que é forçado por comando de teste não gasta nem espera.
+	 */
+	@GameTest(maxTicks = 300)
+	public void aAtencaoLimitaORitmo(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -2400, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		double[] depois = new double[1];
+		helper.runAfterDelay(25, () -> {
+			double antes = Atencao.saldoParaTeste(jogador);
+			helper.assertTrue(antes >= 25, "o saldo começa pela metade: " + antes);
+			helper.assertTrue(Atencao.podeParaTeste(jogador, 16), "com saldo e sem nada recente, pode começar algo");
+			Atencao.gastarParaTeste(jogador, 20);
+			depois[0] = Atencao.saldoParaTeste(jogador);
+			helper.assertTrue(Math.abs(antes - 20 - depois[0]) < 1.0, "gastar 20 deveria baixar o saldo em 20: " + antes + " -> " + depois[0]);
+			helper.assertFalse(Atencao.podeParaTeste(jogador, 1), "logo depois de uma saída, nem o mais barato começa (respiro)");
+			// Forçado por comando: acontece, mas não mexe no orçamento.
+			double antesDoComando = Atencao.saldoParaTeste(jogador);
+			helper.assertTrue(Diretor.forcarEvento(jogador, Evento.PASSO_UNICO) == null, "evento forçado deveria acontecer mesmo no respiro");
+			helper.assertTrue(Math.abs(Atencao.saldoParaTeste(jogador) - antesDoComando) < 0.5, "evento forçado não gasta atenção");
+		});
+		helper.runAfterDelay(225, () -> {
+			// Dez segundos depois: o saldo voltou um pouco (0,2 por segundo na fase 4), mas o respiro (45 s) ainda vale.
+			helper.assertTrue(Atencao.saldoParaTeste(jogador) > depois[0] + 1.0, "o saldo deveria voltar com o tempo: "
+					+ depois[0] + " -> " + Atencao.saldoParaTeste(jogador));
+			helper.assertFalse(Atencao.podeParaTeste(jogador, 1), "dez segundos não bastam: o respiro na fase 4 é de 45 s");
+			// Saldo no chão: nada que custe mais do que ele começa.
+			Atencao.gastarParaTeste(jogador, 200);
+			helper.assertTrue(Atencao.saldoParaTeste(jogador) >= -60.5, "o saldo não desce abaixo de menos a capacidade");
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
 	/**
 	 * O som da assombração é só de quem é assombrado: com dois jogadores lado a lado, o passo atrás de um não
 	 * chega ao outro. Já o que acontece de verdade no mundo (aqui, a caixa de música) os dois ouvem.

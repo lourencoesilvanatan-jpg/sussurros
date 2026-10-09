@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha12
+
+O ritmo do mod foi espaçado, e passa a ter três opções: `/sussurros ritmo calmo`, `padrao` ou `intenso`.
+
 ## 0.9.0-alpha11
 
 Correções por baixo do pano e uma ferramenta de análise das sessões de jogo.

@@ -13,7 +13,8 @@
 			"com.sussurros.teste.TestesDoVeu",
 			"com.sussurros.teste.TestesDosLugares",
 			"com.sussurros.teste.TestesDoAvesso",
-			"com.sussurros.teste.TestesDoBaralho"
+			"com.sussurros.teste.TestesDoBaralho",
+			"com.sussurros.teste.TestesDeSessao"
 		],
 		"fabric-client-gametest": [
 			"com.sussurros.teste.TestesDeCliente"

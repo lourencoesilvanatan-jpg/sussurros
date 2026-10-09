@@ -111,6 +111,9 @@ public class HospedeEntity extends PathfinderMob {
 	@Nullable
 	private String motivoFim;      // por que a espreita mandou sumir (escrito pelo Diretor antes de devolver false)
 	private int vezesPercebida = 0;
+	/** Telemetria de exposição: ticks em que esteve na tela do alvo, e quantos deles perto (25 blocos) e iluminado (luz 8+). */
+	private int ticksNaTela = 0;
+	private int ticksPertoEClaro = 0;
 	private int ticksSemPerceber = 0;
 	private boolean jaEncarada = false;
 
@@ -294,6 +297,14 @@ public class HospedeEntity extends PathfinderMob {
 	}
 
 	/** Só para o log. */
+	public int getTicksNaTela() {
+		return this.ticksNaTela;
+	}
+
+	public int getTicksPertoEClaro() {
+		return this.ticksPertoEClaro;
+	}
+
 	public int getVezesPercebida() {
 		return this.vezesPercebida;
 	}
@@ -432,6 +443,12 @@ public class HospedeEntity extends PathfinderMob {
 		boolean percebido = Diretor.estaVendo(this.alvo, this, Percepcao.conePercebeu(this.alvo));
 		boolean encarado = percebido && Diretor.estaVendo(this.alvo, this, CONE_ENCAROU);
 		this.foraDaTelaTicks = percebido ? 0 : this.foraDaTelaTicks + 1;
+		if (percebido) {
+			this.ticksNaTela++;
+			if (this.distanceToSqr(this.alvo) < 25 * 25 && level.getMaxLocalRawBrightness(this.blockPosition().above()) >= 8) {
+				this.ticksPertoEClaro++;
+			}
+		}
 		if (encarado) {
 			this.marcarEncarado();
 		}

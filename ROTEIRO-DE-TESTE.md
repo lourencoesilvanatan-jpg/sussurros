@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha12: o ritmo do mod foi espaçado (medi a sua sessão de 08/10 e as coisas vinham uma atrás da outra). Se você achar parado demais, ou agitado demais, dá para trocar sem saber de nada: `/sussurros ritmo calmo`, `/sussurros ritmo padrao` ou `/sussurros ritmo intenso`. Me diga qual você preferiu.
+
 Versão 0.9.0-alpha11: correções por baixo do pano (uma delas só aparece jogando com amigos) e uma ferramenta para eu ler as suas sessões mais depressa. Não muda nada no que você precisa fazer.
 
 Versão 0.9.0-alpha10: os textos do mod (nomes de itens, mensagens, legendas de som, páginas) agora aparecem em português do Brasil, mesmo com o jogo em inglês. O resto do jogo continua no idioma que você escolheu em Options > Language.
@@ -72,6 +74,7 @@ Se quiser ajudar mais, responda sem descrever o que viu:
 - Em algum momento pareceu **injusto**?
 - Em algum momento o jogo **travou** por um instante (um segundo ou mais parado)? Se sim, o que você estava fazendo?
 - De 0 a 10, quanto a sessão te deixou desconfortável?
+- O ritmo: as coisas vieram **juntas demais**, **espaçadas demais** ou no ponto? Em qual ritmo você jogou?
 
 ## Já conferido antes desta versão
 

@@ -182,6 +182,20 @@ public final class ComandoSussurros {
 			}
 			raiz.then(evento);
 
+			// O ritmo: sem spoiler, é o único "ajuste" que o dono mexe.
+			LiteralArgumentBuilder<CommandSourceStack> ritmo = Commands.literal("ritmo").executes(ctx -> {
+				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] Ritmo atual: " + Diretor.definirRitmo(null)
+						+ ". Opções: calmo, padrao, intenso."), false);
+				return 1;
+			});
+			for (String nome : new String[] {"calmo", "padrao", "intenso"}) {
+				ritmo.then(Commands.literal(nome).executes(ctx -> {
+					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] Ritmo: " + Diretor.definirRitmo(nome) + "."), false);
+					return 1;
+				}));
+			}
+			raiz.then(ritmo);
+
 			raiz.then(Commands.literal("memoria").executes(ctx -> {
 				ServerPlayer p = ctx.getSource().getPlayerOrException();
 				Map<String, Integer> dados = new TreeMap<>(Memoria.de(p).copia());

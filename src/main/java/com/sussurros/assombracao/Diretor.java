@@ -277,6 +277,14 @@ public final class Diretor {
 		aoAcordar(p, p.blockPosition());
 	}
 
+	/** O ritmo do servidor (calmo, padrão ou intenso). Devolve o que ficou valendo. */
+	public static String definirRitmo(@Nullable String nome) {
+		if (nome != null) {
+			Atencao.definirRitmo(Atencao.Ritmo.valueOf(nome.toUpperCase(Locale.ROOT)));
+		}
+		return Atencao.ritmo().name().toLowerCase(Locale.ROOT);
+	}
+
 	/** Comando de teste: vira agora a próxima carta do baralho de quem pediu. */
 	public static String testarBaralho(ServerPlayer p) {
 		return Baralho.virarParaTeste(p);
@@ -629,6 +637,7 @@ public final class Diretor {
 		Atmosfera.atualizar(level, p, m, e, fase, subterraneo, noite, seg, tick, rnd);
 
 		// --- Itens (0.9): a caixa tocando, a oferenda da noite e a Conta ---
+		Atencao.segundo(e, fase);
 		Cantiga.segundo(level, p, m, e, seg, tick);
 		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
 		Conta.segundo(level, p, m, e, seg, tick);
@@ -686,12 +695,17 @@ public final class Diretor {
 		if (!tregua && cobrarCacadaDevida(level, p, m, e, escuro, calma, seg, tick, rnd)) {
 			tregua = true;
 		}
-		if (!tregua) {
+		if (!tregua && Atencao.podeGastar(e, Atencao.CENA, seg)) {
+			String antes = cenaAtiva(e);
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
 			CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
 			CenaFoiAqui.verificarCenaMarco(p, e, fase, calma, seg, rnd);
 			CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
+			String depois = cenaAtiva(e);
+			if (!depois.equals(antes)) {
+				Atencao.gastar(p, e, "cena:" + depois, Atencao.CENA, seg);
+			}
 		}
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 			// Cena "Ele voltou com você": nada aleatório atrapalha a composição.
@@ -957,7 +971,8 @@ public final class Diretor {
 		e.falhasAgora.clear();
 
 		// Piso: estar seguro reduz muito a atividade, mas nunca desliga o mod.
-		if (st != EstadoDiretor.RECUANDO && seg - e.ultimoEventoSeg >= PISO[fase] && !bloqueado(p, e, tick)) {
+		if (st != EstadoDiretor.RECUANDO && seg - e.ultimoEventoSeg >= PISO[fase] && !bloqueado(p, e, tick)
+				&& Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
 			Evento ev = escolher(level, p, m, e, fase, escuro, inq, calma, v, Modo.PISO, seg, rnd);
 			if (ev != null && executar(level, p, m, e, ev, seg, tick)) {
 				Depuracao.log(p, seg, "PISO: " + ev);
@@ -967,6 +982,10 @@ public final class Diretor {
 		}
 
 		if (st.intensidadeMax == 0) {
+			return;
+		}
+		// 0.9: o orçamento de atenção. Um elo de cadeia já começou e não espera; o resto só começa com saldo.
+		if (e.sequencia == null && !Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
 			return;
 		}
 		if (seg < e.semLugarAte) {
@@ -1552,6 +1571,7 @@ public final class Diretor {
 		}
 
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "EVENTO %s (estado=%s, obs=%.2f, pressao=%.0f)", ev, e.estado, obs, e.pressao));
+		Atencao.gastar(p, e, "evento:" + ev, Atencao.custo(ev.intensidade), seg);
 		if (obs >= 0.15) {
 			if (!e.leitura.pendente()) {
 				e.leitura.iniciar(ev, fonte, obs, tick, "direto");
@@ -3387,6 +3407,7 @@ public final class Diretor {
 		m.set(Memoria.CACA_DEVIDA, 0);
 		prenunciar(level, p, e, tick, rnd, true);
 		Depuracao.log(p, seg, "CACA devida cobrada");
+		Atencao.gastar(p, e, "cacada_devida", Atencao.CACADA, seg);
 		return true;
 	}
 
@@ -3495,6 +3516,10 @@ public final class Diretor {
 					"HOSPEDE id=%s sumiu motivo=%s viveu=%ds dist=%.1f vezesNaTela=%d reposicoes=%d",
 					criatura.getIdManifestacao(), motivo, criatura.ticksVivo() / 20, Math.sqrt(criatura.distanceToSqr(p)),
 					criatura.getVezesPercebida(), criatura.getReposicoes()));
+			// Exposição: quanto tempo ela ficou na tela dele (em ticks), e quanto disso perto e iluminada.
+			// O que aparece demais deixa de assustar; isto é o que o analisador soma por hora.
+			Depuracao.log(p, p.level().getGameTime() / 20, String.format(Locale.ROOT, "EXPOSICAO id=%s modo=%s naTela=%dt perto=%dt",
+					criatura.getIdManifestacao(), criatura.getModo(), criatura.getTicksNaTela(), criatura.getTicksPertoEClaro()));
 		}
 		tentarDeixarCinza(p, criatura, motivo);
 		EstadoJogador e = ESTADOS.get(p.getUUID());

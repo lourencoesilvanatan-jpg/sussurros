@@ -44,7 +44,6 @@ PERCEPTIVEIS = [
     ('cacada', re.compile(r'^PRENUNCIO real=sim')),
     ('captura', re.compile(r'^CAPTURA inicio .*teste=nao')),
     ('avesso', re.compile(r'^AVESSO levado origem=(\S+) .*teste=nao')),
-    ('linha', re.compile(r'^LINHA testada na porta')),
 ]
 
 # O tema musical, em todas as formas em que ele toca.
@@ -243,6 +242,10 @@ def analisar(linhas, jogador, caminho):
                             if any(a <= t0 and t1 <= b for a, b in trechos)), reverse=True)[:5]
         out.append('Maiores silêncios: ' + ', '.join('%s (aos %s)' % (hms(d), hms(t - linhas[0][0])) for d, t in silencios) + '.')
         out.append('')
+    gastos = [float(m.group(1)) for m in (re.match(r'^ATENCAO fonte=\S+ custo=\S+ saldo=(-?[\d.]+)', texto) for _, texto in linhas) if m]
+    if gastos:
+        out.append('Orçamento de atenção: %d gastos; o saldo foi de %.0f a %.0f (a capacidade é 60).' % (len(gastos), min(gastos), max(gastos)))
+        out.append('')
     fortes = [(t, d) for t, f, d in saidas if f == 'evento' and intensidade.get((t, d), 0) >= 22]
     colados = [(t0, d0, t1, d1) for (t0, d0), (t1, d1) in zip(fortes, fortes[1:]) if t1 - t0 < 300]
     out.append('Eventos fortes (intensidade 22 ou mais): %d. Pares a menos de 5 minutos um do outro: **%d**%s' % (
@@ -283,13 +286,15 @@ def analisar(linhas, jogador, caminho):
         motivos = collections.Counter(s[0] for s in sumicos)
         out.append('Como sumiu: ' + ', '.join('%s %d' % (mo, n) for mo, n in motivos.most_common()) + '.')
         out.append('')
-    exposicao = [re.match(r'^EXPOSICAO .*naTela=(\d+)s .*perto=(\d+)s', texto) for _, texto in linhas]
+    exposicao = [re.match(r'^EXPOSICAO .*naTela=(\d+)t perto=(\d+)t', texto) for _, texto in linhas]
     exposicao = [m for m in exposicao if m]
     if exposicao:
-        na_tela = sum(int(m.group(1)) for m in exposicao)
-        perto = sum(int(m.group(2)) for m in exposicao)
-        out.append('**Exposição medida: %d s na tela (%.0f s por hora), dos quais %d s perto e iluminado (%.0f s por hora).**' % (
+        na_tela = sum(int(m.group(1)) for m in exposicao) / 20.0
+        perto = sum(int(m.group(2)) for m in exposicao) / 20.0
+        out.append('**Exposição medida: %.0f s na tela (%.0f s por hora), dos quais %.0f s a menos de 25 blocos e com luz 8 ou mais (%.0f s por hora).**' % (
             na_tela, por_hora(na_tela, jogado), perto, por_hora(perto, jogado)))
+        out.append('')
+        out.append('Referência da revisão externa (ponto de partida): 20 a 30 s por hora de exposição perto e iluminada, na fase 3.')
         out.append('')
     else:
         out.append('O log não tem linhas `EXPOSICAO` (segundos de criatura na tela): esta versão do mod ainda não mede isso.')

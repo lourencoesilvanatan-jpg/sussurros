@@ -49,6 +49,9 @@ final class Cacada {
 	private static final int TETO_BUSCA = 20 * 40;
 	private static final int TETO_TOTAL = 20 * 120;
 	private static final double ALCANCE_TOQUE = 2.4;
+	/** Até onde ele vê o jogador, sem nada no meio: de pé e agachado. Mais longe que isso, ele depende do ouvido. */
+	private static final double ALCANCE_VISAO = 8.0;
+	private static final double ALCANCE_VISAO_AGACHADO = 3.5;
 
 	/**
 	 * Velocidade de um mob no chão, em blocos por segundo: FATOR x (atributo x modificador)^2.
@@ -239,6 +242,14 @@ final class Cacada {
 		this.h.soltarOlhar();
 
 		this.busca.ouvirMovimento(level, this.h, alvo, false);
+		// Ele também vê. De perto e sem nada no meio, sabe onde o jogador está, parado ou não: ficar imóvel só
+		// esconde quem tem uma parede entre os dois, ou quem está agachado a mais de três blocos e meio. Sem isto
+		// ele chegava ao último lugar conhecido, parava a três blocos de um jogador imóvel, "não achava ninguém"
+		// e ia embora (aconteceu num teste: fim por PERDEU_RASTRO a 3,7 blocos do alvo).
+		boolean ve = dist <= (alvo.isCrouching() ? ALCANCE_VISAO_AGACHADO : ALCANCE_VISAO) && this.h.hasLineOfSight(alvo);
+		if (ve) {
+			this.busca.ver(level, this.h, alvo.position());
+		}
 		boolean sabe = this.busca.confianca() >= 0.6 && this.busca.idadeDoConhecimento(level.getGameTime()) <= 60;
 		if (sabe) {
 			this.contato++;
@@ -268,7 +279,13 @@ final class Cacada {
 			this.tickPorta(level, alvo);
 			return;
 		}
-		if (this.h.tickCount % 5 == 0) {
+		if (ve) {
+			// Vendo o alvo, ele não procura: vai direto até ele.
+			if (this.h.tickCount % 5 == 0) {
+				this.h.getNavigation().moveTo(alvo, modificadorPara(this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0)));
+				this.procurarPorta(level);
+			}
+		} else if (this.h.tickCount % 5 == 0) {
 			if (this.busca.tick(level, this.h, alvo)) {
 				this.desistir(level, alvo, "PERDEU_RASTRO");
 				return;
