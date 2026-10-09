@@ -193,3 +193,25 @@ Regra em uma frase: ele só anda quando você não está olhando, ele ouve o que
 ### Tela
 
 Filtro de tela como sinal principal é lido como truque barato. A cor drenada fica, discreta, com comando para desligar; os sinais principais passam a estar em objetos (chamas, bichos, a linha, a tigela, os próprios itens).
+
+---
+
+## Situação
+
+| Parte | Situação |
+|---|---|
+| Testes dentro do jogo | Feito (#18) |
+| Sons e trilha | Feito (0.9.0-alpha1) |
+| Sentidos (pacotes, cor, borda, neblina, piscar, trilha em camadas, eco de passo, opções do cliente) | Feito (0.9.0-alpha1) |
+| Eventos `ECO_PASSOS`, `VIGIA`, `NEBLINA`, `CANTIGA`, `PRENUNCIO` | Feito (0.9.0-alpha1). `CANTIGA` e o assobio do aviso esperam a Caixa de Música |
+| Caçada em estágios, captura e marca | Feito (0.9.0-alpha1), com cinco testes de servidor |
+| Tochas por miragem; "luz no fim" em túnel | Feito (0.9.0-alpha1) |
+| A Conta e os cinco itens novos | A fazer. A arte foi pedida a parte (branch `feat/arte-itens`) |
+| Vela física, Fio que vibra, Chamas Pálidas | A fazer |
+| O Véu, a Soleira, a Casa do Vigia, o Boneco | A fazer |
+| O Avesso | A fazer |
+| O baralho | A fazer |
+| Som da assombração só para o alvo (as chamadas antigas de `ModSons.tocar`) | A fazer |
+| Caçada: lembrar "deslogou no meio" e "fugiu voando" | A fazer |
+
+**Não verificado por ninguém:** como os sons soam; se a caçada assusta ou irrita; se a velocidade está boa contra um jogador de verdade correndo; a pose abaixada em jogo real.

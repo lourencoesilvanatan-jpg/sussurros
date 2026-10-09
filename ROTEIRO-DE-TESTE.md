@@ -1,76 +1,51 @@
-# Sussurros — roteiro de teste no jogo (SPOILERS)
+# Sussurros — roteiro de teste
 
-O que entrou na `main` e ainda precisa de alguém jogando. Cada parte diz o que fazer e o que conferir. Quem programa acrescenta uma seção a cada mudança; o que já foi confirmado vai para o fim, em "Já conferido".
+Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer. O que cada coisa faz está nos arquivos marcados como SPOILERS, que você escolheu não abrir.
 
-**Antes de começar**
+## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha1, primeira parte da expansão:
+
+- sons novos e uma trilha;
+- uma camada nova no jogo, do lado do cliente;
+- acontecimentos novos, espalhados pelas fases;
+- o momento de caçada foi refeito;
+- o mod deixou de tirar blocos do seu mundo.
+
+## Como testar
 
 1. No GitHub Desktop, trocar para a branch `main` e clicar em "Pull origin".
-2. Abrir o jogo de teste (`runClient`) num mundo com cheats.
-3. Rodar `/sussurros debug on`. O log fica em `run/sussurros-debug.log`.
+2. Abrir o jogo de teste (`runClient`).
+3. Rodar `/sussurros debug on`. O log fica em `run/sussurros-debug.log`. Não abra esse arquivo.
+4. **Jogar normalmente.** De preferência sessões longas, num mundo de sobrevivência, com som ligado (fone é melhor).
+5. No menu de som do jogo, deixar "Criaturas hostis" e "Ambiente" audíveis. Boa parte dos sons do mod sai por aí.
 
-**O que mandar de volta:** dizer que jogou (os logs são lidos direto da pasta) e as respostas das perguntas.
+Se quiser adiantar o relógio do mod em vez de esperar, `/sussurros fase 2`, `3` ou `4` continua valendo.
 
-**Para testar uma cena atrás da outra:** `/sussurros cena parar` interrompe a cena em andamento, inclusive o silêncio do fim.
+Se algum efeito de tela incomodar, dá para desligar sem perder o resto: `/sussurros_tela cor nao` e `/sussurros_tela borda nao` (`sim` liga de volta).
 
----
+## O que mandar de volta
 
-## 1. Sósia: as poses
+Basta dizer que jogou e por quanto tempo. Os logs são lidos direto da pasta.
 
-`/sussurros teste sosia Jogador agachado` e `/sussurros teste sosia Jogador deitado`.
+Se quiser ajudar mais, responda sem descrever o que viu:
 
-**Pergunta:** as duas poses apareceram? O boneco deitado fica no chão ou flutuando?
+- Teve algum momento que pareceu **defeito** do jogo, e não parte do mod?
+- Teve algum som **alto demais** ou irritante?
+- Teve algum momento em que você ficou **preso**, sem saber o que fazer, e isso irritou em vez de assustar?
+- Em algum momento pareceu **injusto**?
+- De 0 a 10, quanto a sessão te deixou desconfortável?
 
-## 2. Cena da janela (PR #5)
+## Já conferido antes desta versão
 
-Dentro de uma casa com janela de vidro: `/sussurros cena janela`. No log, a cena vai de `INICIO` a `FIM`. Ela ainda não rodou em nenhuma sessão.
+Pelos logs das sessões de 08/10/2026 e pelas suas respostas: o jogo abre e roda sem erro do mod; as cenas rodam do começo ao fim; você ouviu e gostou dos sons distantes; as aparições somem do jeito que você pediu ("tem como perceber algo piscando, e é justamente isso que eu queria").
 
-## 3. Olho (PR #9)
+## Conferido por teste automático nesta versão
 
-Com `/sussurros fase 3`, num lugar sem vestígios, usar o Olho cinco vezes seguidas:
+Você não precisa repetir isto. Fica registrado para quem programa.
 
-- no máximo uma aparição;
-- no log, `OLHO chamou aparicao ...` uma vez e depois `OLHO nada ... recarga=sim`.
+- O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
+- A caçada foi exercitada contra um jogador de mentira em cinco situações, e o desfecho foi o esperado em todas.
+- Cada efeito de tela foi fotografado no máximo, dentro do jogo, numa máquina do GitHub.
 
-## 4. Sons em caverna (PR #14)
-
-Numa caverna, depois de ter andado em outro andar (acima ou abaixo): `/sussurros evento eco`, `/sussurros evento sinal` e `/sussurros cena tunel`. Os sons devem chegar mesmo quando a fonte está em outro nível.
-
-## 5. Tocha vermelha (PR #16)
-
-`/sussurros teste miragem vermelha`, perto de uma tocha sua.
-
-**Pergunta:** a tocha vermelha chama atenção? A luz em volta fica visivelmente mais fraca?
-
-## 6. Perguntas em aberto sobre o que você já ouviu e viu
-
-- O corte da música quando ele aparece dá medo ou parece defeito?
-- A respiração junto do texto do sussurro ajuda ou atrapalha?
-
----
-
-## Problema conhecido
-
-- **Luz no fim dentro de caverna.** `/sussurros cena luzfim` funcionou ao ar livre, mas o dono não conseguiu fazê-la acontecer numa caverna. Está na lista de próximos passos do `PLANO-MECANICAS.md`.
-
----
-
-## Já conferido
-
-Pelos logs das sessões de 08/10/2026 e pelas respostas do dono:
-
-| O quê | Como ficou |
-|---|---|
-| O jogo abre e roda | Sem erro do mod no `latest.log`, nas duas sessões |
-| Cenas do túnel, do marco e da casa (PRs #2 e #5) | Rodaram de `INICIO` a `FIM`, sem `Erro no Diretor` |
-| Cena do campo | Rodou sozinha, sem comando, até o silêncio do fim |
-| Sons distantes (PR #6) | O dono ouviu e gostou dos sons |
-| Evento que não cabe (PR #7) | O `VULTO` não achou lugar e o Diretor sorteou `PASSOS` no mesmo segundo |
-| Leitura de reação (PR #8) | Nenhum `fugiu` com `investigou`; `SALTO` apareceu nos dois `/tp` |
-| Silêncio de verdade (PR #11) | `SILENCIO_REAL` saiu com aparição, com `SINAL` e com presságio |
-| Vulto distante (PR #12) | Silhuetas a 60–80 blocos, vistas |
-| Sumiço rápido (PR #13) | Aprovado pelo dono: "às vezes é difícil de ver, mas tem como perceber algo piscando, e é justamente isso que eu queria". No log, de 0 a 1 s entre `PERCEBEU` e `sumiu` |
-| Tocha que só o jogador vê (PR #10) | Ilumina, e some ao clicar nela |
-| Tocha escondida por miragem | A luz some junto |
-| Som sem direção | O som preso ao jogador e o arquivo estéreo soam no meio |
-| Sósia em pé (PR #10) | Apareceu, sem rótulo visível |
-| Luz no fim (PR #16) | Funcionou ao ar livre; as miragens se desfizeram ao chegar perto e pelo tempo. "Dá vontade de ir ver" |
+O que nenhum teste automático mede: se assusta, e como soa. Isso é com você.

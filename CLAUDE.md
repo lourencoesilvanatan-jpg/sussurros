@@ -2,16 +2,34 @@
 
 Mod de terror para Minecraft 26.2 (Fabric, Java 25). Código, comentários, documentação e commits são em português.
 
+## Sem spoiler para o dono
+
+O dono do projeto joga o mod para se assustar e pediu, em 08/10/2026, para não saber mais o que ele faz. Vale para tudo o que ele lê:
+
+- Respostas a ele, títulos e corpos de PR, mensagens de commit e o `ROTEIRO-DE-TESTE.md` dizem o que foi mexido em termos gerais e o que ele precisa fazer. Não descrevem o que acontece no jogo, não citam nome de evento novo, não dizem o que um item faz.
+- Os detalhes ficam nos arquivos marcados SPOILERS (`DESIGN-SPOILERS.md`, `PLANO-EXPANSAO.md`, `TELEMETRIA.md`, `pesquisa/`) e nos comentários do código.
+- Se ele perguntar diretamente o que foi alguma coisa que viu, pode responder.
+
 ## Comandos
 
 - `./gradlew build` (no Windows, `gradlew.bat build`): compila e roda os testes JUnit.
-- `./gradlew runClient`: abre o jogo de teste, sempre com o usuário `Jogador`.
+- `./gradlew runGameTest`: sobe um servidor de verdade, sem janela, e roda `src/gametest` com jogadores de mentira. Leva menos de um minuto.
+- `./gradlew runClient`: abre o jogo de teste, sempre com o usuário `Jogador`. É o dono quem usa.
+- `./gradlew runClientGameTest`: abre o jogo e tira fotos. **Não rode na máquina do dono**: abre uma janela e mostra o que ele não quer ver. Roda sozinho no GitHub em todo PR (job `fotos`); `ferramentas/testes/baixar_fotos.sh <branch>` espera a execução e baixa as fotos.
 
-Rode o build antes de cada commit. Não commite se ele falhar.
+Rode o build e o `runGameTest` antes de cada commit. Não commite se falharem.
 
-## O que você não consegue verificar
+## O que você consegue verificar, e o que não
 
-Você não joga. Build e testes verdes não provam que algo funciona dentro do jogo. Ao entregar, diga isso claramente e deixe os comandos `/sussurros ...` e as linhas de telemetria que o dono do projeto deve conferir. As referências são o `CHECKLIST-TESTES-REFATORACAO.md` e o `TELEMETRIA.md`.
+Três níveis: JUnit (matemática pura), teste de servidor (as regras, contra um jogador de mentira) e fotos do cliente (o que aparece na tela). Use os três. Mesmo assim ninguém ouviu os sons e ninguém sabe se assusta: isso só o dono descobre jogando. Ao entregar, diga o que foi verificado por qual nível e o que ficou sem verificação.
+
+Cuidados com os testes de servidor (`JogadorDeTeste`):
+
+- O jogador de mentira não tem cliente: `Rede.temCliente` é falso, e o que só existe no cliente não é sorteado para ele. Leia o resultado em `Diretor.sentidos(p)`.
+- Ele não carrega o mundo em volta de si. `JogadorDeTeste` força os chunks vizinhos; sem isso, o que nasce a vinte blocos fica parado.
+- A estrutura do teste fica acima do chão e tem piso próprio. Use `criarNoChao`, que o põe no chão de verdade, fora dela.
+- O mundo de teste fica em pacífico: de noite os monstros do jogo matam o jogador de mentira.
+- O log de decisões fica ligado nos testes, em `build/run/gameTest/sussurros-debug.log`. Quando um teste falha, a causa está lá.
 
 ## Fluxo de trabalho
 
@@ -20,7 +38,13 @@ Você não joga. Build e testes verdes não provam que algo funciona dentro do j
 - Se o dono estiver com o jogo aberto, não troque de branch nem rode o Gradle na mesma pasta: use um `git worktree`.
 - Prefixos de commit: `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`.
 
-## Refatoração 0.8.1 (em andamento)
+## Expansão 0.9 (em andamento)
+
+O plano, com o que já foi feito e o que falta, está no `PLANO-EXPANSAO.md` (leia a seção "versão 2" antes de qualquer coisa: ela corrige o começo do arquivo). Três regras valem para tudo o que entrar: nunca alto, nunca matar, nunca estragar a construção do jogador.
+
+Sons e texturas são gerados por código (`ferramentas/sons`, `ferramentas/texturas`). Para mudar um som, mude o script e gere de novo; não edite o `.ogg`.
+
+## Refatoração 0.8.1 (suspensa durante a expansão)
 
 O `Diretor` está sendo dividido em passos. Em cada passo:
 
@@ -36,11 +60,16 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Alterações no mundo.** O que é temporário passa por `AlteracoesTemporarias`, que restaura no tempo certo e ao fechar o mundo. Não remova nem coloque blocos de forma permanente sem uma decisão de design (princípio 5 do `ROADMAP.md`).
 - **Testes por comando.** O que é forçado por `/sussurros` (`e.forcando`, `PedidoManifestacao.deComando`) não pode contar para aprendizado, pressão, agenda nem memória.
 - **RNG.** A telemetria (`Depuracao.log`) nunca pode consumir números aleatórios: isso mudaria as decisões do Diretor.
-- **Spoilers.** `README.md` e `VERSAO-ATUAL.md` não detalham eventos. Os detalhes ficam em `DESIGN-SPOILERS.md` e `TELEMETRIA.md`.
+- **Spoilers.** `README.md`, `VERSAO-ATUAL.md`, `LEIA-ME.md` e `ROTEIRO-DE-TESTE.md` não detalham eventos. Os detalhes ficam em `DESIGN-SPOILERS.md` e `TELEMETRIA.md`.
+- **Som só para o alvo.** Tudo o que é da assombração de um jogador usa `ModSons.tocarPara`, `tocarNaCabeca` ou `tocarEventoPara`. `ModSons.tocar` é para o que aconteceu de verdade no mundo.
+- **Apresentação não usa o sorteio do mundo.** `Sentidos`, `Cacada` e `Captura` têm gerador próprio ou decidem pelo ID da manifestação: usar `level.getRandom()` ali mudaria os sorteios do Diretor.
+- **Categoria de som.** O silêncio do mod corta "Música" e "Ambiente" do jogador. Som próprio que precisa continuar tocando vai em "Criaturas hostis".
 
 ## Onde olhar primeiro
 
 - `ARQUITETURA.md` e `ROADMAP.md`: princípios e plano.
 - `src/main/java/com/sussurros/assombracao/Diretor.java`: ritmo, estados, seleção e eventos.
 - `Cena*.java`: as cinco cenas compostas. `Atmosfera`: presságios e perturbações. `Aparicao`: escolha de posição.
-- `entidade/HospedeEntity` e `entidade/HospedeBusca`: a criatura.
+- `entidade/HospedeEntity`, `entidade/HospedeBusca` e `entidade/Cacada`: a criatura, a busca e a caçada.
+- `assombracao/Sentidos` e `rede/`: o que o servidor manda o cliente mostrar e tocar. `client/`: como ele mostra.
+- `assombracao/Captura` e `assombracao/ApoioCaca`: o que a caçada faz ao jogador.

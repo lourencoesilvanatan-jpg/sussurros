@@ -71,10 +71,6 @@
       {
         "name": "sussurros:caixa_gasta_1",
         "stream": true
-      },
-      {
-        "name": "sussurros:caixa_gasta_2",
-        "stream": true
       }
     ]
   },
@@ -209,7 +205,6 @@
     ]
   },
   "fundo_grave": {
-    "subtitle": "subtitles.sussurros.fundo_grave",
     "sounds": [
       {
         "name": "sussurros:fundo_grave",
@@ -218,7 +213,6 @@
     ]
   },
   "fundo_vigia": {
-    "subtitle": "subtitles.sussurros.fundo_vigia",
     "sounds": [
       {
         "name": "sussurros:fundo_vigia",
@@ -227,7 +221,6 @@
     ]
   },
   "caca_pulso": {
-    "subtitle": "subtitles.sussurros.caca_pulso",
     "sounds": [
       {
         "name": "sussurros:caca_pulso",
@@ -236,7 +229,6 @@
     ]
   },
   "caca_cordas": {
-    "subtitle": "subtitles.sussurros.caca_cordas",
     "sounds": [
       {
         "name": "sussurros:caca_cordas",
@@ -245,7 +237,6 @@
     ]
   },
   "caca_tema": {
-    "subtitle": "subtitles.sussurros.caca_tema",
     "sounds": [
       {
         "name": "sussurros:caca_tema",
@@ -254,10 +245,18 @@
     ]
   },
   "avesso_ar": {
-    "subtitle": "subtitles.sussurros.avesso_ar",
     "sounds": [
       {
         "name": "sussurros:avesso_ar",
+        "stream": true
+      }
+    ]
+  },
+  "caixa_arruinada": {
+    "subtitle": "subtitles.sussurros.caixa_gasta",
+    "sounds": [
+      {
+        "name": "sussurros:caixa_gasta_2",
         "stream": true
       }
     ]

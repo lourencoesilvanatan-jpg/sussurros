@@ -549,3 +549,91 @@ O que passou a ser miragem:
 - **Tocha vermelha** (tipo novo, `VERMELHA`): uma tocha do jogador passa a ser de redstone, só para ele, por 25 a 45 s. Volta ao normal quando ele chega a 3 blocos ou clica nela. A luz em volta fica mais fraca.
 
 O que continua mexendo no mundo de verdade, por enquanto: a tocha que pisca, as tochas apagadas ao acordar e as que o Hóspede apaga na caça. Falta saber se, ao esconder uma tocha por miragem, a luz dela some junto.
+
+---
+# Versão 0.9.0-alpha1 — "Sentir e ser caçado"
+
+Primeira entrega da expansão descrita no `PLANO-EXPANSAO.md`. As pesquisas que embasam os números estão em `pesquisa/`.
+
+## Sentidos
+
+O servidor passa a enviar a cada jogador, uma vez por segundo, quatro medidas de 0 a 1. O cliente as transforma em apresentação. Nada disso entra em pressão, agenda ou aprendizado.
+
+| Medida | De onde vem | O que o jogador percebe |
+|---|---|---|
+| `peso` | fase (0 / 0,10 / 0,28 / 0,48 / 0,66) mais até 0,34 da obsessão. Dentro da vela vale 35%; de dia em casa, 80% | A cor do mundo drena em quatro degraus (saturação 0,90 / 0,80 / 0,70 / 0,60) e um fundo grave sobe. Dentro da vela a cor volta |
+| `vigia` | Há criatura que vê o jogador sem estar na tela dele, a até 72 blocos. Só 7 em cada 10 manifestações são "sentidas" (decidido pelo ID, sem sorteio). O evento `VIGIA` produz a mesma sensação sem ninguém | Borda escura que respira e uma camada fina de som |
+| `caca` | Caçada: 0,2 no aviso; 0,25 longe; de 0,45 a 1 quando ele está a menos de 12 blocos e sem parede no meio; 0 quando ele finge que desistiu | Batimento (de 24 a 11 ticks entre batidas) e três camadas baixas de perseguição |
+| `neblina` | Evento `NEBLINA` | A neblina fecha (até 22 blocos no máximo) |
+
+Sem o mod no cliente nada disso existe, e os eventos que dependem só do cliente não são sorteados.
+
+Efeitos pontuais: `PISCAR` (a tela fecha por 8 ticks), `APAGAO` (fecha e segura), `ACORDAR` (abre devagar).
+
+O cliente informa o FOV efetivo e a proporção da janela. Os cones "está na tela" e "é seguro nascer aqui" passam a ser calculados por jogador (`Percepcao`). Vidro não tampa mais a visão que o mod usa, e basta uma de três alturas do corpo aparecer.
+
+Quando ele some na frente do jogador, dissolve em 4 ticks. O vulto distante continua sumindo de um quadro para o outro.
+
+A cor e a borda podem ser desligadas por quem joga: `/sussurros_tela cor nao` e `/sussurros_tela borda nao` (comando do cliente, sem permissão; fica em `config/sussurros-cliente.properties`).
+
+## Eventos novos
+
+| Evento | Fase | Categoria | Intensidade | O que é |
+|---|---|---|---|---|
+| `ECO_PASSOS` | 1 | SOM | 9 | Por 25 a 40 s, cerca de 70% dos passos do próprio jogador tocam de novo 4 a 7 ticks depois, mais baixos e 1,6 bloco atrás. Para quando ele para |
+| `VIGIA` | 1 | MENTE | 7 | A sensação de estar sendo olhado, por 15 a 30 s, sem criatura |
+| `NEBLINA` | 2 | AMBIENTE | 13 | A neblina fecha por 60 a 120 s, só a céu aberto. Sem leitura de reação |
+| `CANTIGA` | 2 | SOM | 12 | Um pedaço do tema assobiado a 24–42 blocos, de um lugar fora da tela, só para o jogador. **Só existe depois que a Caixa de Música tocou três vezes** (o item chega na entrega seguinte) |
+| `PRENUNCIO` | 3 | MENTE | 14 | O aviso da caçada (o mundo emudece, uma luz perto falha, um grave) sem caçada. Só acontece onde uma caçada poderia começar |
+
+O `SUSSURRO` passa a vir com voz (sussurro que não dá para entender) em 70% das vezes.
+
+## A caçada
+
+Regra em uma frase: ele só anda quando você não está olhando, ele ouve o que você faz, e ele não entra na luz da vela.
+
+**Onde começa.** No escuro, com inquietação de 60 ou mais, fora da base (contexto diferente de CASA e a mais de 24 blocos da cama), nunca com o jogador montado ou planando, nunca a menos de 7 blocos de outro jogador. O golpe da sequência de ameaça espera essas condições.
+
+**Estágios**
+
+1. **Aviso (8 a 10 s).** O mundo emudece para o alvo, uma luz a até 9 blocos falha por alguns segundos, um grave baixo. Se ele já aprendeu a cantiga, assobia em 60% das vezes. Ele nasce a 18–26 blocos, atrás, e **não se mexe**.
+2. **Perseguição.** Anda quando não é visto. Velocidade de 4,9 blocos/s, subindo 4% por segundo de contato até 6,3 (o jogador anda a 4,3, corre a 5,6 e corre pulando a 7,1); cai 1% por segundo sem contato. Na luz forte (12 ou mais) fica 15% mais lento. Apaga, por miragem, uma luz a até 4 blocos a cada 1,5 s. Os passos dele são ouvidos pelo alvo até uns 24 blocos.
+3. **Encarar.** Na tela, ele congela e sabe onde o jogador está. Depois de 4 a 6 s seguidos, a tela do jogador pisca e ele avança até 3 blocos; os piscares seguintes vêm a cada 3 a 5 s. O relógio de contato só anda com ele fora da tela.
+4. **Toque.** A 2,4 blocos, com linha de visão, olhando ou não.
+5. **Bater.** As duas primeiras vezes o fazem recuar (reaparece fora da tela a 10–14 blocos); da terceira em diante, nada.
+6. **Portas.** Abre porta de madeira depois de 1,5 a 3 s mexendo na maçaneta. A caixa de colisão na caça tem 1,9 de altura; o modelo dobra o corpo sob teto baixo.
+7. **Atalho.** Com 3 s fora da tela, sabendo onde o jogador está e a mais de 16 blocos, reaparece a 8–12 blocos, fora da tela, de preferência aos lados da direção em que o jogador anda. Recarga de 10 s.
+8. **Ouvir.** Além do movimento, quebrar bloco, usar porta e abrir baú a até 16 blocos entregam a posição. Agachado e quase parado é silêncio. A chance de ouvir sobe 10% a cada 10 s sem notícia, até +50%.
+9. **Busca.** Ao chegar ao último lugar conhecido, para 2 a 3 s e olha em volta. Os pontos de busca fecham o cerco (raios 12, 8, 5, 4).
+10. **Vela.** Com o alvo dentro da zona, ele espera na borda por 20 a 40 s e vai embora. Na fase 4, para quem já usou 4 velas ou mais, em 35% das vezes ele a sopra no meio da espera.
+11. **Sem caminho.** Sabendo onde o jogador está, a até 8 blocos no chão (a altura não conta) e sem caminho por 10 s: 2,5 s de batidas e arranhões num bloco ao lado do jogador (o de baixo, se ele estiver no alto), com poeira escura. Quem ainda estiver a 1,9 bloco do centro daquele bloco é pego; quem saiu, ele aparece ali. Cada uso encurta a espera em 2 s (mínimo 4 s) e o aviso em 0,25 s (mínimo 1,5 s); o contador fica na memória.
+12. **Fingir.** Em 35% das desistências, uma vez por caçada: fica calado 8 a 15 s e volta.
+13. **Tetos.** 45 s de contato, 40 s de busca, 120 s no total.
+
+Na primeira caçada da vida do jogador, o atalho e o "sem caminho" ficam desligados.
+
+**Fim honesto.** Enquanto ele existe, o mundo fica mudo para o alvo. O som só volta de 3,5 a 5 s depois de ele ir embora de verdade. Na falsa desistência o silêncio continua.
+
+## Ser pego
+
+Ele não mata.
+
+1. Tudo emudece, a tela fecha.
+2. O que estava na mão fica caído onde ele foi pego, sem prazo para sumir. O lugar vira um vestígio (o Olho e o Sino apontam para lá).
+3. O jogador acorda a 20–40 blocos, de preferência num ponto escuro do próprio Rastro. A vida cai 8, nunca abaixo de 4. As luzes em volta aparecem apagadas por um minuto.
+4. **A marca:** um coração a menos de vida máxima por captura, até três. Some ao dormir de verdade com uma vela pálida acesa. Volta depois de morrer e renascer.
+5. O Diretor recua por 6 a 10 minutos e a próxima sequência de ameaça só é possível 30 a 45 minutos depois. Depois de qualquer caçada, 25 a 40 minutos.
+
+Criatura criada por comando faz tudo isso, menos a marca e os contadores.
+
+## Sons
+
+46 arquivos novos, sintetizados por `ferramentas/sons/gerar_sons.py` (medidos, nunca ouvidos por quem os fez). O tema é uma cantiga em lá menor, valsa, oito compassos: aparece na caixa (limpa, gasta e arruinada), assobiada, cantarolada e, em fragmentos graves, numa das camadas da perseguição. As camadas em loop tocam na categoria "Criaturas hostis", porque o silêncio do mod corta a categoria "Ambiente".
+
+## O mundo deixa de ser tocado pelas luzes
+
+A tocha que pisca, a tocha "levada" na fase 4, as luzes apagadas ao acordar, as das cenas de luz e as que ele apaga na caça passaram a ser miragem. A "luz no fim" procura o lugar primeiro nos pontos do Rastro, o que a faz funcionar dentro de túnel.
+
+## Diário
+
+Três páginas novas (23 a 25 de 25) ensinam, na voz de quem escreveu, que encarar só compra tempo, que ele atravessa o que não tem caminho e como a marca sai.

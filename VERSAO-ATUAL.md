@@ -1,11 +1,11 @@
 # Estado atual
 
-## 0.8.0-alpha1-fix2
+## 0.9.0-alpha1
 
-Base usada para o experimento neste ponto do desenvolvimento.
+Primeira parte de uma expansão grande. Entram sons e trilha próprios, uma camada nova do lado do cliente, acontecimentos novos e uma caçada refeita. O mod também deixou de remover blocos do mundo do jogador.
 
-A versão inclui o Diretor adaptativo, sistema de atmosfera, memória, perfil comportamental, aparições com seleção espacial e a primeira camada de busca do Hóspede.
+Passam a existir testes automáticos dentro do jogo: um servidor de verdade com jogadores de mentira, e o jogo aberto numa máquina do GitHub, que devolve fotos.
 
-A prioridade seguinte é aumentar a presença ambiental entre manifestações e melhorar a integração entre intenção do Diretor, comportamento do Hóspede e consequências no mundo.
+O que vem a seguir está no `PLANO-EXPANSAO.md` (com spoilers).
 
 > Para preservar a experiência de jogo, detalhes específicos dos eventos não são documentados aqui.

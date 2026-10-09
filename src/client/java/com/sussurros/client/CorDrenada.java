@@ -47,7 +47,7 @@ final class CorDrenada {
 			return;
 		}
 		degrau = proximoDegrau(degrau, SentidosCliente.peso);
-		Identifier desejado = SentidosCliente.noAvesso() ? AVESSO : DEGRAUS[degrau];
+		Identifier desejado = !OpcoesCliente.cor ? null : SentidosCliente.noAvesso() ? AVESSO : DEGRAUS[degrau];
 		try {
 			if (campoEfeito == null || campoAtivo == null) {
 				campoEfeito = GameRenderer.class.getDeclaredField("postEffectId");

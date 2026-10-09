@@ -24,6 +24,9 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 	private final ModelPart olhoEsquerdo;
 	private final ModelPart olhoDireito;
 
+	/** Quanto o tronco tomba para a frente quando ele se abaixa (radianos, uns 72 graus). */
+	private static final float DOBRA = 1.26f;
+
 	public HospedeModel(ModelPart root) {
 		super(root);
 		this.cabeca = root.getChild(PartNames.HEAD);
@@ -147,6 +150,29 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 			this.corpo.xRot *= 0.25f;
 			this.bracoDireito.xRot *= 0.2f;
 			this.bracoEsquerdo.xRot *= 0.2f;
+		}
+
+		// Dobrado para caber sob um teto de dois blocos: o tronco tomba para a frente a partir do quadril,
+		// e a cabeça e os ombros descem junto. O tronco gira em torno do topo, então desloca-se o topo para
+		// onde ele ficaria se o giro fosse no quadril (que está em y = 2, com 18 de comprimento).
+		float dobra = state.agachado ? DOBRA : 0.0f;
+		float topoY = 2.0f - 18.0f * Mth.cos(dobra);
+		float topoZ = -18.0f * Mth.sin(dobra);
+		this.corpo.y = topoY;
+		this.corpo.z = topoZ;
+		this.cabeca.y = topoY;
+		this.cabeca.z = topoZ;
+		this.bracoDireito.y = topoY + 1.0f;
+		this.bracoDireito.z = topoZ;
+		this.bracoEsquerdo.y = topoY + 1.0f;
+		this.bracoEsquerdo.z = topoZ;
+		if (state.agachado) {
+			this.corpo.xRot += dobra;
+			// A cabeça vai à frente do corpo, erguida o bastante para continuar olhando para você.
+			this.cabeca.xRot += dobra * 0.55f;
+			// Os braços são longos demais para pender: vão para trás, quase arrastando.
+			this.bracoDireito.xRot += 0.95f;
+			this.bracoEsquerdo.xRot += 0.95f;
 		}
 	}
 }

@@ -125,6 +125,9 @@ public final class Diretor {
 	/** Só conta como "ele ignorou" um evento com pelo menos esta chance de ter sido percebido. */
 	private static final double OBS_INDIFERENCA = 0.7;
 
+	/** Quantas vezes a Caixa de Música precisa tocar para ele aprender a cantiga e passar a assobiá-la. */
+	static final int CANTIGA_APRENDIDA = 3;
+
 	/** Obsessão necessária (0-100) para ele montar a sequência de ameaça (v0.4.2). */
 	private static final double OBSESSAO_AMEACA = 60;
 
@@ -950,7 +953,8 @@ public final class Diretor {
 			case ECO_PASSOS -> Rede.temCliente(p) && p.onGround() && e.velocidade > 1.0;
 			case VIGIA -> Rede.temCliente(p) && level.getGameTime() >= e.vigiaFalsaAte;
 			case NEBLINA -> Rede.temCliente(p) && level.getGameTime() >= e.neblinaAte && level.canSeeSky(p.blockPosition().above());
-			case CANTIGA -> true;
+			// Ele só assobia a cantiga depois de aprendê-la, e aprende ouvindo a caixa do jogador.
+			case CANTIGA -> m.get(Memoria.CAIXA_USOS) >= CANTIGA_APRENDIDA;
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
@@ -2183,9 +2187,13 @@ public final class Diretor {
 		if (pos == null) {
 			return null;
 		}
-		level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.25F, 0.7F);
+		// 0.9: "levar" a tocha deixou de tirá-la do mundo. Ela some para o jogador por alguns minutos
+		// (miragem), ou até ele clicar no lugar. A construção de ninguém perde um bloco por causa do mod.
+		if (!Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), 20L * (180 + level.getRandom().nextInt(121)), 0, "TOCHA_LEVADA")) {
+			return null;
+		}
+		ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+				pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.25F, 0.7F);
 		estado(p).tochas.remove(pos);
 		return pos;
 	}
@@ -2201,12 +2209,13 @@ public final class Diretor {
 		if (!(original.is(Blocks.TORCH) || original.is(Blocks.WALL_TORCH))) {
 			return null;
 		}
-		// Pelas AlteracoesTemporarias (e não pela Agenda): assim a tocha volta mesmo se o mundo fechar antes.
-		AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, "TOCHA_PISCA",
-				() -> ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
-						ModSons.Som.ESTALO, 0.25F, 1.05F));
-		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.22F, 0.72F);
+		// 0.9: miragem. A tocha some só para este jogador (a luz some junto) e volta sozinha; no mundo ela
+		// nunca saiu do lugar, então não há o que restaurar se o mundo fechar no meio.
+		if (!Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, 0, "TOCHA_PISCA")) {
+			return null;
+		}
+		ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+				pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.22F, 0.72F);
 		estado(p).tochas.remove(pos);
 		return pos;
 	}
@@ -2900,6 +2909,9 @@ public final class Diretor {
 				if (!escuro || bloqueado(p, e, tick)) {
 					return; // espera o escuro
 				}
+				if (fase >= 4 && !podeComecarCacada(level, p, m, e)) {
+					return; // caçada não começa na base nem colado num amigo: espera ele sair
+				}
 				Evento golpe = fase >= 4 ? Evento.CACA : Evento.ATRAS;
 				if (executar(level, p, m, e, golpe, seg, tick)) {
 					e.golpeDado = true;
@@ -3055,19 +3067,11 @@ public final class Diretor {
 		}
 
 		if (fase >= 3) {
-			int apagadas = 0;
-			for (int dx = -6; dx <= 6 && apagadas < 3; dx++) {
-				for (int dy = -2; dy <= 3 && apagadas < 3; dy++) {
-					for (int dz = -6; dz <= 6 && apagadas < 3; dz++) {
-						BlockPos t = pos.offset(dx, dy, dz);
-						BlockState s = level.getBlockState(t);
-						if ((s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH)) && rnd.nextBoolean()) {
-							level.setBlock(t, Blocks.AIR.defaultBlockState(), 3);
-							apagadas++;
-						}
-					}
-				}
-			}
+			// 0.9: as luzes perto da cama aparecem apagadas ao acordar, só para ele, por um ou dois minutos
+			// (antes eram tiradas do mundo de verdade, sem devolver nada: item 3.10 da análise).
+			int apagadas = rnd.nextBoolean()
+					? ApoioCaca.apagarLuzPerto(level, p, pos, 6, 20 * (60 + rnd.nextInt(61)), 1 + rnd.nextInt(3))
+					: 0;
 			if (m.get(Memoria.CAMA_VEZES) >= 4) {
 				p.sendOverlayMessage(Component.translatable("message.sussurros.acordar.mesma_cama", p.getName())
 						.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
@@ -3116,7 +3120,16 @@ public final class Diretor {
 		e.cacaAvisoAte = tick + 20L * 10;
 		int apagadas = ApoioCaca.apagarLuzPerto(level, p, p.blockPosition(), 9, 60 + rnd.nextInt(60), 1);
 		ModSons.tocarPara(p, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.55F, 0.8F);
-		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas);
+		boolean assobio = Memoria.de(p).get(Memoria.CAIXA_USOS) >= CANTIGA_APRENDIDA && rnd.nextFloat() < 0.6F;
+		if (assobio) {
+			agendar(level, 30 + rnd.nextInt(40), () -> {
+				if (!p.isRemoved()) {
+					assobiar(level, p, p.getRandom());
+				}
+			});
+		}
+		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas
+				+ " assobio=" + (assobio ? "sim" : "nao"));
 	}
 
 	/**
@@ -3621,6 +3634,7 @@ public final class Diretor {
 			}
 			case ESPERA -> !temZonaCalma(p) ? "precisa de uma Vela Pálida acesa." : null;
 			case NEBLINA -> !level.canSeeSky(p.blockPosition().above()) ? "precisa estar a céu aberto." : null;
+			case CANTIGA -> null; // por comando ele assobia mesmo sem ter aprendido
 			default -> null;
 		};
 	}

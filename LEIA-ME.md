@@ -19,7 +19,14 @@ Baixe no Modrinth as versões para **26.2** do Iris e do Sodium e coloque os .ja
 Coloque um shader pack (.zip) em `run/shaderpacks`. Ative em Opções > Vídeo > Shader Packs.
 
 ## Gerar o .jar final
-Gradle > Tasks > build > **build**. Sai em `build/libs/` (use o sussurros-0.8.0-alpha1.jar, NÃO o que termina em -sources).
+Gradle > Tasks > build > **build**. Sai em `build/libs/` (use o sussurros-0.9.0-alpha1.jar, NÃO o que termina em -sources).
+
+## Som e tela
+- Deixe audíveis, no menu de som do jogo, "Criaturas hostis" e "Ambiente". Fone é melhor.
+- Se algum efeito de tela incomodar, dá para desligar sem perder o resto: `/sussurros_tela cor nao` e `/sussurros_tela borda nao` (`sim` liga de volta). Não precisa de cheats.
+
+## 0.9.0-alpha1
+Primeira parte de uma expansão grande: sons e trilha, uma camada nova no cliente, acontecimentos novos e a caçada refeita. Sem detalhes aqui, de propósito. O que testar está no `ROTEIRO-DE-TESTE.md`, que não tem spoiler.
 
 
 

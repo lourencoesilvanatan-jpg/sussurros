@@ -442,3 +442,65 @@ MIRAGEM fim motivo=TOCHA_VERMELHA por=TEMPO pos=(...)
 ```
 
 Se o jogador clica na miragem, o jogo a desfaz sozinho na hora e não há linha de log; a linha `MIRAGEM fim` aparece depois, quando o tempo dela vence.
+
+## 0.9.0-alpha1 — sentidos, eventos novos e caçada
+
+### Eventos novos
+
+```
+ECO_PASSOS janela=31s
+VIGIA falsa forca=0.62 duracao=22s
+NEBLINA forca=0.58 duracao=94s
+CANTIGA pos=(x,y,z) dist=33
+PRENUNCIO real=nao luz=1 assobio=nao
+PRENUNCIO real=sim luz=0 assobio=sim
+```
+
+`PRENUNCIO real=sim` sai no começo de toda caçada; `real=nao` é o evento que só avisa. `luz` é quantas luzes falharam.
+
+### Caçada
+
+Toda linha começa por `CACA id=M...` (o mesmo ID da manifestação).
+
+```
+CACA id=M031 AVISO -> PERSEGUE motivo=FIM_DO_AVISO
+CACA id=M031 piscar n=2 dist=18.4
+CACA id=M031 atalho n=1 de=22 para=11
+CACA id=M031 abriu porta pos=x, y, z
+CACA id=M031 ferido n=1 recuou=sim
+CACA id=M031 PERSEGUE -> ESPERA_VELA motivo=ALVO_NA_VELA soprar=nao
+CACA id=M031 soprou a vela
+CACA id=M031 PERSEGUE -> ATRAVESSA motivo=SEM_CAMINHO bloco=x, y, z
+CACA id=M031 ATRAVESSA -> PERSEGUE motivo=ATRAVESSOU_VAZIO
+CACA id=M031 PERSEGUE -> FINGE motivo=FINGIU_PERDEU_RASTRO
+CACA id=M031 FINGE -> PERSEGUE motivo=VOLTOU
+CACA id=M031 CAPTURA como=TOCOU duracao=27s contato=13s
+CACA id=M031 FIM motivo=TETO_BUSCA duracao=82s contato=0s piscadas=0 atalhos=0 golpes=0 fingiu=sim
+CACA terminou motivo=TETO_BUSCA cacadas=3 proximaAmeacaEm=1766s
+```
+
+- Estágios: `AVISO`, `PERSEGUE`, `ESPERA_VELA`, `FINGE`, `ATRAVESSA`.
+- `motivo` do fim: `TETO_CONTATO`, `TETO_BUSCA`, `TETO_TOTAL`, `PERDEU_RASTRO`, `VELA`, `TOCOU`, `ZONA_CALMA` (a vela foi acesa com ele dentro), `SEM_ALVO`.
+- `CAPTURA como=`: `TOCOU` ou `ATRAVESSOU`.
+- `contato` é o relógio que só anda com ele fora da tela e sabendo onde o jogador está.
+- A linha `CACA terminou` só sai em caçada que conta (não em teste por comando).
+- A busca ganhou o estado `OLHANDO` e o motivo `OUVIU_QUEBRA`, `OUVIU_PORTA`, `OUVIU_BAU`, `OUVIU_ATALHO`.
+
+### Captura e marca
+
+```
+CAPTURA inicio pos=(x,y,z) vida=20 teste=nao
+CAPTURA deslocou de=(x,y,z) para=(x,y,z) dist=38 vida=12 marcas=1
+ESTADO ESCALANDO -> RECUANDO (captura)
+MARCA curada (dormiu com a vela acesa)
+```
+
+### Luz
+
+`LUZ_ERRADA tipo=FANTASMA` ganhou `lugar=RASTRO|EM_VOLTA`. `PISCA` e `MIGRA` ganharam `miragem=sim`. As miragens novas aparecem em `MIRAGEM fim motivo=...` como `LUZ_APAGADA` (caça, aviso, acordar, depois da captura), `TOCHA_PISCA`, `TOCHA_LEVADA`, `LUZ_PISCA`, `LUZ_MIGRA_ORIGEM` e `LUZ_SEQUENCIA`.
+
+### Comandos de teste novos
+
+- `/sussurros teste sentidos <peso> <vigia> <caca> <neblina> [flags]`: impõe os quatro valores por dois minutos.
+- `/sussurros teste efeito piscar|apagao|acordar [ticks]`.
+- `/sussurros evento eco_passos|vigia|neblina|cantiga|prenuncio|caca`.

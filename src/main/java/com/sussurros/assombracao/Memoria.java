@@ -84,6 +84,9 @@ public final class Memoria {
 	public static final String MARCAS = "marcas";                   // corações de vida máxima perdidos (0 a 3); dormir com vela acesa cura
 	public static final String CACA_ATRAVESSOU = "caca_atravessou"; // vezes que ele precisou atravessar (pilar, buraco, muro): cada uma encurta o aviso
 
+	// 0.9: os itens
+	public static final String CAIXA_USOS = "caixa_usos"; // vezes que a Caixa de Música tocou: é assim que ele aprende a cantiga
+
 	public static final int MAX_INQUIETACAO = 200;
 
 	public static final AttachmentType<Map<String, Integer>> TIPO = AttachmentRegistry.create(

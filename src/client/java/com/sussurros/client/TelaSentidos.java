@@ -32,6 +32,9 @@ final class TelaSentidos {
 	}
 
 	private static void vinheta(GuiGraphicsExtractor g, DeltaTracker delta) {
+		if (!OpcoesCliente.borda) {
+			return;
+		}
 		// Respira devagar: uma borda parada o olho esquece em segundos.
 		float respiracao = 0.85F + 0.15F * Mth.sin(SentidosCliente.idade * 0.05F);
 		float forca = SentidosCliente.vigia * 0.55F * respiracao + SentidosCliente.caca * 0.4F;

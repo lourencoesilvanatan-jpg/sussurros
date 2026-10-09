@@ -54,6 +54,20 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.takeScreenshot("34-caca-depois");
 		context.waitTicks(200);
 		context.takeScreenshot("35-caca-acordou");
+
+		// A pose abaixada: de dia, um teto de vidro dois blocos acima dele, visto de lado e de perto.
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		context.waitTicks(20);
+		mundo.getServer().runCommand("execute as @p run sussurros evento caca");
+		context.waitTicks(10);
+		mundo.getServer().runCommand("execute at @e[type=sussurros:hospede,limit=1,sort=nearest] run fill ~-3 ~2 ~-3 ~3 ~2 ~3 minecraft:glass");
+		mundo.getServer().runCommand("execute as @p at @e[type=sussurros:hospede,limit=1,sort=nearest] run tp @s ~4 ~ ~1.5");
+		mundo.getServer().runCommand("execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] feet run tp @s ~ ~ ~ ~ ~");
+		context.waitTicks(15);
+		context.takeScreenshot("36-caca-abaixado-de-lado");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		context.waitTicks(20);
 	}
 
 	/** Cada sentido no máximo, isolado, para ver o que o jogador veria no pior caso. */

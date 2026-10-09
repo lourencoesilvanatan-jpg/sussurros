@@ -12,6 +12,7 @@ public class SussurrosClient implements ClientModInitializer {
 		ModCamadas.registrar();
 		EntityRenderers.register(ModEntidades.HOSPEDE, HospedeRenderer::new);
 		// Sentidos: o que o servidor mede vira cor, borda, neblina e som.
+		OpcoesCliente.registrar();
 		SentidosCliente.registrar();
 		TelaSentidos.registrar();
 		NeblinaSussurros.instalar();
