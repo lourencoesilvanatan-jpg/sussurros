@@ -134,10 +134,62 @@ Cada PR atualiza o `ROTEIRO-DE-TESTE.md` (sem spoiler), o `DESIGN-SPOILERS.md` e
 
 ---
 
-## Pesquisa desta fase
+## Pesquisa desta fase e o que ela mudou (versão 2 do plano)
 
-Três levantamentos (itens com custo e progressão sensorial; IA de perseguidor; lugares, dimensão e espaços "iguais mas errados") foram pedidos em 08/10/2026. Os relatórios entram no `PESQUISA-E-ANALISE.md` como seções 19 a 21, e o que mudar neste plano por causa deles fica anotado aqui embaixo.
+Os três relatórios estão em `pesquisa/` (caçada, lugares e dimensão, itens e sentidos), com fontes e marcas de confiança. **Onde esta seção discorda do que está acima, vale esta seção.**
 
-### Ajustes vindos da pesquisa
+### Itens (substitui a tabela do Pilar II)
 
-(a preencher quando os relatórios chegarem)
+A lista final é menor e gira em torno de um sistema só.
+
+**A Conta.** Valor escondido por jogador. Cada uso de item ligado à criatura soma (Vela 1, Sino 1, Fio 1, Isca 2, Olho 3, Caixa 2, Ossos 1, Linha 1 por bloco). Cai 1 a cada 10 minutos sem usar nada. O limite é sorteado a cada ciclo (6 a 10). Antes de cobrar, três avisos sem texto: a Cinza Pálida no inventário escurece; as chamas perto do jogador encolhem por alguns segundos; a cantiga toca com uma nota a menos. A cobrança vem na moeda do item mais usado e nunca mata. Depois zera e sorteia outro limite. É o que deixa os itens serem bons de verdade.
+
+| Item | Resumo |
+|---|---|
+| **Caixa de Música** | Toca o tema. A inquietação cai; se ele estiver a até 20 blocos, algo cantarola junto, sem direção (confirma presença, não posição). Na caçada serve de isca, cada vez menos. Pelo total de usos: mais lenta, depois com nota faltando, depois **o tema volta sem a caixa**, assobiado de longe. O assobio só existe depois que ele aprendeu, e é honesto nas duas primeiras vezes. A caixa é entregue ao jogador na passagem para a fase 2 e também está na Casa do Vigia |
+| **Linha de Cinza** | Cinza Pálida usada no chão vira um bloco fino. Ele não cruza uma linha intacta; cada tentativa a desgasta (três estágios) e na manhã seguinte ela está riscada: prova de que ele esteve ali. Rompida, deixa de valer. O mesmo bloco, em outro estado, é a pegada de cinza que ele deixa. Só a linha intacta devolve a Cinza ao ser quebrada |
+| **Tigela de Oferenda** | Bloco. O que for posto nela ao anoitecer pode ser aceito: trégua em casa por uma noite. O critério não aparece; repetir a mesma oferenda vale menos; depois de algumas aceitas, pular uma noite é desfeita e ele vem à porta. De manhã ela está intacta (recusou), vazia com rastro de cinza (aceitou) ou com outra coisa dentro (ele deixou algo) |
+| **Lampião Pálido** | Bloco de luz que queima Cinza. A chama encolhe quando ele olha para o jogador ou está perto, e apaga quando ele passa. É o sinal "preso a um objeto" que a pesquisa pede no lugar de filtro de tela |
+| **Ossos de Agouro** | Consumível de sorteio, sete desfechos (nada 25%, silêncio 15%, trégua 15%, apontam para o último vestígio 15%, presença agora 15%, ele aparece para o amigo mais próximo 10%, a Conta sobe 5%). O resultado se lê em como os ossos caem. O Diretor vicia o sorteio para o que mais fez o jogador reagir |
+
+Saem do plano: o Espelho e a Infusão (ver "lugares", abaixo). O Giz fica como ideia, só se sobrar tempo.
+
+Ajustes nos itens antigos: a **Vela** põe uma vela de verdade no chão e ele pode soprá-la; o **Fio** vibra segundos antes de romper.
+
+**Chamas Pálidas.** A progressão também se lê no mundo, sem tela: tochas do próprio jogador queimando pálidas (miragem de tocha de almas, uma ou duas por vez), bichos da base virados para o lado de onde ele vem. A drenagem de cor continua, mas precisa de uma opção de desligar (filtro de tela sem opção é reclamação recorrente).
+
+### Caçada (substitui III.1)
+
+Regra em uma frase: ele só anda quando você não está olhando, ele ouve o que você faz, e ele não entra na luz da vela.
+
+- **Onde começa:** nunca na base, nunca na zona da vela, nunca com o jogador montado ou a até 7 blocos de um amigo.
+- **Aviso de 8 a 10 s:** o mundo emudece e uma luz falha; ele nasce e não se mexe. O mesmo aviso acontece sem caçada cerca de duas vezes para cada caçada real (evento `PRENUNCIO`).
+- **Velocidade fora da tela:** começa entre a caminhada e a corrida do jogador e sobe até um pouco acima da corrida, abaixo da corrida pulando. O campo `velocidade` existia e não era lido.
+- **Encarar segura, não vence:** some o fim por "encarado demais". O relógio da caçada só anda com ele fora da tela. Depois de 4 a 6 s na tela vem um piscar forçado de ~0,4 s em que ele avança até 3 blocos; os seguintes vêm a cada 3 a 5 s.
+- **Bater:** ele recua (reaparece fora da tela a 10–14 blocos) duas vezes por caçada; a terceira não faz nada.
+- **Portas e vãos:** caixa de colisão de 1,9 de altura na caça (antes 3,0: ele não entrava em casa nenhuma); abre porta de madeira em 1,5 a 3 s.
+- **Luz:** apaga tochas por miragem (voltam depois). A vela continua intransponível; ele espera na borda no máximo 20 a 40 s.
+- **Toque:** a 2,4 blocos e só com linha de visão.
+- **Atalho:** 3 s fora da tela e (mais de 16 blocos ou sem caminho) → reaparece a 8–12 blocos, fora da tela, à frente do movimento do jogador. Recarga de 10 s. Desligado na primeira caçada da vida.
+- **Ouvir:** quebrar bloco, porta e baú a até 16 blocos entregam a posição; agachado e parado é silêncio. A chance de ouvir sobe 10% a cada 10 s de busca, até +50%.
+- **Busca:** para 2 a 3 s e olha em volta ao chegar; raio que encolhe (12, 8, 5).
+- **Fingir que desistiu:** 35% das desistências, uma vez por caçada: fica calado 8 a 15 s e volta. **Sinal honesto de fim:** o som ambiente só volta quando ele foi embora de verdade.
+- **Sem caminho não é sem saída:** 10 s sabendo onde o jogador está e sem caminho → aviso de 2,5 s num bloco ao lado do jogador (som abafado, partículas escuras); se o jogador ficar a até 1,5 bloco, toque; se sair, ele aparece ali. Não quebra bloco. Cada uso repetido encurta a espera (mínimo 4 s) e o aviso (mínimo 1,5 s).
+- **Tetos:** 45 s de contato, 40 s de busca, 120 s no total.
+- **Ser pego:** apagão de 2 a 3 s; acorda a 20–40 blocos, no escuro; vida nunca abaixo de 2 corações; o item da mão fica caído onde foi pego. **Marca:** −1 coração de vida máxima até dormir com uma vela acesa. Nas vezes seguintes pode ser o Avesso.
+- **Som:** longe, tirar som; perto, os passos dele (que significam "você não está olhando"); colado, batimento. Sem música que cubra os passos: as camadas de perseguição ficam baixas.
+
+### Lugares e dimensão (substitui III.2 e parte de III.3)
+
+- **O jogador nunca escolhe entrar no Avesso.** Sem item, sem portal. Primeira vez dormindo (fase 3+, chance baixa); depois, em parte das capturas. Meta: 3 a 5 visitas por jogador em duas semanas.
+- **Visita curta:** 45 a 180 s, teto de 4 minutos. Sai sozinho (acorda), andando para longe da casa ou deitando na cama da cópia. Volta ao ponto de onde saiu, com tudo. Morrer lá é acordar.
+- **Arco de três visitas:** a primeira é idêntica à casa (só vazia e sem luz); a segunda tem dois ou três detalhes errados e ele dentro da casa, visto de fora; a terceira tem medida errada (um bloco a mais, porta em parede cega). Às vezes, nenhuma mudança.
+- **Trazer de volta dúvida, não recompensa.** Sem Ninho, sem baú, sem chave. Por 2 a 5 minutos depois de voltar, uma ou duas coisas da cópia aparecem na casa real por miragem.
+- **O Véu** (novo, e mais frequente que a dimensão): no mundo real, por 30 a 60 s, a neblina fecha, a cor some, o som some, os bichos e os amigos deixam de aparecer e dois ou três blocos da casa são trocados por miragem.
+- **Soleira:** porta sozinha na paisagem. Atravessar três vezes abre o Véu, não a dimensão.
+- **Casa do Vigia** e **Boneco:** continuam. Estruturas só são colocadas com ninguém por perto.
+- A dimensão é o único lugar em que o mod estraga a casa.
+
+### Tela
+
+Filtro de tela como sinal principal é lido como truque barato. A cor drenada fica, discreta, com comando para desligar; os sinais principais passam a estar em objetos (chamas, bichos, a linha, a tigela, os próprios itens).
