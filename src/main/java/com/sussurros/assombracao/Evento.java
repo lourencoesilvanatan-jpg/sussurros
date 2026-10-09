@@ -38,6 +38,7 @@ public enum Evento {
 	TUMULO(3, Categoria.VISAO, 28, true),
 	ESPREITA(3, Categoria.VISAO, 26, false), // v0.4.2: só na sequência de ameaça (ou por comando)
 	VISTO(3, Categoria.MENTE, 10, false),
+	PRENUNCIO(3, Categoria.MENTE, 14, true), // 0.9: o aviso da caçada (o mundo emudece, uma luz falha) sem caçada nenhuma
 	CACA(4, Categoria.AMEACA, 45, true),
 	ESPERA(4, Categoria.AMEACA, 30, false);
 

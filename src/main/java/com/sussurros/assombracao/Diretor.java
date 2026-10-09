@@ -21,6 +21,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -40,6 +41,7 @@ import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -163,6 +165,7 @@ public final class Diretor {
 				while (e.quebrasRecentes.size() > 16) {
 					e.quebrasRecentes.removeFirst();
 				}
+				avisarCacador(e, Vec3.atCenterOf(pos), "QUEBRA");
 			}
 		});
 
@@ -177,6 +180,9 @@ public final class Diretor {
 					registrarCasa(jogador, clicado);
 				} else if (bloco.getBlock() instanceof DoorBlock && !bloco.is(Blocks.IRON_DOOR)) {
 					registrarPorta(jogador, nivel, clicado); // v0.4.2: a porta mais usada vira âncora
+					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "PORTA");
+				} else if (nivel.getBlockEntity(clicado) instanceof Container) {
+					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "BAU");
 				}
 			}
 			return InteractionResult.PASS;
@@ -205,6 +211,9 @@ public final class Diretor {
 				m.salvar();
 			}
 		});
+
+		// Renascer devolve os atributos ao padrão; a marca da captura tem de ser reposta.
+		ServerPlayerEvents.AFTER_RESPAWN.register((antigo, novo, vivo) -> Captura.repor(novo));
 
 		// Machucado recentemente? Não é hora (anti-frustração).
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamageTaken, damageTaken, blocked) -> {
@@ -252,6 +261,33 @@ public final class Diretor {
 	/** O que o cliente deste jogador foi mandado sentir por último (para os testes e para o comando memoria). */
 	public static PacoteSentidos sentidos(ServerPlayer p) {
 		return estado(p).sentidos;
+	}
+
+	/** A criatura que assombra este jogador agora, se houver (para os testes). */
+	@Nullable
+	public static HospedeEntity criatura(ServerPlayer p) {
+		HospedeEntity h = estado(p).criatura;
+		return h == null || h.isRemoved() ? null : h;
+	}
+
+	/**
+	 * Começa uma caçada agora, com o aviso e tudo. contaNaMemoria=false é o teste comum (nada fica gravado);
+	 * true existe para os testes automáticos conferirem o que só acontece numa caçada de verdade (a marca).
+	 */
+	public static boolean cacadaParaTeste(ServerPlayer p, boolean contaNaMemoria) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		if (e.criatura != null && !e.criatura.isRemoved()) {
+			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
+		}
+		PedidoManifestacao pedido = contaNaMemoria
+				? PedidoManifestacao.doDiretor(Evento.CACA)
+				: PedidoManifestacao.deComando(Evento.CACA);
+		boolean ok = invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26, 20 * 130, 1.0, true, pedido);
+		if (ok) {
+			prenunciar(level, p, e, level.getGameTime(), level.getRandom(), true);
+		}
+		return ok;
 	}
 
 	public static String testarSentidos(ServerPlayer p, float peso, float vigia, float caca, float neblina, int flags) {
@@ -928,7 +964,9 @@ public final class Diretor {
 				double d = distanciaSqr(p, m.get(Memoria.MORTE_X), m.get(Memoria.MORTE_Z));
 				yield d > 16 * 16 && d < 72 * 72;
 			}
-			case CACA -> escuro && inq >= 60;
+			case CACA -> escuro && inq >= 60 && podeComecarCacada(level, p, m, e);
+			// O falso aviso tem de caber nos mesmos lugares da caçada, senão o lugar denuncia qual dos dois é.
+			case PRENUNCIO -> escuro && podeComecarCacada(level, p, m, e);
 			case ESPERA, ESPREITA -> false;
 		};
 	}
@@ -1325,16 +1363,17 @@ public final class Diretor {
 			case VISTO -> p.sendOverlayMessage(Component.translatable("message.sussurros.visto", p.getName())
 					.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
 			case CACA -> {
+				// 0.9: a caçada inteira mora em entidade.Cacada. O teto de 130 s é só uma trava: quem encerra é ela.
+				// O último número é quanto mais rápido que o normal ele vem (cresce cada vez que o jogador o fere).
 				ok = invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26,
-						20 * 60, 0.9 + 0.08 * m.get(Memoria.VEZES_FERIDO), true, pedido);
+						20 * 130, 1.0 + 0.03 * Math.min(6, m.get(Memoria.VEZES_FERIDO)), true, pedido);
 				if (ok) {
-					// Evita a assinatura sonora do Warden: a caca deve parecer do Sussurros.
-					ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.75F, 0.82F);
-					if (rnd.nextBoolean()) {
-						agendar(level, 18 + rnd.nextInt(20), () -> ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(),
-							ModSons.Som.RESPIRACAO, 0.55F, 0.92F));
-					}
+					prenunciar(level, p, e, tick, rnd, true);
 				}
+			}
+			case PRENUNCIO -> {
+				// O mesmo aviso, sem ninguém. Aviso que nunca falha vira radar; por isso ele mente mais do que acerta.
+				prenunciar(level, p, e, tick, rnd, false);
 			}
 			case ESPERA -> ok = invocarNaBordaDaZona(level, p, e, ousadia, pedido);
 		}
@@ -1555,6 +1594,7 @@ public final class Diretor {
 			case VIGIA -> new Evento[] {Evento.PASSO_UNICO, Evento.SUSSURRO, Evento.PRESENCA};
 			case NEBLINA -> new Evento[] {Evento.VULTO, Evento.SINAL_DISTANTE, Evento.CANTIGA};
 			case CANTIGA -> new Evento[] {Evento.VIGIA, Evento.PASSOS, Evento.SINAL_DISTANTE};
+			case PRENUNCIO -> new Evento[] {Evento.VIGIA, Evento.PASSO_UNICO};
 			case ECO -> new Evento[] {Evento.ECO, Evento.RUIDO_RETORNO, Evento.PASSO_UNICO, Evento.SEGUIDOR};
 			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA, Evento.ECO_PASSOS};
 			case PEGADAS -> new Evento[] {Evento.SINAL, Evento.PRESENCA};
@@ -2874,7 +2914,7 @@ public final class Diretor {
 		e.obsessao *= fatorObsessao;
 		e.cena = EstadoJogador.Cena.NENHUMA;
 		e.golpeDado = false;
-		e.ameacaLiberadaEm = seg + 600;
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, seg + 600);
 		mudarEstado(p, e, EstadoDiretor.RECUANDO, seg, rnd);
 		e.duracaoEstado = 180 + rnd.nextInt(121); // silêncio de verdade depois do pico
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s FIM motivo=%s obsessao=%.0f->%.0f",
@@ -3000,6 +3040,9 @@ public final class Diretor {
 		int fase = m.get(Memoria.FASE);
 		RandomSource rnd = level.getRandom();
 
+		// Dormir de verdade com uma vela acesa tira a marca da captura. Sair da cama no meio não conta.
+		Captura.tentarCurar(p, m, p.isSleepingLongEnough());
+
 		// Ele deixou algo ao lado da cama enquanto você dormia.
 		if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS && rnd.nextFloat() < 0.45F) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
@@ -3039,6 +3082,84 @@ public final class Diretor {
 	// =====================================================================
 	// Chamadas vindas da criatura e dos itens
 	// =====================================================================
+
+	/** Na caça, quem mexe no mundo se entrega: o som de uma ação a até 16 blocos dá a posição a ele. */
+	private static void avisarCacador(EstadoJogador e, Vec3 onde, String oQue) {
+		HospedeEntity h = e.criatura;
+		if (h != null && !h.isRemoved() && h.getModo() == HospedeEntity.Modo.CACAR) {
+			h.ouvirAcao(onde, oQue);
+		}
+	}
+
+	/**
+	 * A caçada nunca começa na base, nem com o jogador montado ou planando, nem colado num amigo.
+	 * Base invadida é a reclamação que mais mata o medo; e ficar junto dos amigos tem de ser um alívio.
+	 */
+	private static boolean podeComecarCacada(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e) {
+		if (e.contexto == ContextoMundo.Tipo.CASA || ContextoMundo.pertoDaCasa(p, m, 24)) {
+			return false;
+		}
+		if (p.isPassenger() || p.isFallFlying()) {
+			return false;
+		}
+		return level.getPlayers(o -> o != p && !o.isSpectator() && o.distanceToSqr(p) < 7 * 7).isEmpty();
+	}
+
+	/**
+	 * O aviso da caçada: o mundo emudece e uma luz perto do jogador falha. Dura o tempo em que ele, se existir,
+	 * fica parado (8 a 10 s). É o que dá ao jogador a chance de correr para a vela ou sair de um beco.
+	 * O mesmo aviso acontece sem caçada (evento PRENUNCIO), para nunca virar certeza.
+	 */
+	private static void prenunciar(ServerLevel level, ServerPlayer p, EstadoJogador e, long tick, RandomSource rnd, boolean deVerdade) {
+		emudecer(level, p, deVerdade ? 12 : 10 + rnd.nextInt(8), deVerdade ? "CACA" : "PRENUNCIO");
+		e.semMusicaAte = tick + 20L * (deVerdade ? 12 : 10 + rnd.nextInt(8));
+		e.cacaAvisoAte = tick + 20L * 10;
+		int apagadas = ApoioCaca.apagarLuzPerto(level, p, p.blockPosition(), 9, 60 + rnd.nextInt(60), 1);
+		ModSons.tocarPara(p, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.55F, 0.8F);
+		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas);
+	}
+
+	/**
+	 * A caçada acabou: ele sumiu, por qualquer motivo. O som do mundo volta alguns segundos depois (é o sinal
+	 * honesto de fim), e a próxima caçada fica longe.
+	 */
+	public static void cacadaTerminou(ServerPlayer p, HospedeEntity h, String motivo) {
+		EstadoJogador e = estado(p);
+		ServerLevel level = p.level();
+		long tick = level.getGameTime();
+		RandomSource sorte = p.getRandom();
+		e.semMusicaAte = tick + 70 + sorte.nextInt(31);
+		e.cacaAvisoAte = -1;
+		if (h.ehTeste()) {
+			return;
+		}
+		Memoria m = Memoria.de(p);
+		m.add(Memoria.CACADAS, 1);
+		m.salvar();
+		// Caçada é rara: a próxima sequência de ameaça só daqui a 25-40 minutos.
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, tick / 20 + 1500 + sorte.nextInt(901));
+		Depuracao.log(p, tick / 20, "CACA terminou motivo=" + motivo + " cacadas=" + m.get(Memoria.CACADAS)
+				+ " proximaAmeacaEm=" + (e.ameacaLiberadaEm - tick / 20) + "s");
+	}
+
+	/** Depois de pegar o jogador, ele some por um bom tempo. O Diretor não pode emendar outra coisa. */
+	static void depoisDaCaptura(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		long seg = p.level().getGameTime() / 20;
+		RandomSource sorte = p.getRandom();
+		e.pressao = 0;
+		e.obsessao *= 0.4;
+		e.cena = EstadoJogador.Cena.NENHUMA;
+		e.golpeDado = false;
+		e.sequencia = null;
+		e.elosCadeia = 0;
+		Depuracao.log(p, seg, "ESTADO " + e.estado + " -> RECUANDO (captura)");
+		e.estado = EstadoDiretor.RECUANDO;
+		e.estadoDesde = seg;
+		e.duracaoEstado = 360 + sorte.nextInt(241);
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, seg + 1800 + sorte.nextInt(901));
+		marcarSilencioDoRecuo(p, e, seg, "POS_CAPTURA", e.ameacaId);
+	}
 
 	/**
 	 * Primeira vez que a criatura aparece na tela do jogador. A reação só é medida para aparições

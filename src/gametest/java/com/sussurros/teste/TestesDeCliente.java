@@ -27,7 +27,33 @@ public class TestesDeCliente implements FabricClientGameTest {
 			context.waitTicks(60);
 
 			sentidos(context, mundo);
+			cacada(context, mundo);
 		}
+	}
+
+	/** A caçada vista pelo jogador: o aviso, ele parado ao longe, e o que sobra na tela quando ele chega. */
+	private static void cacada(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		mundo.getServer().runCommand("difficulty peaceful");
+		mundo.getServer().runCommand("time set 18000");
+		mundo.getServer().runCommand("execute as @p run sussurros debug on");
+		mundo.getServer().runCommand("execute as @p run sussurros fase 4");
+		context.waitTicks(40);
+		mundo.getServer().runCommand("execute as @p run sussurros evento caca");
+		context.waitTicks(20);
+		// Vira o jogador para ele.
+		mundo.getServer().runCommand("execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] eyes run tp @s ~ ~ ~ ~ ~");
+		context.waitTicks(10);
+		context.takeScreenshot("30-caca-aviso-de-noite");
+		context.waitTicks(260);
+		context.takeScreenshot("31-caca-encarando-13s");
+		context.waitTicks(200);
+		context.takeScreenshot("32-caca-encarando-23s");
+		context.waitTicks(300);
+		context.takeScreenshot("33-caca-encarando-38s");
+		context.waitTicks(300);
+		context.takeScreenshot("34-caca-depois");
+		context.waitTicks(200);
+		context.takeScreenshot("35-caca-acordou");
 	}
 
 	/** Cada sentido no máximo, isolado, para ver o que o jogador veria no pior caso. */

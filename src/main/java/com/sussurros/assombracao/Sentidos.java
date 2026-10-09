@@ -49,13 +49,8 @@ final class Sentidos {
 			if (!naTela && dist < ALCANCE_VIGIA && h.avisaVigia() && Percepcao.linhaDeVisao(p, h)) {
 				vigia = (float) Diretor.limitar(1.05 - dist / ALCANCE_VIGIA, 0.25, 1.0);
 			}
-			if (h.getModo() == HospedeEntity.Modo.CACAR) {
-				// Fora da vista ela pesa mais: o medo é não saber onde ele está.
-				double perto = Diretor.limitar(1.0 - dist / 36.0, 0.0, 1.0);
-				caca = (float) (0.3 + 0.7 * perto) * (naTela ? 0.75F : 1.0F);
-			} else if (h.getModo() == HospedeEntity.Modo.ESPERAR) {
-				caca = 0.2F;
-			}
+			// Longe, a caçada é quase só silêncio. O batimento é para quando ele está perto e sem parede no meio.
+			caca = h.intensidadeDaCaca(p, dist);
 		}
 		if (tick < e.vigiaFalsaAte) {
 			vigia = Math.max(vigia, e.vigiaFalsaForca);

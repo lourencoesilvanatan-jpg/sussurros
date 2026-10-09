@@ -114,6 +114,17 @@ public final class ModSons {
 				x, y, z, volume, pitch, p.getRandom().nextLong()));
 	}
 
+	/** Um som do próprio jogo (um passo, uma chama apagando), só para um jogador. */
+	public static void tocarEventoPara(ServerPlayer p, SoundEvent evento, SoundSource categoria,
+			double x, double y, double z, float volume, float pitch) {
+		double alcance = evento.getRange(volume);
+		if (p.distanceToSqr(x, y, z) > alcance * alcance) {
+			return;
+		}
+		p.connection.send(new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(evento), categoria,
+				x, y, z, volume, pitch, p.getRandom().nextLong()));
+	}
+
 	/** "Dentro da cabeça": o som fica preso ao próprio jogador, então não vem de lado nenhum. Só ele ouve. */
 	public static void tocarNaCabeca(ServerPlayer p, Som som, float volume, float pitch) {
 		SoundEvent evento = SONS.get(som);

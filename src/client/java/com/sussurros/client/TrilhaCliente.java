@@ -57,16 +57,19 @@ final class TrilhaCliente {
 		float fundo = peso * 0.5F + caca * 0.25F + vigia * 0.15F;
 		ALVOS[Camada.FUNDO.ordinal()] = fundo < 0.06F ? 0.0F : Math.min(0.8F, fundo);
 		ALVOS[Camada.VIGIA.ordinal()] = vigia * 0.55F;
-		ALVOS[Camada.PULSO.ordinal()] = suave(caca, 0.12F, 0.5F) * 0.8F;
-		ALVOS[Camada.CORDAS.ordinal()] = suave(caca, 0.4F, 0.8F) * 0.7F;
-		ALVOS[Camada.TEMA.ordinal()] = suave(caca, 0.65F, 1.0F) * 0.6F;
+		// Baixas de propósito: a informação que importa na caçada são os passos dele, e música alta os cobre.
+		ALVOS[Camada.PULSO.ordinal()] = suave(caca, 0.12F, 0.5F) * 0.5F;
+		ALVOS[Camada.CORDAS.ordinal()] = suave(caca, 0.45F, 0.85F) * 0.4F;
+		ALVOS[Camada.TEMA.ordinal()] = suave(caca, 0.7F, 1.0F) * 0.3F;
 		ALVOS[Camada.AVESSO.ordinal()] = SentidosCliente.noAvesso() ? 0.75F : 0.0F;
 
 		boolean perseguicao = ALVOS[Camada.PULSO.ordinal()] > 0.0F;
 		for (Camada c : CAMADAS) {
 			int i = c.ordinal();
 			Laco laco = ATIVAS[i];
-			if (laco != null && laco.isStopped()) {
+			if (laco != null && (laco.isStopped() || (laco.idade > 40 && !mc.getSoundManager().isActive(laco)))) {
+				// Parou por conta própria, ou o jogo a parou (recarregar recursos, "parar todos os sons").
+				laco.encerrar();
 				laco = null;
 				ATIVAS[i] = null;
 			}
@@ -126,9 +129,11 @@ final class TrilhaCliente {
 	private static final class Laco extends AbstractTickableSoundInstance {
 		private final int indice;
 		private int mudoHa;
+		int idade;
 
 		Laco(SoundEvent evento, int indice) {
-			super(evento, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
+			// "Criaturas hostis", e não "ambiente": o silêncio do mod corta o ambiente do jogo, e a trilha ficaria muda.
+			super(evento, SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
 			this.indice = indice;
 			this.looping = true;
 			this.delay = 0;
@@ -140,6 +145,7 @@ final class TrilhaCliente {
 
 		@Override
 		public void tick() {
+			this.idade++;
 			float alvo = ALVOS[this.indice];
 			if (alvo > this.volume) {
 				this.volume = Math.min(alvo, this.volume + 0.015F);
