@@ -902,3 +902,25 @@ Da terceira visita em diante a cópia tem uma fatia repetida: dois blocos a lest
 Depois da primeira visita (que é sempre pela cama), 35% das capturas não deslocam o jogador: ele acorda do outro lado, no ponto onde foi pego, e volta depois para esse mesmo ponto. No máximo uma vez por dia de jogo, e só com o mod no cliente.
 
 O resto da captura acontece igual: o item da mão fica caído no mundo normal, a vida cai, a marca entra, o Diretor recua. A visita conta como qualquer outra (a terceira já tem a medida errada e ele vindo).
+
+---
+# Versão 0.9.0-alpha7 — duas limpezas
+
+## A caçada que ficou devendo
+
+Antes, sair do jogo no meio de uma caçada, ou fugir para longe (élitro, cavalo, barco, portal), acabava com ela sem consequência. Pior: a mais de 128 blocos de qualquer jogador o próprio jogo apagava a criatura sem avisar o mod, e a caçada sumia sem registro.
+
+Agora a caçada não é cancelada, só adiada:
+
+- **Fica devendo** quem sai do jogo com uma caçada em curso (`DESLOGOU`), quem fica a mais de 110 blocos dele (`FUGIU_LONGE`) e quem troca de dimensão (`TROCOU_DE_MUNDO`). Caçada de teste não deixa dívida. Morrer ou ser pego não é fugir.
+- **Ela volta** um a dois minutos depois de ele entrar no jogo ou de ter fugido, quando as condições de sempre valem: no escuro, fora da base (nunca na casa nem a 24 blocos da cama), fora da vela, sem estar voando, montado ou caindo, sem um amigo colado.
+- O aviso é o de sempre (os oito a dez segundos com ele parado). Não há castigo extra: é a mesma caçada.
+- Só uma dívida por vez. Ela fica guardada com o personagem.
+
+A criatura deixou de ser apagada pelo jogo quando fica longe de todos: quem decide quando ela some é ela.
+
+## Som só para quem é assombrado
+
+Dezenove sons que ainda tocavam para qualquer um por perto passaram a tocar só para o alvo: os presságios e as perturbações de ambiente, os sons das quatro cenas compostas, o som atrás do jogador, a respiração, os sinais falsos e as respostas distantes do sino.
+
+Continuam tocando para todos, de propósito, porque aconteceram de verdade no mundo: a caixa de música, a tigela, a linha de cinza que arrasta, o fio que rompe, os itens quando usados e os sons que saem do corpo da criatura (que os amigos também veem).

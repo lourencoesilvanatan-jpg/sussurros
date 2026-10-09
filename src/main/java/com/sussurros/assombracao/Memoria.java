@@ -82,6 +82,7 @@ public final class Memoria {
 	public static final String CACADAS = "cacadas";                 // quantas caçadas de verdade já aconteceram
 	public static final String CAPTURAS = "capturas";               // quantas vezes ele pegou o jogador
 	public static final String MARCAS = "marcas";                   // corações de vida máxima perdidos (0 a 3); dormir com vela acesa cura
+	public static final String CACA_DEVIDA = "caca_devida"; // 1: ele saiu do jogo ou fugiu para longe no meio de uma caçada; ela volta
 	public static final String CACA_ATRAVESSOU = "caca_atravessou"; // vezes que ele precisou atravessar (pilar, buraco, muro): cada uma encurta o aviso
 
 	// 0.9: os itens

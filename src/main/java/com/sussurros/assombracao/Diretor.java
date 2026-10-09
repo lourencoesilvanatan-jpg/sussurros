@@ -46,6 +46,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -196,6 +197,8 @@ public final class Diretor {
 			}
 			return InteractionResult.PASS;
 		});
+
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> aoSair(handler.getPlayer()));
 
 		EntitySleepEvents.START_SLEEPING.register((entity, sleepingPos) -> {
 			if (entity instanceof ServerPlayer jogador) {
@@ -663,6 +666,10 @@ public final class Diretor {
 		// 0.9: trégua comprada (os ossos, ou a oferenda aceita enquanto ele está em casa). O que já começou
 		// termina; nada novo começa.
 		boolean tregua = tick < e.treguaAte || Oferenda.emTregua(e, tick) || tick < e.veuAte;
+		// 0.9: a caçada que ficou devendo. Quem saiu do jogo ou fugiu para longe no meio de uma não escapou dela.
+		if (!tregua && cobrarCacadaDevida(level, p, m, e, escuro, calma, seg, tick, rnd)) {
+			tregua = true;
+		}
 		if (!tregua) {
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
@@ -1268,7 +1275,7 @@ public final class Diretor {
 					Vec3 atras = pontoRelativo(p, 180, 3.0);
 					float qual = rnd.nextFloat();
 					ModSons.Som som = qual < 0.4F ? ModSons.Som.ESTALO : qual < 0.8F ? ModSons.Som.PANO : ModSons.Som.RESPIRACAO;
-					ModSons.tocar(level, atras.x, p.getY() + 1.0, atras.z, som, 0.6F, 0.9F + rnd.nextFloat() * 0.2F);
+					ModSons.tocarPara(p, atras.x, p.getY() + 1.0, atras.z, som, 0.6F, 0.9F + rnd.nextFloat() * 0.2F);
 					Depuracao.log(p, seg, "passo único virou " + som + " (falso positivo)");
 				} else {
 					passoUnico(level, p);
@@ -1468,7 +1475,7 @@ public final class Diretor {
 				if (ok && atras != null && rnd.nextFloat() < 0.25F) {
 					agendar(level, 20 + rnd.nextInt(25), () -> {
 						if (!atras.isRemoved()) {
-							ModSons.tocar(level, atras.getX(), atras.getY() + 2.2, atras.getZ(), ModSons.Som.RESPIRACAO, 0.8F, 0.95F);
+							ModSons.tocarPara(p, atras.getX(), atras.getY() + 2.2, atras.getZ(), ModSons.Som.RESPIRACAO, 0.8F, 0.95F);
 						}
 					});
 				}
@@ -2154,15 +2161,15 @@ public final class Diretor {
 					lugar = Vec3.atCenterOf(porta);
 					tipo = "PORTA_SEM_MOVER";
 					float vol = volumePara(p, lugar.x, lugar.y, lugar.z, 0.55F);
-					ModSons.tocar(level, lugar.x, lugar.y, lugar.z, ModSons.Som.MADEIRA, vol, 0.88F);
+					ModSons.tocarPara(p, lugar.x, lugar.y, lugar.z, ModSons.Som.MADEIRA, vol, 0.88F);
 					if (rnd.nextFloat() < 0.28F) {
-						agendar(level, 16 + rnd.nextInt(18), () -> ModSons.tocar(level, lugar.x, lugar.y, lugar.z,
+						agendar(level, 16 + rnd.nextInt(18), () -> ModSons.tocarPara(p, lugar.x, lugar.y, lugar.z,
 							ModSons.Som.ESTALO, vol, 0.9F));
 					}
 				} else {
 					lugar = pontoRelativo(p, 145 + rnd.nextDouble() * 70, 7 + rnd.nextInt(7));
 					tipo = "RESPIRACAO_DA_CASA";
-					ModSons.tocar(level, lugar.x, p.getY() + 1.0, lugar.z,
+					ModSons.tocarPara(p, lugar.x, p.getY() + 1.0, lugar.z,
 						rnd.nextBoolean() ? ModSons.Som.RESPIRACAO : ModSons.Som.PANO,
 						volumePara(p, lugar.x, lugar.y, lugar.z, 0.45F), 0.9F);
 				}
@@ -2191,7 +2198,7 @@ public final class Diretor {
 				} else {
 					lugar = pontoRelativo(p, 130 + rnd.nextDouble() * 100, 12 + rnd.nextInt(12));
 					tipo = "COISA_NO_TUNEL";
-					ModSons.tocar(level, lugar.x, p.getY(), lugar.z,
+					ModSons.tocarPara(p, lugar.x, p.getY(), lugar.z,
 						rnd.nextBoolean() ? ModSons.Som.ARRASTO : ModSons.Som.MADEIRA,
 						volumePara(p, lugar.x, lugar.y, lugar.z, 0.6F), 0.84F);
 				}
@@ -2207,7 +2214,7 @@ public final class Diretor {
 				}
 				ModSons.Som som = rnd.nextFloat() < 0.18F ? ModSons.Som.RESPIRACAO
 						: (rnd.nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.PANO);
-				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.5F), 0.9F);
+				ModSons.tocarPara(p, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.5F), 0.9F);
 			}
 			case FLORESTA -> {
 				Rastro.Ponto pt = pontoDoRastro(p, e, seg, 12, 220, 10, 30, true);
@@ -2219,13 +2226,13 @@ public final class Diretor {
 					tipo = "GALHO_FORA_DA_VISAO";
 				}
 				ModSons.Som som = rnd.nextFloat() < 0.55F ? ModSons.Som.ESTALO : ModSons.Som.PANO;
-				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.46F),
+				ModSons.tocarPara(p, lugar.x, lugar.y, lugar.z, som, volumePara(p, lugar.x, lugar.y, lugar.z, 0.46F),
 						0.86F + rnd.nextFloat() * 0.10F);
 			}
 			case OUTRO -> {
 				lugar = pontoRelativo(p, 110 + rnd.nextDouble() * 140, 8 + rnd.nextInt(12));
 				tipo = "RUIDO_SEM_FONTE";
-				ModSons.tocar(level, lugar.x, p.getY() + 0.8, lugar.z,
+				ModSons.tocarPara(p, lugar.x, p.getY() + 0.8, lugar.z,
 					rnd.nextBoolean() ? ModSons.Som.PANO : ModSons.Som.ESTALO,
 					volumePara(p, lugar.x, lugar.y, lugar.z, 0.45F), 0.92F);
 			}
@@ -3296,6 +3303,59 @@ public final class Diretor {
 				+ " assobio=" + (assobio ? "sim" : "nao"));
 	}
 
+	/** O jogador saiu do jogo. Se era no meio de uma caçada de verdade, ela fica devendo. */
+	public static void aoSair(ServerPlayer p) {
+		EstadoJogador e = ESTADOS.get(p.getUUID());
+		if (e == null) {
+			return;
+		}
+		HospedeEntity h = e.criatura;
+		if (h != null && !h.isRemoved() && !h.isSumindo() && h.getModo() == HospedeEntity.Modo.CACAR) {
+			cacadaFugiu(p, h, "DESLOGOU");
+		}
+	}
+
+	/**
+	 * Ele escapou de uma caçada por fora das regras dela: saiu do jogo, voou ou cavalgou para longe, trocou de
+	 * dimensão. Não há castigo; a caçada só não foi cancelada. Ela volta quando ele estiver de novo num lugar
+	 * onde uma caçada pode começar. Caçada de teste não deixa dívida.
+	 */
+	public static void cacadaFugiu(ServerPlayer p, HospedeEntity h, String motivo) {
+		if (h.ehTeste()) {
+			return;
+		}
+		Memoria m = Memoria.de(p);
+		m.set(Memoria.CACA_DEVIDA, 1);
+		m.salvar();
+		estado(p).cacaDevidaApos = 0;
+		Depuracao.log(p, p.level().getGameTime() / 20, "CACA devida motivo=" + motivo + " manifestacao=" + h.getIdManifestacao());
+	}
+
+	/**
+	 * Cobra a caçada devida: no escuro, fora da base, sem ele estar voando, montado ou caindo, um ou dois minutos
+	 * depois de ele entrar no jogo ou de ter fugido. O aviso é o de sempre (ele ainda tem os seus oito segundos).
+	 */
+	private static boolean cobrarCacadaDevida(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, boolean escuro,
+			boolean calma, long seg, long tick, RandomSource rnd) {
+		if (m.get(Memoria.CACA_DEVIDA) != 1) {
+			return false;
+		}
+		if (e.cacaDevidaApos == 0) {
+			e.cacaDevidaApos = seg + 60 + p.getRandom().nextInt(61);
+		}
+		if (seg < e.cacaDevidaApos || !escuro || calma || bloqueado(p, e, tick)
+				|| (e.criatura != null && !e.criatura.isRemoved()) || !podeComecarCacada(level, p, m, e)) {
+			return false;
+		}
+		if (!invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26, 20 * 130, 1.0, true, PedidoManifestacao.doDiretor(Evento.CACA))) {
+			return false;
+		}
+		m.set(Memoria.CACA_DEVIDA, 0);
+		prenunciar(level, p, e, tick, rnd, true);
+		Depuracao.log(p, seg, "CACA devida cobrada");
+		return true;
+	}
+
 	/**
 	 * A caçada acabou: ele sumiu, por qualquer motivo. O som do mundo volta alguns segundos depois (é o sinal
 	 * honesto de fim), e a próxima caçada fica longe.
@@ -3621,7 +3681,7 @@ public final class Diretor {
 			if (!enganar && marca != null && level.getRandom().nextFloat() < 0.38F) {
 				BlockPos mp = marca.pos();
 				ModSons.Som som = marca.tipo() == Vestigios.Tipo.VIGILIA ? ModSons.Som.ESTALO : ModSons.Som.PANO;
-				ModSons.tocar(level, mp.getX() + 0.5, mp.getY() + 0.7, mp.getZ() + 0.5, som,
+				ModSons.tocarPara(p, mp.getX() + 0.5, mp.getY() + 0.7, mp.getZ() + 0.5, som,
 						volumePara(p, mp.getX() + 0.5, mp.getY() + 0.5, mp.getZ() + 0.5, 0.52F), 0.72F);
 				Depuracao.log(p, agora, "SINO resposta=VESTIGIO tipo=" + marca.tipo() + " idade=" + marca.idade(agora)
 						+ "s pos=" + pos(mp.getX(), mp.getY(), mp.getZ()));
@@ -3630,7 +3690,7 @@ public final class Diretor {
 			Rastro.Ponto pt = pontoDoRastro(p, e, level.getGameTime() / 20, 18, 300, 10, 38, true);
 			if (pt != null && (enganar || level.getRandom().nextFloat() < 0.62F)) {
 				ModSons.Som som = level.getRandom().nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.MADEIRA;
-				ModSons.tocar(level, pt.x(), pt.y() + 0.8, pt.z(), som, volumePara(p, pt.x(), pt.y(), pt.z(), 0.55F), 0.82F);
+				ModSons.tocarPara(p, pt.x(), pt.y() + 0.8, pt.z(), som, volumePara(p, pt.x(), pt.y(), pt.z(), 0.55F), 0.82F);
 				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=" + (enganar ? "ISCA_RASTRO" : "RASTRO") + " idade="
 						+ (level.getGameTime() / 20 - pt.seg()) + "s pos=" + pos(pt.x(), pt.y(), pt.z()));
 			} else {

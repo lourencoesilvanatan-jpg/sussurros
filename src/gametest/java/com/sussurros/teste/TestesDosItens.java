@@ -25,6 +25,7 @@ import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Conta;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
@@ -139,8 +140,12 @@ public class TestesDosItens {
 		});
 	}
 
-	/** O Lampião Pálido muda a chama quando ele chega perto, e apaga quando ele passa. */
-	@GameTest(maxTicks = 2000)
+	/**
+	 * O Lampião Pálido muda a chama quando ele chega perto, e apaga quando ele passa.
+	 * Não usa uma caçada (que tem sorteio e já falhou no GitHub por não terminar a tempo): usa a criatura
+	 * como ela é do outro lado, que vem em linha reta, devagar, até encostar.
+	 */
+	@GameTest(maxTicks = 900)
 	public void oLampiaoReage(GameTestHelper helper) {
 		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -300, 0);
 		JogadorDeTeste.acompanhar(helper, jogador, "lampiao");
@@ -153,12 +158,13 @@ public class TestesDosItens {
 				.setValue(LampiaoPalidoBlock.COMBUSTIVEL, 3);
 		List<BlockPos> lampioes = List.of(centro.offset(2, 0, 2), centro.offset(-2, 0, 2), centro.offset(2, 0, -2), centro.offset(-2, 0, -2));
 		lampioes.forEach(pos -> level.setBlockAndUpdate(pos, aceso));
-		Vec3 inicio = jogador.position();
 		boolean[] reagiu = new boolean[1];
+		HospedeEntity[] ele = new HospedeEntity[1];
 
 		helper.runAfterDelay(5, () -> {
 			helper.assertTrue(level.getBlockState(lampioes.get(0)).getLightEmission() == 12, "aceso e calmo deveria dar luz 12");
-			comecarCacada(helper, jogador);
+			helper.assertTrue(Avesso.criaturaParaTeste(jogador, true), "deveria haver lugar para ele");
+			ele[0] = Diretor.criatura(jogador);
 		});
 		helper.onEachTick(() -> {
 			for (BlockPos pos : lampioes) {
@@ -170,7 +176,7 @@ public class TestesDosItens {
 			}
 		});
 		helper.succeedWhen(() -> {
-			helper.assertTrue(jogador.position().distanceTo(inicio) > 8, "a caçada ainda não terminou");
+			helper.assertTrue(ele[0] != null && ele[0].isRemoved(), "ele ainda não chegou ao jogador");
 			helper.assertTrue(reagiu[0], "nenhum lampião ficou inquieto ou frio com ele chegando");
 			boolean apagou = lampioes.stream().anyMatch(pos -> level.getBlockState(pos).is(ModBlocos.LAMPIAO_PALIDO)
 					&& level.getBlockState(pos).getValue(LampiaoPalidoBlock.CHAMA) == LampiaoPalidoBlock.Chama.APAGADA);

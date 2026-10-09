@@ -141,7 +141,7 @@ final class CenaDoOutroLadoDoVidro {
 					e.cenaJanelaAte = seg + 5 + rnd.nextInt(5);
 					BlockPos vidro = e.cenaJanelaPos;
 					if (vidro != null) {
-						ModSons.tocar(level, vidro.getX() + 0.5, vidro.getY() + 0.6, vidro.getZ() + 0.5,
+						ModSons.tocarPara(p, vidro.getX() + 0.5, vidro.getY() + 0.6, vidro.getZ() + 0.5,
 								ModSons.Som.ESTALO, Diretor.volumePara(p, vidro.getX() + 0.5, vidro.getY() + 0.5, vidro.getZ() + 0.5, 0.50F), 0.58F);
 						level.sendParticles(ParticleTypes.ASH, vidro.getX() + 0.5, vidro.getY() + 0.5, vidro.getZ() + 0.5,
 								3, 0.12, 0.22, 0.12, 0.001);

@@ -28,6 +28,17 @@ jobs:
       - name: Testes dentro do jogo (servidor)
         run: ./gradlew runGameTest
 
+      # Quando um teste falha aqui e não na máquina de quem programa, a causa está no log de decisões do mod.
+      - name: Guardar os logs dos testes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-dos-testes
+          path: |
+            build/run/gameTest/sussurros-debug.log
+            build/run/gameTest/logs/latest.log
+          if-no-files-found: warn
+
   # Abre o jogo numa tela virtual e tira fotos. Não trava o merge: serve para quem programa olhar.
   fotos:
     runs-on: ubuntu-latest

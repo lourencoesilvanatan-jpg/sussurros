@@ -150,7 +150,7 @@ final class CenaAlgoNoTunel {
 					case 1 -> ModSons.Som.ARRASTO;
 					default -> ModSons.Som.PANO;
 				};
-				ModSons.tocar(level, lugar.x, lugar.y, lugar.z, som, Diretor.volumePara(p, lugar.x, lugar.y, lugar.z, 0.7F), 0.82F + rnd.nextFloat() * 0.14F);
+				ModSons.tocarPara(p, lugar.x, lugar.y, lugar.z, som, Diretor.volumePara(p, lugar.x, lugar.y, lugar.z, 0.7F), 0.82F + rnd.nextFloat() * 0.14F);
 				Depuracao.log(p, seg, String.format(Locale.ROOT,
 						"CENA id=%s etapa=RUIDO som=%s motivoPosicao=%s pos=%s dist=%.1f",
 						e.cenaTunelId, som, pt != null ? "RASTRO" : "TUNEL", Diretor.pos(lugar.x, lugar.y, lugar.z), Diretor.distancia(p, lugar)));

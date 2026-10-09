@@ -26,6 +26,62 @@ import com.sussurros.entidade.HospedeEntity;
  * confere o desfecho. Não mede medo; mede se as regras valem e se nada trava.
  */
 public class TestesDaCacada {
+	private static void comecarCacadaDeVerdade(GameTestHelper helper, ServerPlayer jogador) {
+		helper.setTime(18000);
+		for (int i = 0; i < 6; i++) {
+			if (Diretor.cacadaParaTeste(jogador, true)) {
+				return;
+			}
+		}
+		helper.fail("a caçada não achou lugar para começar");
+	}
+
+	/** Quem sai do jogo no meio de uma caçada fica devendo. */
+	@GameTest(maxTicks = 300)
+	public void quemSaiNoMeioFicaDevendo(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1800, 0);
+		JogadorDeTeste.acompanhar(helper, jogador, "sai-no-meio");
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		helper.runAfterDelay(5, () -> comecarCacadaDeVerdade(helper, jogador));
+		helper.runAfterDelay(60, () -> {
+			helper.assertTrue(Diretor.criatura(jogador) != null && !Diretor.criatura(jogador).isRemoved(), "a caçada deveria estar em curso");
+			helper.assertTrue(Memoria.de(jogador).get("caca_devida") == 0, "em curso, ainda não deve nada");
+			Diretor.aoSair(jogador);
+			helper.assertTrue(Memoria.de(jogador).get("caca_devida") == 1, "quem sai no meio deveria ficar devendo a caçada");
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
+	/** Quem foge para longe fica devendo, e ela volta sozinha um ou dois minutos depois, onde ele estiver. */
+	@GameTest(maxTicks = 3600)
+	public void quemFogeParaLongeEEncontrado(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1900, 0);
+		JogadorDeTeste.acompanhar(helper, jogador, "foge-longe");
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		boolean[] deveu = new boolean[1];
+		boolean[] fugiu = new boolean[1];
+		helper.runAfterDelay(5, () -> comecarCacadaDeVerdade(helper, jogador));
+		helper.runAfterDelay(80, () -> {
+			// Cento e sessenta blocos de uma vez, como quem sai voando.
+			jogador.snapTo(jogador.getX() + 160, jogador.getY(), jogador.getZ(), jogador.getYRot(), jogador.getXRot());
+			fugiu[0] = true;
+		});
+		helper.onEachTick(() -> {
+			helper.setTime(18000);
+			deveu[0] |= fugiu[0] && Memoria.de(jogador).get("caca_devida") == 1;
+		});
+		helper.succeedWhen(() -> {
+			helper.assertTrue(deveu[0], "depois de fugir, deveria ficar devendo a caçada");
+			helper.assertTrue(Memoria.de(jogador).get("caca_devida") == 0, "a caçada devida ainda não voltou");
+			HospedeEntity h = Diretor.criatura(jogador);
+			helper.assertTrue(h != null && !h.isRemoved() && h.getModo() == HospedeEntity.Modo.CACAR, "deveria haver uma caçada nova em curso");
+			helper.assertTrue(h.distanceTo(jogador) < 40, "e ela deveria ser onde ele está agora, não onde ele estava");
+			JogadorDeTeste.remover(jogador);
+		});
+	}
 	/** Começa a caçada. O lugar onde ele nasce é sorteado, então tenta algumas vezes antes de reclamar. */
 	private static void comecar(GameTestHelper helper, ServerPlayer jogador, boolean deVerdade) {
 		helper.setTime(18000);
