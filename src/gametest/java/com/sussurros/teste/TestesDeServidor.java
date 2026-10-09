@@ -2,6 +2,7 @@ package com.sussurros.teste;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.locale.Language;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -23,6 +24,26 @@ import com.sussurros.registro.ModItems;
  * jogador de mentira e que as regras básicas valem. O que só o olho vê fica para os testes de cliente.
  */
 public class TestesDeServidor {
+	/**
+	 * Os textos do mod saem em português do Brasil com o jogo no idioma padrão (inglês): o dono joga com o jogo
+	 * em inglês e pediu o mod em português. Se alguém voltar a pôr texto em inglês no arquivo-base, este teste cai.
+	 */
+	@GameTest
+	public void osTextosSaemEmPortugues(GameTestHelper helper) {
+		Language idioma = Language.getInstance();
+		helper.assertTrue("Cinza Pálida".equals(idioma.getOrDefault("item.sussurros.cinza_palida")),
+				"nome de item: " + idioma.getOrDefault("item.sussurros.cinza_palida"));
+		helper.assertTrue("Lampião Pálido".equals(idioma.getOrDefault("block.sussurros.lampiao_palido")),
+				"nome de bloco: " + idioma.getOrDefault("block.sussurros.lampiao_palido"));
+		helper.assertTrue(idioma.getOrDefault("message.sussurros.vela.acendeu").startsWith("Uma chama pálida"),
+				"mensagem: " + idioma.getOrDefault("message.sussurros.vela.acendeu"));
+		helper.assertTrue("Respiração".equals(idioma.getOrDefault("subtitles.sussurros.respiracao")),
+				"legenda de som: " + idioma.getOrDefault("subtitles.sussurros.respiracao"));
+		helper.assertTrue(idioma.getOrDefault("diario.sussurros.pagina.0").length() > 20 && !idioma.getOrDefault("diario.sussurros.pagina.0").startsWith("diario."),
+				"a primeira página do diário deveria existir");
+		helper.succeed();
+	}
+
 	@GameTest
 	public void oModCarregaComTudoRegistrado(GameTestHelper helper) {
 		helper.assertTrue(Sussurros.MOD_ID.equals(BuiltInRegistries.ENTITY_TYPE.getKey(ModEntidades.HOSPEDE).getNamespace()),

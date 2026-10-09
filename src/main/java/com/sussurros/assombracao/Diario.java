@@ -8,7 +8,7 @@ import net.minecraft.sounds.SoundSource;
 
 /**
  * O diário de quem morou neste mundo antes de você.
- * O texto de cada página está nos arquivos de tradução (lang/pt_br.json).
+ * O texto de cada página está no arquivo de textos (lang/en_us.json, que está em português de propósito).
  */
 public final class Diario {
 	public static final int TOTAL_PAGINAS = 28;
