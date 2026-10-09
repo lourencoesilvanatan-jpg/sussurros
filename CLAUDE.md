@@ -32,6 +32,7 @@ Cuidados com os testes de servidor (`JogadorDeTeste`):
 - O log de decisões fica ligado nos testes, em `build/run/gameTest/sussurros-debug.log`. Quando um teste falha, a causa está lá. O arquivo acumula as execuções: a última está no fim.
 - Os testes rodam todos ao mesmo tempo, lado a lado. Os dos itens põem o jogador a cem blocos uns dos outros (`dz` de -100 a -1000), porque a criatura de um teste esbarra no que o outro pôs no chão (uma Linha de Cinza alheia já derrubou um teste da caçada).
 - `./gradlew build` já roda o `runGameTest` junto.
+- Teste que depende de uma caçada terminar pode falhar no GitHub sem falhar aqui (aconteceu duas vezes em doze execuções, sem causa achada). Quando o job `build` falha, o log de decisões sobe como artefato `log-dos-testes`: baixe com `gh run download <id> -n log-dos-testes` antes de mexer em qualquer coisa. Teste novo que só precisa da criatura por perto use `Avesso.criaturaParaTeste`, que não tem sorteio.
 
 ## Fluxo de trabalho
 
