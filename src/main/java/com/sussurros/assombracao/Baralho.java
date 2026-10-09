@@ -94,7 +94,8 @@ public final class Baralho {
 			m.add(FALTA, -1);
 			return;
 		}
-		if ((e.criatura != null && !e.criatura.isRemoved()) || tick < e.veuAte || Diretor.bloqueado(p, e, tick)) {
+		if ((e.criatura != null && !e.criatura.isRemoved()) || tick < e.veuAte || Diretor.bloqueado(p, e, tick)
+				|| !Atencao.podeGastar(e, Atencao.CARTA, seg)) {
 			return;
 		}
 		virar(level, p, m, e, fase, seg, tick, null);
@@ -151,6 +152,7 @@ public final class Baralho {
 					return null;
 				}
 				Veu.abrir(level, p, m, e, tick, false);
+				Atencao.gastar(p, e, "carta:VEU", Atencao.VEU, seg);
 				return "abriu";
 			}
 			case SOLEIRA -> {

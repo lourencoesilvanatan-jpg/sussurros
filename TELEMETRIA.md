@@ -663,3 +663,16 @@ BARALHO carta=SONO efeito=nada pos=8/12 ciclo=1 proximaEm=3551s
 - `pos=3/12` é a posição da carta no baralho daquele ciclo. `efeito` diz o que ela fez: `nada`, `ja_existe`, `sem_cama`, `nao_coube` ou o próprio efeito.
 - Depois de uma carta vêm as linhas normais do que ela adiantou (`VEU abriu`, `CACA devida cobrada`, `AVESSO levado origem=SONO`...).
 - `/sussurros teste baralho` vira agora a próxima carta de quem pediu.
+
+## 0.9.0-alpha12 — a atenção
+
+```
+ATENCAO fonte=evento:PASSOS custo=20 saldo=14
+ATENCAO fonte=pressagio custo=14 saldo=0
+ATENCAO fonte=cena:ALGO_NO_TUNEL custo=36 saldo=-22
+ATENCAO fonte=conta custo=10 saldo=31
+```
+
+Também novos: `EXPOSICAO id=M012 modo=OBSERVAR naTela=14t perto=0t` (logo depois de cada `HOSPEDE ... sumiu`: ticks na tela do alvo, e quantos deles perto e iluminado) e, na busca da caçada, o motivo `VIU` (`BUSCA id=... OLHANDO -> ULTIMA_POSICAO motivo=VIU`).
+
+Sai uma linha a cada saída perceptível, com o saldo depois do gasto. Saldo negativo quer dizer que algo que já tinha começado (um elo de cadeia, a ameaça) gastou sem esperar. O analisador resume isso na seção "Ritmo".

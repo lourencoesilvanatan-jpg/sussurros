@@ -128,6 +128,21 @@ final class HospedeBusca {
         this.falhasNavegacao = 0;
     }
 
+    /** Ele está vendo o jogador agora: sabe exatamente onde ele está. Sem linha de log a cada olhada. */
+    void ver(ServerLevel level, HospedeEntity hospede, Vec3 onde) {
+        if (!this.inicializado) {
+            return;
+        }
+        registrarConhecimento(onde, level.getGameTime(), 1.0);
+        this.ultimaPosicaoOuvida = onde;
+        if (this.estado != Estado.ULTIMA_POSICAO) {
+            mudarEstado(level, hospede, Estado.ULTIMA_POSICAO, "VIU");
+        }
+        this.pontoBusca = null;
+        this.buscaTicks = 0;
+        this.falhasNavegacao = 0;
+    }
+
     /** Atualiza o rastro mental e retorna true se houve um novo ruído perceptível. */
     boolean ouvirMovimento(ServerLevel level, HospedeEntity hospede, ServerPlayer alvo, boolean percebido) {
         if (!this.inicializado) {

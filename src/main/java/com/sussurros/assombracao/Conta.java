@@ -102,9 +102,10 @@ public final class Conta {
 
 		// Os três avisos, um por degrau antes do limite.
 		int degrau = total >= limite - 1 ? 3 : total >= limite - 2 ? 2 : total >= limite - 3 ? 1 : 0;
-		if (degrau > m.get(AVISOS) && !Diretor.bloqueado(p, e, tick)) {
+		if (degrau > m.get(AVISOS) && !Diretor.bloqueado(p, e, tick) && Atencao.podeGastar(e, Atencao.AVISO_DA_CONTA, seg)) {
 			m.set(AVISOS, degrau);
 			avisar(level, p, m, e, degrau, seg, tick);
+			Atencao.gastar(p, e, "conta", Atencao.AVISO_DA_CONTA, seg);
 		}
 
 		if (total >= limite && e.cobrancaEm < 0) {

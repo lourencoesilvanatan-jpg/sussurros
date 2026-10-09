@@ -23,8 +23,11 @@ public final class Rede {
 	}
 
 	/** O cliente deste jogador tem o mod e entende os sentidos? Efeitos que só existem no cliente dependem disso. */
+	/** Só para a sessão sintética: trata os jogadores de mentira como se tivessem o mod no cliente. */
+	public static boolean fingirClienteNosTestes;
+
 	public static boolean temCliente(ServerPlayer p) {
-		return ServerPlayNetworking.canSend(p, PacoteSentidos.TIPO);
+		return fingirClienteNosTestes || ServerPlayNetworking.canSend(p, PacoteSentidos.TIPO);
 	}
 
 	/** Só envia a quem declarou que entende o pacote. Jogador de teste e cliente sem o mod ficam de fora. */

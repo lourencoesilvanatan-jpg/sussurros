@@ -36,6 +36,41 @@ public class TestesDaCacada {
 		helper.fail("a caçada não achou lugar para começar");
 	}
 
+	/**
+	 * Ele vê de perto. Posto a 2,6 blocos atrás de um jogador imóvel (mais longe que o toque, mais perto que o
+	 * "cheguei ao último lugar conhecido"), ele tem de pegá-lo. Antes ele parava ali, olhava em volta, não
+	 * achava ninguém e ia embora: era a causa do teste de captura que falhava de vez em quando.
+	 */
+	@GameTest(maxTicks = 900)
+	public void eleNaoDesisteAoLadoDeQuemEstaParado(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -2500, 0);
+		JogadorDeTeste.acompanhar(helper, jogador, "parado-ao-lado");
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		Vec3 inicio = jogador.position();
+		boolean[] posto = new boolean[1];
+		helper.runAfterDelay(5, () -> {
+			helper.setTime(18000);
+			for (int i = 0; i < 6 && !Diretor.cacadaParaTeste(jogador, false); i++) {
+				// tenta de novo: o lugar de nascer é sorteado
+			}
+			helper.assertTrue(Diretor.criatura(jogador) != null, "a caçada deveria ter começado");
+		});
+		// Depois do aviso (até dez segundos), já perseguindo: ele é posto logo atrás do jogador, que olha para o sul.
+		helper.runAfterDelay(215, () -> {
+			HospedeEntity ele = Diretor.criatura(jogador);
+			if (ele != null && !ele.isRemoved()) {
+				ele.snapTo(jogador.getX(), jogador.getY(), jogador.getZ() - 2.6, 0.0F, 0.0F);
+			}
+			posto[0] = true;
+		});
+		helper.succeedWhen(() -> {
+			helper.assertTrue(posto[0], "ele ainda não foi posto atrás do jogador");
+			helper.assertTrue(jogador.position().distanceTo(inicio) > 8, "a 2,6 blocos de um jogador parado, ele deveria tê-lo pegado");
+			JogadorDeTeste.remover(jogador);
+		});
+	}
+
 	/** Quem sai do jogo no meio de uma caçada fica devendo. */
 	@GameTest(maxTicks = 300)
 	public void quemSaiNoMeioFicaDevendo(GameTestHelper helper) {

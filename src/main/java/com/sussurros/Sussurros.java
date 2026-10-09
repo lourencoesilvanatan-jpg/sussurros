@@ -7,6 +7,7 @@ import net.fabricmc.api.ModInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sussurros.assombracao.Atencao;
 import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.ComandoSussurros;
 import com.sussurros.assombracao.Diretor;
@@ -40,6 +41,7 @@ public class Sussurros implements ModInitializer {
 		Memoria.inicializar();
 		Vestigios.inicializar();
 		Lugares.inicializar();
+		Atencao.carregar();
 		Diretor.inicializar();
 		Avesso.inicializar();
 		LootDoDiario.inicializar();

@@ -976,3 +976,67 @@ Uma revisão de fora (`pesquisa/2026-10-09-revisao-externa-0.9.md`) propôs que 
 - **Analisador de log** (`ferramentas/log/analisar.py`): transforma o `sussurros-debug.log` num relatório com fases, ritmo (saídas perceptíveis por hora e intervalo entre elas), criatura, tema, reações, itens e Conta, caçadas e o que não coube.
 
 O primeiro número que o analisador deu, no log de 08/10 (antes da expansão): 45 saídas perceptíveis por hora, mediana de 56 s entre uma e outra, 34 manifestações da criatura por hora. É denso. O passo seguinte é o orçamento de atenção por jogador.
+
+---
+# Versão 0.9.0-alpha12 — o orçamento de atenção
+
+O primeiro risco apontado pela revisão externa, confirmado pelo log de 08/10: cada sistema tinha o seu relógio e ninguém decidia a soma. Naquela sessão, antes da expansão, a soma já dava 45 saídas perceptíveis por hora, com mediana de 56 s entre uma e outra.
+
+## Como funciona (`Atencao`)
+
+Um saldo por jogador, de no máximo 60 pontos, que volta devagar. Tudo o que o mod empurra para o jogador gasta desse mesmo saldo.
+
+| Saída | Custo |
+|---|---|
+| evento do Diretor | 12 + a intensidade dele (de 16 a mais de 40) |
+| presságio | 14 |
+| perturbação de ambiente | 20 |
+| começo de uma cena composta | 36 |
+| aviso da Conta | 10 |
+| o Véu aberto por uma carta | 32 |
+| caçada devida | 50 |
+
+| Fase | O saldo volta (por segundo) | Respiro mínimo depois de uma saída |
+|---|---|---|
+| 0 | 0,06 | 120 s |
+| 1 | 0,08 | 110 s |
+| 2 | 0,10 | 90 s |
+| 3 | 0,14 | 60 s |
+| 4 | 0,20 | 45 s |
+
+- **Para começar** algo novo é preciso ter saldo para o mais barato e ter passado o respiro. Vale para o sorteio normal do Diretor, o piso, os presságios, as perturbações, o começo das cenas, os avisos da Conta e as cartas do baralho.
+- **O que já começou termina.** Elos de cadeia, a sequência de ameaça e os passos de uma cena não esperam: só gastam. O saldo pode ficar negativo (até -60), e aí o silêncio seguinte é mais longo. Depois de uma cena densa vem uma pausa de verdade.
+- **Com o Diretor recuando nada começa e o saldo não volta.** A trégua passou a ser trégua para todos os sistemas.
+- **Ficam de fora:** o que é contínuo (cor, fundo sonoro); a resposta direta a uma ação do jogador (usar um item, atravessar a Soleira); e o que ele só encontra se olhar (as chamas pálidas, o boneco, a tigela, a casa).
+- Comando de teste não gasta nem espera.
+
+## Ele vê de perto (correção na caçada)
+
+A sessão sintética reproduziu aqui o teste de captura que falhava de vez em quando só no GitHub, e o log mostrou um defeito de verdade: `CACA ... FIM motivo=PERDEU_RASTRO ... dist=3.7`. Ele chegava ao último lugar conhecido (a tolerância de "cheguei" é 2,8 blocos), parava a mais de 2,4 blocos do jogador (o alcance do toque), olhava em volta, "não achava ninguém" e ia embora, com o jogador imóvel à vista.
+
+Agora ele também vê: a até 8 blocos e sem nada no meio (3,5 blocos se o jogador estiver agachado), sabe onde o jogador está e vai direto até ele. Ficar imóvel continua escondendo quem tem uma parede entre os dois, e quem está agachado a mais de três blocos e meio. Na busca, o motivo aparece como `VIU`.
+
+## Exposição (só medida)
+
+Cada manifestação passa a registrar quantos ticks ficou na tela do alvo, e quantos deles a menos de 25 blocos com luz 8 ou mais (`EXPOSICAO id=... modo=... naTela=14t perto=0t`). O analisador soma por hora. Ainda não há teto: primeiro o número de uma sessão de verdade.
+
+## Três ritmos
+
+`/sussurros ritmo calmo|padrao|intenso` (sem argumento, mostra o atual). Vale para o servidor inteiro e fica guardado em `config/sussurros-ajustes.properties`. O calmo multiplica a volta do saldo por 0,7 e alonga o respiro; o intenso multiplica por 3 e encurta o respiro a um terço, o que fica perto do que o mod fazia antes. É o único ajuste pensado para o dono mexer, e o nome não entrega nada.
+
+## Medição
+
+A sessão sintética (`TestesDeSessao`, desligada no dia a dia) põe dois jogadores de mentira andando em campo aberto por uma hora de jogo, um começando na fase 2 e outro na fase 4, com o relógio do servidor acelerado. O log passa pelo analisador.
+
+Três execuções em 09/10/2026 (saídas perceptíveis por hora; mediana e menor intervalo entre uma saída e a seguinte):
+
+| Jogador de mentira | Sem o limite (1 h) | Com o limite, primeiros números (1 h) | Com o limite, números atuais (50 min) |
+|---|---|---|---|
+| começa na fase 2 | 15 por hora; na fase 2, mediana de 99 s e menor de 22 s | 35 por hora; na fase 2, mediana de 128 s e menor de 60 s | 10 por hora; na fase 2, mediana de 153 s e menor de 90 s |
+| fase 4 | 33 por hora; mediana de 46 s e menor de 0 s (duas coisas no mesmo segundo) | 16 por hora; mediana de 84 s e menor de 31 s | 18 por hora; mediana de 89 s e menor de 45 s |
+
+Para comparar, a sessão de verdade de 08/10 (antes da expansão, fases 0 a 3): 45 por hora, mediana de 56 s, menor de 7 s.
+
+A referência da revisão externa era mediana de 180 s ou mais na fase 2 e de 90 s ou mais na fase 4. A fase 4 está no alvo; a fase 2 ficou perto, com poucos intervalos medidos. Com um jogador de verdade, que puxa o Diretor para estados mais ativos, quem passa a mandar é o saldo: na conta, cerca de 220 s entre saídas na fase 2 e 110 s na fase 4.
+
+Limite da medição: o jogador de mentira não reage, e o Diretor o trata como alguém indiferente (fica a maior parte do tempo observando). Um jogador de verdade puxa o Diretor para estados mais ativos, e aí é o orçamento que segura. As execuções variam bastante entre si, porque o Diretor sorteia. O que a sessão garante é a forma: acabaram as rajadas, e o intervalo mínimo é o respiro.
