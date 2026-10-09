@@ -158,7 +158,8 @@ final class EstruturasSussurros {
 			int x = (int) Math.floor(p.getX() - Math.sin(ang) * dist);
 			int z = (int) Math.floor(p.getZ() + Math.cos(ang) * dist);
 			int topo = Math.min(320, p.getBlockY() + 28);
-			int baixo = Math.max(-60, p.getBlockY() - 36);
+			// Até um bloco acima do fundo do mundo (era -60 fixo, e num mundo plano o chão fica em -61).
+			int baixo = Math.max(level.getMinY() + 1, p.getBlockY() - 36);
 			for (int y = topo; y >= baixo; y--) {
 				BlockPos base = new BlockPos(x, y, z);
 				if (level.getBlockState(base).getCollisionShape(level, base).isEmpty()) continue;

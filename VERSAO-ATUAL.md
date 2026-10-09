@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha9
+
+Fecha o plano da expansão. A ordem em que as coisas acontecem passa a mudar de um mundo para outro.
+
 ## 0.9.0-alpha8
 
 Mais uma coisa para encontrar no mundo, longe de casa.

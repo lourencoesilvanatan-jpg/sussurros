@@ -213,8 +213,19 @@ Filtro de tela como sinal principal é lido como truque barato. A cor drenada fi
 | A Soleira e o Boneco | Feito (0.9.0-alpha4), com dois testes de servidor e três fotos (`Erguidos`) |
 | A Casa do Vigia | Feito (0.9.0-alpha8), com um teste de servidor e três fotos (`CasaDoVigia`). O giz ficou de fora, como o resto do plano já previa |
 | O Avesso | Feito (0.9.0-alpha5 e alpha6): a dimensão, a cópia apagada da casa, a entrada pelo sono, as quatro saídas, a primeira visita vazia e ele presente da segunda em diante. Conferido no teste de cliente (o servidor de teste não carrega dimensões). Na 0.9.0-alpha6 entraram: ser levado em 35% das capturas, o modo próprio da criatura lá dentro (não some ao ser vista; da terceira visita em diante vem andando) e a "medida errada" da terceira visita |
-| O baralho | A fazer |
+| O baralho | Feito (0.9.0-alpha9), com três testes de servidor. Doze cartas: nove adiantam algo que já existe, três são "nada" |
 | Som da assombração só para o alvo (as chamadas antigas de `ModSons.tocar`) | Feito (0.9.0-alpha7): dezenove chamadas convertidas; as que ficaram são de coisas que aconteceram de verdade no mundo |
 | Caçada: lembrar "deslogou no meio" e "fugiu voando" | Feito (0.9.0-alpha7), com dois testes de servidor. De quebra, a criatura deixou de ser apagada pelo jogo quando fica longe de todos |
 
 **Não verificado por ninguém:** como os sons soam; se a caçada assusta ou irrita; se a velocidade está boa contra um jogador de verdade correndo; a pose abaixada em jogo real; se os avisos da Conta são percebidos ou passam batido; se o limite de 6 a 10 é curto ou folgado numa sessão de verdade; se a Linha de Cinza deixa a caçada fácil demais; se o Véu é percebido como parte do mod ou como defeito; se meio minuto é muito ou pouco; se o jogador entende que a Soleira responde a ser atravessada; se o Boneco é notado antes de chegar perto; se a primeira visita ao Avesso, em que nada acontece, é tensa ou só vazia; quanto demora o apagão da chegada numa máquina de verdade (a cópia gera chunks na hora).
+
+## O plano fechou (0.9.0-alpha9)
+
+Tudo o que a tabela acima lista está feito. Ficou de fora de propósito, anotado para uma próxima rodada se o dono quiser:
+
+- o giz (sempre foi "só se sobrar tempo");
+- o viés dos Ossos de Agouro para o que mais fez o jogador reagir;
+- os bichos da base virados para o lado de onde ele vem;
+- uma caçada de verdade dentro do Avesso (hoje ele só vem andando).
+
+O que falta de verdade não é código: é o dono jogar. Nada do que entrou na expansão foi ouvido nem jogado por uma pessoa. A próxima rodada deve começar pelos logs das sessões dele e pelas respostas do `ROTEIRO-DE-TESTE.md`, e só depois mexer em número.

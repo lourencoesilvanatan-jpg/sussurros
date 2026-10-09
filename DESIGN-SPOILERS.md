@@ -939,3 +939,29 @@ A casa de quem escreveu o diário (`CasaDoVigia`). Uma por jogador.
   - depois da segunda, o lampião está aceso e a tigela, limpa;
   - depois, a porta alterna entre aberta e fechada, e os riscos continuam.
 - As mudanças só mexem no que ainda é o que a casa pôs. O que o jogador tirou ou trocou fica como ele deixou.
+
+---
+# Versão 0.9.0-alpha9 — "O baralho"
+
+O último item do plano da expansão. É o que faz cada mundo ter a sua ordem.
+
+Cada jogador tem um baralho de doze cartas, embaralhado com a semente do mundo, a identidade dele e o número do ciclo. Uma carta é virada a cada 40 a 90 minutos de jogo, da fase 2 em diante. Três são "nada". As outras nove não inventam coisa nova: cada uma adianta, fora de hora, algo que o mod já sabe fazer.
+
+| Carta | O que adianta |
+|---|---|
+| `VEU` | O Véu abre agora, sem respeitar o intervalo (fase 3 ou mais, com o mod no cliente) |
+| `SOLEIRA` | A Soleira é erguida perto, a 30–55 blocos, se ainda não existe |
+| `BONECO` | O Boneco começa a vir esta noite; se já vem, pula um passo |
+| `SONO` | Na próxima vez que ele deitar, é levado ao Avesso, sem sorteio e sem o intervalo de três dias (fase 3 ou mais) |
+| `CACADA` | Uma caçada fica devendo: vem quando as condições de sempre valerem (fase 4) |
+| `PRESENTE` | Na próxima manhã há algo ao lado da cama, sem sorteio: uma página, ou cinza se as páginas acabaram |
+| `CHAMAS` | Por dez minutos, até três tochas a mais empalidecem |
+| `CASA` | A Casa do Vigia é erguida agora, se ainda não existe |
+| `LINHAS` | Na próxima manhã, a Linha de Cinza mais perto da cama amanhece rompida |
+
+- Uma carta que não vale naquela fase, ou cujo lugar já existe, é gasta como "nada".
+- Uma carta que não cabe agora (o Véu com a vela acesa; sem terreno para a casa) espera um minuto e tenta de novo, até dez vezes.
+- Nenhuma é virada com criatura presente, com o Véu aberto ou com o jogador em perigo de verdade.
+- Esgotado o baralho, ele é embaralhado de novo, em outra ordem.
+
+Quem lê o código sabe quais são as cartas, mas não a ordem delas num mundo: ela só existe depois que o mundo existe.

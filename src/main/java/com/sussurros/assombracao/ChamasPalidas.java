@@ -36,7 +36,7 @@ final class ChamasPalidas {
 		if (fase < 2 || calma || seg % 20 != Math.floorMod(p.getUUID().hashCode(), 20)) {
 			return;
 		}
-		int cota = (fase >= 4 ? 2 : 1) + (e.obsessao >= 60 ? 1 : 0);
+		int cota = (fase >= 4 ? 2 : 1) + (e.obsessao >= 60 ? 1 : 0) + (seg < e.chamasExtraAteSeg ? 3 : 0);
 		if (Miragem.ativas(p, MOTIVO) >= cota) {
 			return;
 		}

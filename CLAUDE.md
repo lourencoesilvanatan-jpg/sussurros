@@ -87,4 +87,5 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - `assombracao/Conta`, `Cantiga`, `Oferenda`, `Ossos`, `ChamasPalidas` e `bloco/`: os itens da 0.9 e a dívida que os une.
 - `assombracao/Veu` e `client/mixin/`: o Véu e o único mixin do mod.
 - `assombracao/Avesso` e `data/sussurros/{dimension,dimension_type,worldgen/biome}`: a dimensão. O Diretor só cuida do mundo normal; lá quem conduz é a própria classe.
-- `assombracao/Erguidos`, `CasaDoVigia` e `EstruturasSussurros`: o que o mod põe no mundo. (`Lugares` é outra coisa: o mapa dos lugares que o jogador frequenta.)
+- `assombracao/Erguidos`, `CasaDoVigia` e `EstruturasSussurros`: o que o mod põe no mundo.
+- `assombracao/Baralho`: as cartas que adiantam, fora de hora, o que os outros sistemas já fazem. Sistema novo que mereça carta entra no enum `Carta` e em `aplicar`; não invente efeito que só exista na carta. (`Lugares` é outra coisa: o mapa dos lugares que o jogador frequenta.)
