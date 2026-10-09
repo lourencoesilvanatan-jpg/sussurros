@@ -2,11 +2,13 @@ package com.sussurros.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
+import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.rede.PacoteCampo;
 import com.sussurros.rede.PacoteEfeito;
 import com.sussurros.rede.PacoteSentidos;
@@ -66,6 +68,14 @@ public final class SentidosCliente {
 
 	static boolean noAvesso() {
 		return tem(PacoteSentidos.FLAG_AVESSO);
+	}
+
+	/**
+	 * No Véu, tudo o que é entidade deixa de ser desenhado para este jogador, menos o Hóspede e ele mesmo.
+	 * Quem pergunta é o EsconderNoVeuMixin.
+	 */
+	public static boolean esconde(Entity entidade) {
+		return tem(PacoteSentidos.FLAG_VEU) && !(entidade instanceof HospedeEntity) && entidade != Minecraft.getInstance().player;
 	}
 
 	private static void receber(PacoteSentidos pacote) {
@@ -139,6 +149,12 @@ public final class SentidosCliente {
 
 		escuroAnterior = escuroAtual;
 		escuroAtual = calcularEscuro();
+		// De olhos fechados o mundo troca de uma vez: quando a tela abre, já está tudo como vai ficar.
+		if (escuroAtual > 0.9F) {
+			peso = pesoAlvo;
+			vigia = vigiaAlvo;
+			neblina = neblinaAlvo;
+		}
 
 		CorDrenada.tick(mc);
 		TrilhaCliente.tick(mc);

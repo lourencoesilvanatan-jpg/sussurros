@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha3
+
+Terceira parte da expansão. Entra um acontecimento novo, raro, das fases mais avançadas, e o primeiro mixin do mod (só no cliente).
+
 ## 0.9.0-alpha2
 
 Segunda parte da expansão. Entram itens e blocos novos, ajustes em itens antigos e um detalhe de ambiente. As receitas do mod passam a aparecer sozinhas no livro de receitas do jogo.

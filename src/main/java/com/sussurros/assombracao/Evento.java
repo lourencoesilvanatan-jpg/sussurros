@@ -33,6 +33,7 @@ public enum Evento {
 	TOCHA(2, Categoria.AMBIENTE, 12, true),
 	BATIDA(2, Categoria.AMBIENTE, 16, true),
 	ECO_CHAT(3, Categoria.MENTE, 18, true),
+	VEU(3, Categoria.MENTE, 20, true), // 0.9: por meio minuto o mundo fica do outro lado de alguma coisa (ver Veu)
 	PRESENCA(3, Categoria.VISAO, 22, true),
 	ATRAS(3, Categoria.VISAO, 30, true),
 	TUMULO(3, Categoria.VISAO, 28, true),

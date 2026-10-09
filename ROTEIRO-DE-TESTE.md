@@ -4,7 +4,11 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
-Versão 0.9.0-alpha2, segunda parte da expansão:
+Versão 0.9.0-alpha3, terceira parte da expansão:
+
+- um acontecimento novo, raro, das fases mais avançadas.
+
+Da versão 0.9.0-alpha2, que você ainda não jogou:
 
 - itens e blocos novos, e mudanças em alguns dos antigos;
 - as receitas do mod agora aparecem sozinhas no livro de receitas do jogo, conforme você joga. Não precisa procurar em lugar nenhum;
@@ -38,7 +42,7 @@ Basta dizer que jogou e por quanto tempo. Os logs são lidos direto da pasta.
 
 Se quiser ajudar mais, responda sem descrever o que viu:
 
-- Teve algum momento que pareceu **defeito** do jogo, e não parte do mod?
+- Teve algum momento que pareceu **defeito** do jogo, e não parte do mod? (Essa pergunta ficou mais importante nesta versão: se algo sumir, mudar ou "bugar" de um jeito que pareça erro, anote a hora e me diga só isso. Eu confiro no log se foi o mod.)
 - Teve algum som **alto demais** ou irritante?
 - Teve algum momento em que você ficou **preso**, sem saber o que fazer, e isso irritou em vez de assustar?
 - Teve algum item que você **não entendeu para que serve**, mesmo depois de usar algumas vezes?
@@ -59,5 +63,6 @@ Você não precisa repetir isto. Fica registrado para quem programa.
 - Cada efeito de tela foi fotografado no máximo, dentro do jogo, numa máquina do GitHub.
 - Cada item e bloco novo foi usado por um jogador de mentira (nove situações) e fotografado dentro do jogo.
 - As receitas carregam e aparecem no livro na hora certa.
+- O acontecimento novo foi exercitado em duas situações num servidor de verdade e fotografado dentro do jogo.
 
 O que nenhum teste automático mede: se assusta, e como soa. Isso é com você.

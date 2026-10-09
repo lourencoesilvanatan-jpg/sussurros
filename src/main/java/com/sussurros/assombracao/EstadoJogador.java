@@ -271,6 +271,12 @@ final class EstadoJogador {
 	/** Janela em que os próprios passos ecoam. */
 	long ecoPassoAte = -1;
 	long semMusicaAte = -1;
+	// --- O Véu (0.9) ---
+	long veuDesde;
+	long veuAte;
+	long veuProximoEm;
+	long veuVultoEm = -1;
+	boolean veuFechou;
 	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
 	long cacaAvisoAte = -1;
 

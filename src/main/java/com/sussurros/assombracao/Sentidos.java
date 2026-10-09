@@ -68,7 +68,28 @@ final class Sentidos {
 		if (tick < e.semMusicaAte) {
 			flags |= PacoteSentidos.FLAG_SEM_MUSICA;
 		}
+		if (Veu.ativo(e, tick)) {
+			peso = Math.max(peso, VEU_PESO);
+			neblina = Math.max(neblina, VEU_NEBLINA);
+			flags |= VEU_FLAGS;
+		}
 		return new PacoteSentidos(limitar01(peso), limitar01(vigia), limitar01(caca), limitar01(neblina), flags);
+	}
+
+	static final float VEU_PESO = 0.9F;
+	static final float VEU_NEBLINA = 0.85F;
+	static final int VEU_FLAGS = PacoteSentidos.FLAG_AVESSO | PacoteSentidos.FLAG_SEM_MUSICA | PacoteSentidos.FLAG_VEU;
+
+	/**
+	 * O Véu abre e fecha no meio de uma piscada, não no segundo cheio: reenvia já o último pacote, com ou sem
+	 * as marcas do Véu. O cliente troca tudo de uma vez enquanto a tela está fechada.
+	 */
+	static void veuAgora(ServerPlayer p, EstadoJogador e, boolean aberto) {
+		PacoteSentidos a = e.sentidos != null ? e.sentidos : PacoteSentidos.NEUTRO;
+		e.sentidos = aberto
+				? new PacoteSentidos(Math.max(a.peso(), VEU_PESO), a.vigia(), a.caca(), Math.max(a.neblina(), VEU_NEBLINA), a.flags() | VEU_FLAGS)
+				: new PacoteSentidos(Math.min(a.peso(), 0.66F), a.vigia(), a.caca(), 0, a.flags() & ~VEU_FLAGS);
+		Rede.enviar(p, e.sentidos);
 	}
 
 	/** Comando de teste: impõe os quatro valores por um tempo, para conferir cada efeito isolado. */

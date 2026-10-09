@@ -46,6 +46,21 @@ final class Miragem {
 		return true;
 	}
 
+	/** Desfaz agora todas as miragens deste motivo deste jogador. Devolve quantas eram. */
+	static int encerrar(ServerLevel level, ServerPlayer p, String motivo) {
+		int n = 0;
+		Iterator<Ativa> it = ATIVAS.iterator();
+		while (it.hasNext()) {
+			Ativa a = it.next();
+			if (a.jogador().equals(p.getUUID()) && a.motivo().equals(motivo)) {
+				it.remove();
+				p.connection.send(new ClientboundBlockUpdatePacket(level, a.pos()));
+				n++;
+			}
+		}
+		return n;
+	}
+
 	/** Quantas miragens deste motivo este jogador tem agora. */
 	static int ativas(ServerPlayer p, String motivo) {
 		int n = 0;
