@@ -1,5 +1,7 @@
 package com.sussurros.teste;
 
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.GameType;
@@ -13,6 +15,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
+import com.sussurros.entidade.HospedeEntity;
 
 /**
  * A dimensão, até onde o servidor de teste alcança. Ele não carrega dimensões de pacotes de dados (o próprio
@@ -43,6 +46,57 @@ public class TestesDoAvesso {
 			helper.assertTrue(Avesso.apagado(s).getLightEmission() == 0, "nada do que é copiado dá luz: " + s);
 		}
 		helper.succeed();
+	}
+
+	/** Até a segunda visita a cópia vem do mesmo lugar; da terceira em diante há uma fatia repetida a leste. */
+	@GameTest
+	public void aMedidaErradaDaTerceiraVisita(GameTestHelper helper) {
+		BlockPos ancora = new BlockPos(100, 64, -40);
+		for (int visita = 1; visita <= 2; visita++) {
+			for (int dx = -14; dx <= 14; dx++) {
+				BlockPos pos = ancora.offset(dx, 1, 3);
+				helper.assertTrue(Avesso.fonte(pos, ancora, visita).equals(pos), "na visita " + visita + " cada bloco vem do seu lugar");
+			}
+		}
+		for (int dx = -14; dx <= 2; dx++) {
+			BlockPos pos = ancora.offset(dx, 0, -5);
+			helper.assertTrue(Avesso.fonte(pos, ancora, 3).equals(pos), "na terceira, até dois blocos a leste nada muda (dx=" + dx + ")");
+		}
+		helper.assertTrue(Avesso.fonte(ancora.offset(3, 0, 0), ancora, 3).equals(ancora.offset(2, 0, 0)), "a fatia a três blocos repete a de dois");
+		helper.assertTrue(Avesso.fonte(ancora.offset(9, 2, 4), ancora, 3).equals(ancora.offset(8, 2, 4)), "e tudo depois está um bloco mais longe");
+		helper.succeed();
+	}
+
+	/** Como ele é do outro lado: ser olhado não o faz sumir; quando vem, vem até encostar. */
+	@GameTest(maxTicks = 700)
+	public void doOutroLadoEleNaoSomeEVem(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1700, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 3);
+		BlockPos pe = jogador.blockPosition();
+		HospedeEntity[] ele = new HospedeEntity[1];
+		double[] distInicial = new double[1];
+
+		helper.runAfterDelay(5, () -> {
+			helper.assertTrue(Avesso.criaturaParaTeste(jogador, false), "deveria haver lugar para ele");
+			ele[0] = Diretor.criatura(jogador);
+			distInicial[0] = ele[0].distanceTo(jogador);
+			// O jogador vira o rosto para ele e fica olhando.
+			jogador.lookAt(EntityAnchorArgument.Anchor.EYES, ele[0].getEyePosition());
+		});
+		helper.runAfterDelay(85, () -> {
+			helper.assertFalse(ele[0].isRemoved(), "quatro segundos encarado, ele deveria continuar lá");
+			helper.assertTrue(Math.abs(ele[0].distanceTo(jogador) - distInicial[0]) < 0.5, "parado, não deveria ter saído do lugar");
+			ele[0].virNoAvesso();
+		});
+		helper.runAfterDelay(125, () -> helper.assertTrue(ele[0].isRemoved() || ele[0].distanceTo(jogador) < distInicial[0] - 2.0,
+				"dois segundos depois de começar a vir, deveria estar mais perto mesmo sendo olhado"));
+		helper.succeedWhen(() -> {
+			helper.assertTrue(ele[0] != null && ele[0].isRemoved(), "ele ainda não encostou");
+			helper.assertTrue(jogador.level().dimension() == Level.OVERWORLD && jogador.blockPosition().equals(pe),
+					"fora da dimensão, encostar não leva ninguém a lugar nenhum");
+			JogadorDeTeste.remover(jogador);
+		});
 	}
 
 	/** Num mundo sem a dimensão, ninguém é levado e ninguém fica marcado como "lá dentro". */

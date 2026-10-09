@@ -775,7 +775,7 @@ Evento `VEU` (fase 3, categoria MENTE, intensidade 20). Dura de 30 a 60 s. O jog
 2. **O que ele sente:** a cor é a do Avesso, a neblina fecha (0,85), a música e o som ambiente somem, a camada sonora do Avesso sobe.
 3. **O que deixa de aparecer:** tudo o que é entidade, menos o Hóspede. Bichos, monstros, itens caídos, quadros, suportes de armadura e os outros jogadores. Eles continuam lá de verdade (dá para esbarrar, ser atacado, falar no chat); só não são desenhados para ele.
 4. **O que está errado em volta**, tudo por miragem: até 16 luzes a 14 blocos aparecem apagadas; uma porta fechada, fora da tela, aparece aberta; um vidro de janela, fora da tela, falta.
-5. **Em metade das vezes**, a partir do meio, ele está parado de lado, a 12–17 blocos, dentro do que a neblina deixa ver. Fica até o fim e some com o Véu.
+5. **Em metade das vezes**, a partir do meio, ele está parado de lado, a 12–17 blocos, dentro do que a neblina deixa ver. Vale a regra de sempre do mundo normal: visto por um instante, ele some. Se não for visto, some com o Véu.
 6. Outra piscada, e tudo voltou.
 
 Regras:
@@ -875,3 +875,30 @@ Ficou para depois: ser levado numa parte das capturas, e a caçada lá dentro.
 - Enquanto ele está lá, a Memoria guarda `avesso_dentro` e o ponto de volta. Se o jogo fechar com ele dentro, ao entrar de novo ele é devolvido no primeiro segundo.
 - Num mundo em que a dimensão não exista, ninguém é levado.
 - Em criativo e espectador as travas de lá não valem (para quem quiser olhar o lugar por comando).
+
+---
+# Versão 0.9.0-alpha6 — "O Avesso, segunda parte"
+
+Fecha o que a alpha5 deixou para depois. Corrige também uma frase dela: na segunda visita ele usava o modo de observar do mundo normal e sumia ao ser visto por meio segundo. Agora, do outro lado, ele tem modo próprio.
+
+## Como ele é do outro lado
+
+Modo `AVESSO` da criatura. As regras de cá não valem: olhar para ele não o faz sumir nem o segura, e a zona da vela não o afasta.
+
+| Visita | O que há |
+|---|---|
+| 1 | Só o lugar. Nada acontece |
+| 2 | Aos 20 s ele está lá, de lado, a 10–16 blocos, parado, olhando. Fica até o fim |
+| 3 em diante | O mesmo, e aos 45 s **ele vem**: 2,2 blocos por segundo (metade do passo do jogador), sem parar, olhado ou não |
+
+Encostar (2,3 blocos, com linha de visão) é acordar, e mais nada: sem dano, sem marca. Quem quiser ficar até o fim do tempo tem de andar; quem se afastar mais de 40 blocos também acorda.
+
+## A medida errada
+
+Da terceira visita em diante a cópia tem uma fatia repetida: dois blocos a leste do ponto de chegada, um plano inteiro aparece duas vezes, e tudo depois dele está um bloco mais longe. A sala em que ele chega ficou um bloco mais comprida. Somado aos blocos de parede que faltam (dois a mais por visita, até seis).
+
+## Ser levado na captura
+
+Depois da primeira visita (que é sempre pela cama), 35% das capturas não deslocam o jogador: ele acorda do outro lado, no ponto onde foi pego, e volta depois para esse mesmo ponto. No máximo uma vez por dia de jogo, e só com o mod no cliente.
+
+O resto da captura acontece igual: o item da mão fica caído no mundo normal, a vida cai, a marca entra, o Diretor recua. A visita conta como qualquer outra (a terceira já tem a medida errada e ele vindo).

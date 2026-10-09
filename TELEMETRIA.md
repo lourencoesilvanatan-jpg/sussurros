@@ -618,3 +618,14 @@ AVESSO voltou motivo=TEMPO ficou=58s visitas=1 residuo=2 pos=x, y, z
 - `origem`: `SONO` ou `COMANDO`. `motivo` da saída: `TEMPO`, `LONGE`, `CAMA`, `MORTE`, `COMANDO`, `SEM_VISITA` (estava lá sem visita em curso: o jogo fechou com ele dentro).
 - `erros` é quantos blocos de parede faltam na cópia. `residuo` é quantas luzes da casa de verdade ficaram apagadas por miragem na volta.
 - `/sussurros teste avesso` leva agora, sem contar como visita; `/sussurros teste avesso voltar` traz de volta.
+
+## 0.9.0-alpha6 — o Avesso, segunda parte
+
+```
+AVESSO levado origem=CAPTURA visita=2 teste=nao
+AVESSO ele vem dist=13
+AVESSO saindo motivo=TOCADO
+```
+
+- `origem=CAPTURA`: a linha `CAPTURA deslocou` daquela captura sai com `para=-`, porque não houve deslocamento.
+- `motivo=TOCADO`: ele encostou. A criatura de lá aparece nas linhas `HOSPEDE` com `modo=AVESSO`.

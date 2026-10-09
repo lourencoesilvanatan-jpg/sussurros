@@ -212,7 +212,7 @@ Filtro de tela como sinal principal é lido como truque barato. A cor drenada fi
 | O Véu | Feito (0.9.0-alpha3), com dois testes de servidor e quatro fotos. Entrou o primeiro mixin do mod (cliente), para esconder entidades |
 | A Soleira e o Boneco | Feito (0.9.0-alpha4), com dois testes de servidor e três fotos (`Erguidos`) |
 | A Casa do Vigia | A fazer |
-| O Avesso | Feito em parte (0.9.0-alpha5): a dimensão, a cópia apagada da casa, a entrada pelo sono, as quatro saídas, a primeira visita vazia e ele presente da segunda em diante. Conferido no teste de cliente (o servidor de teste não carrega dimensões). Falta: ser levado em parte das capturas, a caçada lá dentro, a "medida errada" da terceira visita |
+| O Avesso | Feito (0.9.0-alpha5 e alpha6): a dimensão, a cópia apagada da casa, a entrada pelo sono, as quatro saídas, a primeira visita vazia e ele presente da segunda em diante. Conferido no teste de cliente (o servidor de teste não carrega dimensões). Na 0.9.0-alpha6 entraram: ser levado em 35% das capturas, o modo próprio da criatura lá dentro (não some ao ser vista; da terceira visita em diante vem andando) e a "medida errada" da terceira visita |
 | O baralho | A fazer |
 | Som da assombração só para o alvo (as chamadas antigas de `ModSons.tocar`) | A fazer |
 | Caçada: lembrar "deslogou no meio" e "fugiu voando" | A fazer |
