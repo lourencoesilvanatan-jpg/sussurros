@@ -142,16 +142,28 @@ public class TestesDeCliente implements FabricClientGameTest {
 		// Os ossos: quatro desfechos, vistos de cima. Cada jogada cai 1,6 bloco à frente.
 		camera(mundo, partida, 0, 5, 60);
 		context.waitTicks(10);
-		String[] desfechos = {"silencio", "tregua", "presenca", "conta"};
+		String[] desfechos = {"silencio", "tregua", "conta", "presenca"};
 		for (int i = 0; i < desfechos.length; i++) {
 			mundo.getServer().runCommand("execute as @p run sussurros teste ossos " + desfechos[i]);
 			context.waitTicks(12);
-			context.takeScreenshot("07-ossos-" + (i + 1));
+			context.takeScreenshot("07-ossos-" + (i + 1) + "-" + desfechos[i]);
 			mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
-			mundo.getServer().runCommand("execute as @p run sussurros cena parar");
-			mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
 			context.waitTicks(4);
 		}
+		// O último desfecho o chama em até seis segundos. Com ele ali, os ossos que "apontam" têm para onde:
+		// o jogador se vira para ele antes de jogar, então na foto a fila tem de aparecer de pé na tela.
+		context.waitTicks(140);
+		mundo.getServer().runCommand("execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] feet run tp @s ~ ~ ~ ~ ~");
+		context.waitTicks(4);
+		mundo.getServer().runCommand("execute as @p run sussurros teste ossos apontam");
+		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~ ~ 60");
+		context.waitTicks(12);
+		context.takeScreenshot("07-ossos-5-apontam");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		camera(mundo, partida, 0, 5, 60);
+		context.waitTicks(4);
 
 		// A vela aos pés, e os ícones no inventário.
 		mundo.getServer().runOnServer(server -> Diretor.acenderVela(server.getPlayerList().getPlayers().get(0)));

@@ -63,10 +63,10 @@ public class TestesDosItens {
 	/** Usar Cinza Pálida no chão faz a linha, gasta a cinza e soma na Conta. */
 	@GameTest(maxTicks = 100)
 	public void aCinzaViraLinha(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -12, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -100, 0);
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
-		BlockPos chao = JogadorDeTeste.chao(helper, 6, -12).below();
+		BlockPos chao = JogadorDeTeste.chao(helper, 6, -100).below();
 		jogador.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CINZA_PALIDA, 3));
 		helper.runAfterDelay(5, () -> {
 			jogador.gameMode.useItemOn(jogador, level, jogador.getMainHandItem(), InteractionHand.MAIN_HAND, cliqueEmCima(chao));
@@ -89,7 +89,7 @@ public class TestesDosItens {
 	/** Um anel de linha em volta do jogador segura a caçada por um tempo e sai gasto. No fim, ele passa. */
 	@GameTest(maxTicks = 2400)
 	public void aLinhaSeguraACacadaPorUmTempo(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -40, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -200, 0);
 		JogadorDeTeste.acompanhar(helper, jogador, "linha");
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
@@ -142,7 +142,7 @@ public class TestesDosItens {
 	/** O Lampião Pálido muda a chama quando ele chega perto, e apaga quando ele passa. */
 	@GameTest(maxTicks = 2000)
 	public void oLampiaoReage(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -70, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -300, 0);
 		JogadorDeTeste.acompanhar(helper, jogador, "lampiao");
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
@@ -183,7 +183,7 @@ public class TestesDosItens {
 	/** A tigela guarda um item, mostra, e o que ele decide muda o que sobra nela. */
 	@GameTest(maxTicks = 200)
 	public void aTigelaGuardaEEleDecide(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -100, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -400, 0);
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 2);
 		ServerLevel level = helper.getLevel();
@@ -232,7 +232,7 @@ public class TestesDosItens {
 	/** A caixa toca, gasta a corda, conta os usos e soma na Conta. Tocando, não dá para dar corda de novo. */
 	@GameTest(maxTicks = 200)
 	public void aCaixaTocaEGasta(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -130, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -500, 0);
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
 		jogador.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CAIXA_DE_MUSICA));
@@ -253,7 +253,7 @@ public class TestesDosItens {
 	/** Os ossos caem (três, ou dois quando um se desfaz), somem depois, e cada jogada soma na Conta. */
 	@GameTest(maxTicks = 500)
 	public void osOssosCaemESomem(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -160, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -600, 0);
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 3);
 		ServerLevel level = helper.getLevel();
@@ -279,7 +279,7 @@ public class TestesDosItens {
 	/** A Conta estoura, avisa, cobra no item mais usado e zera. */
 	@GameTest(maxTicks = 3400)
 	public void aContaCobraEZera(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -190, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -700, 0);
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 2);
 		helper.runAfterDelay(5, () -> {
@@ -303,7 +303,7 @@ public class TestesDosItens {
 	/** A vela é um bloco de verdade enquanto a zona dura; tirar o bloco acaba com a zona. */
 	@GameTest(maxTicks = 200)
 	public void aVelaEUmBloco(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -220, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -800, 0);
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
 		BlockPos pe = jogador.blockPosition();
@@ -336,7 +336,7 @@ public class TestesDosItens {
 			helper.assertTrue(server.getAdvancements().get(Identifier.fromNamespaceAndPath("sussurros", "recipes/" + nome)) != null,
 					"falta o desbloqueio da receita " + nome);
 		}
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -250, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -900, 0);
 		helper.assertFalse(jogador.getRecipeBook().contains(receita("lampiao_palido")), "não deveria conhecer a receita antes da cinza");
 		helper.runAfterDelay(5, () -> jogador.getInventory().add(new ItemStack(ModItems.CINZA_PALIDA)));
 		helper.succeedWhen(() -> {
@@ -351,7 +351,7 @@ public class TestesDosItens {
 	/** Da fase 2 em diante, uma tocha fora da tela passa a queimar pálida só para ele. O mundo não muda. */
 	@GameTest(maxTicks = 900)
 	public void asChamasEmpalidecem(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -280, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1000, 0);
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 2);
 		ServerLevel level = helper.getLevel();

@@ -27,8 +27,8 @@ import com.sussurros.entidade.HospedeEntity;
  *
  * | desfecho  | peso | o que faz                                              | como caem                         |
  * | NADA      | 25   | nada                                                   | espalhados, sem ordem             |
- * | SILENCIO  | 15   | o mundo emudece por 25 s                               | três em paralelo                  |
- * | TREGUA    | 15   | dez minutos sem nenhum acontecimento                   | fechando um triângulo             |
+ * | SILENCIO  | 15   | o mundo emudece por 25 s                               | três lado a lado                  |
+ * | TREGUA    | 15   | dez minutos sem nenhum acontecimento                   | em estrela, as pontas se tocando  |
  * | APONTAM   | 15   | alinham-se na direção do vestígio mais próximo         | em fila, apontando                |
  * | PRESENCA  | 15   | ele aparece, agora                                     | dois cruzados, um afastado        |
  * | AMIGO     | 10   | ele aparece para o jogador mais próximo, não para você | em fila, apontando para o amigo   |
@@ -188,7 +188,7 @@ public final class Ossos {
 		// {deslocamento em x, em z, giro em graus}
 		double[][] ossos;
 		switch (d) {
-			case SILENCIO -> ossos = new double[][] {{-0.28, 0, 0}, {0, 0, 0}, {0.28, 0, 0}};
+			case SILENCIO -> ossos = new double[][] {{0, -0.28, 0}, {0, 0, 0}, {0, 0.28, 0}};
 			case TREGUA -> ossos = new double[][] {{0, -0.2, 90}, {-0.18, 0.12, 30}, {0.18, 0.12, 150}};
 			case PRESENCA -> ossos = new double[][] {{0, 0, 45}, {0, 0, 135}, {0.42, 0.3, 80}};
 			case APONTAM, AMIGO -> {
@@ -197,8 +197,9 @@ public final class Ossos {
 				double comprimento = Math.max(0.001, Math.sqrt(dx * dx + dz * dz));
 				dx /= comprimento;
 				dz /= comprimento;
-				double giro = Math.toDegrees(Math.atan2(dx, dz));
-				ossos = new double[][] {{-dx * 0.38, -dz * 0.38, giro}, {0, 0, giro}, {dx * 0.38, dz * 0.38, giro}};
+				// Com giro 0 o osso fica deitado de oeste a leste; o giro positivo o vira do leste para o norte.
+				double giro = Math.toDegrees(Math.atan2(-dz, dx));
+				ossos = new double[][] {{-dx * 0.5, -dz * 0.5, giro}, {0, 0, giro}, {dx * 0.5, dz * 0.5, giro}};
 			}
 			case CONTA -> ossos = new double[][] {{-0.2, 0.1, sorte.nextInt(180)}, {0.25, -0.15, sorte.nextInt(180)}};
 			default -> ossos = new double[][] {

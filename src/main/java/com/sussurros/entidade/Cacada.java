@@ -195,14 +195,12 @@ final class Cacada {
 			this.h.pararEOlhar();
 			return;
 		}
-		if (this.h.tickCount % 5 == 0) {
-			BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, this.h.blockPosition(), 1);
-			if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
-				this.barrado = 60;
-				this.h.getNavigation().stop();
-				ApoioCaca.linhaSegurou(level, alvo, this.h, linha);
-				return;
-			}
+		BlockPos linha = this.linhaNoCaminho(level);
+		if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
+			this.barrado = 60;
+			this.h.getNavigation().stop();
+			ApoioCaca.linhaSegurou(level, alvo, this.h, linha);
+			return;
 		}
 
 		// O toque exige linha de visão (nada de ser pego através da parede), mas não depende de ele estar sendo
@@ -296,6 +294,34 @@ final class Cacada {
 	}
 
 	/**
+	 * Uma Linha de Cinza que ainda segura no caminho dele: o bloco onde ele está ou um dos dois próximos passos.
+	 * Linha ao lado do caminho não o segura; só a que ele teria de pisar. Olhado a cada tick: na corrida ele
+	 * anda mais de um bloco em cinco ticks e passaria por cima entre duas olhadas.
+	 */
+	private BlockPos linhaNoCaminho(ServerLevel level) {
+		BlockPos aqui = this.h.blockPosition();
+		BlockPos achada = CinzaEspalhadaBlock.linhaPerto(level, aqui, 0);
+		if (achada != null) {
+			return achada;
+		}
+		Path caminho = this.h.getNavigation().getPath();
+		if (caminho == null || caminho.isDone()) {
+			return null;
+		}
+		int proximo = caminho.getNextNodeIndex();
+		for (int i = proximo; i < Math.min(caminho.getNodeCount(), proximo + 2); i++) {
+			BlockPos no = caminho.getNodePos(i);
+			if (no.distSqr(aqui) <= 6.25) {
+				achada = CinzaEspalhadaBlock.linhaPerto(level, no, 0);
+				if (achada != null) {
+					return achada;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Piscar forçado: a tela do jogador fecha por uma fração de segundo e ele avança até três blocos.
 	 * De perto, é o fim. De longe, é o que impede "ficar parado encarando" de ser uma vitória.
 	 */
@@ -309,7 +335,21 @@ final class Cacada {
 		if (direcao.lengthSqr() < 1.0E-4) {
 			return;
 		}
-		Vec3 destino = this.h.position().add(direcao.normalize().scale(avanco));
+		// Ele não salta uma Linha de Cinza no piscar: para antes dela.
+		Vec3 meioPasso = direcao.normalize().scale(0.5);
+		Vec3 ponto = this.h.position();
+		double livre = 0;
+		for (double d = 0.5; d <= avanco + 0.01; d += 0.5) {
+			ponto = ponto.add(meioPasso);
+			if (CinzaEspalhadaBlock.linhaPerto(level, BlockPos.containing(ponto), 0) != null) {
+				break;
+			}
+			livre = d;
+		}
+		if (livre < 0.5) {
+			return;
+		}
+		Vec3 destino = this.h.position().add(direcao.normalize().scale(livre));
 		BlockPos chao = HospedeBusca.acharChao(level, destino.x, this.h.getY() - 2, destino.z);
 		if (chao == null || Math.abs(chao.getY() - this.h.getY()) > 2.5
 				|| Diretor.emZonaCalma(alvo, chao.getX(), chao.getY(), chao.getZ())) {

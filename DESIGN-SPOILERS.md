@@ -688,7 +688,7 @@ Item com 12 voltas de corda. É **deixada para o jogador na passagem para a fase
 
 Cinza Pálida usada no chão vira um bloco fino (`cinza_espalhada`). A faixa atravessa na frente de quem a põe, ou continua a linha vizinha.
 
-- **Na caçada ele não cruza uma linha que segura.** A cada tentativa (ele a um bloco dela) a linha perde um estágio, arrasta e o deixa parado 3 s: intacta, riscada, gasta, rompida. Quem está atrás da linha não é pego enquanto ela dura. Uma linha de três blocos numa porta compra perto de meio minuto.
+- **Na caçada ele não cruza uma linha que segura.** Vale a linha que está no caminho dele (o bloco que ele pisaria); linha ao lado não o segura. A cada tentativa ela perde um estágio, arrasta e o deixa parado 3 s: intacta, riscada, gasta, rompida. Quem está atrás da linha não é pego enquanto ela dura. Cada bloco de linha no caminho compra uns nove segundos; ele também não a salta no piscar.
 - **Na porta:** a batida e a maçaneta, se há linha segurando a até 2 blocos da porta, não mexem na porta; gastam um estágio da linha.
 - **Dormindo:** na fase 2 ou mais, em 45% das manhãs uma linha a até 12 blocos da cama amanhece um estágio mais gasta, com uma pegada de cinza do lado de fora, virada para ela. Sem som. A pegada some em um dia de jogo.
 - Aparições não nascem a menos de 2 blocos de uma linha que segura.
@@ -729,8 +729,8 @@ Consumível. Três ossos caem no chão à frente e ficam 15 s. O desfecho não �
 | Desfecho | Peso | O que faz | Como caem |
 |---|---|---|---|
 | nada | 25 | nada | espalhados |
-| silêncio | 15 | o mundo emudece por 25 s | três em paralelo |
-| trégua | 15 | dez minutos sem nada novo começar | em triângulo |
+| silêncio | 15 | o mundo emudece por 25 s | três lado a lado |
+| trégua | 15 | dez minutos sem nada novo começar | em estrela, as três pontas se tocando |
 | apontam | 15 | alinham-se para o vestígio mais próximo (ou para ele) | em fila |
 | presença | 15 | ele aparece em 3 a 6 s | dois cruzados, um afastado |
 | amigo | 10 | ele aparece para o jogador mais próximo | em fila, apontando para o amigo |

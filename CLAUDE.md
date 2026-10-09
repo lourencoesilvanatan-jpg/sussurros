@@ -30,7 +30,7 @@ Cuidados com os testes de servidor (`JogadorDeTeste`):
 - A estrutura do teste fica acima do chão e tem piso próprio. Use `criarNoChao`, que o põe no chão de verdade, fora dela.
 - O mundo de teste fica em pacífico: de noite os monstros do jogo matam o jogador de mentira.
 - O log de decisões fica ligado nos testes, em `build/run/gameTest/sussurros-debug.log`. Quando um teste falha, a causa está lá. O arquivo acumula as execuções: a última está no fim.
-- Os testes rodam todos ao mesmo tempo, lado a lado. Cada um põe o seu jogador num `dz` diferente (de 30 em 30 blocos) para a criatura de um não mexer no bloco do outro.
+- Os testes rodam todos ao mesmo tempo, lado a lado. Os dos itens põem o jogador a cem blocos uns dos outros (`dz` de -100 a -1000), porque a criatura de um teste esbarra no que o outro pôs no chão (uma Linha de Cinza alheia já derrubou um teste da caçada).
 - `./gradlew build` já roda o `runGameTest` junto.
 
 ## Fluxo de trabalho
