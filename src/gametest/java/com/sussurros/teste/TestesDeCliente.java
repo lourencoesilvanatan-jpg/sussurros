@@ -1,5 +1,7 @@
 package com.sussurros.teste;
 
+import java.util.Locale;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.BlockPos;
@@ -60,13 +62,16 @@ public class TestesDeCliente implements FabricClientGameTest {
 		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
 		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
 		mundo.getServer().runCommand("weather clear");
+		// A câmera anda por coordenadas absolutas, sempre com os pés no chão: em sobrevivência, um salto
+		// relativo para cima vira queda, e o salto de volta enterra o jogador (aconteceu na primeira versão).
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
 		// De frente para o norte: daqui em diante "na frente" é z negativo.
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~ 180 35");
+		camera(mundo, partida, 0, 0, 35);
 		mundo.getServer().runOnServer(server -> {
 			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = p.level();
 			BlockPos pe = p.blockPosition();
-			for (BlockPos pos : BlockPos.betweenClosed(pe.offset(-5, -1, -9), pe.offset(5, 4, 0))) {
+			for (BlockPos pos : BlockPos.betweenClosed(pe.offset(-5, -1, -9), pe.offset(5, 4, 9))) {
 				level.setBlockAndUpdate(pos.immutable(), pos.getY() < pe.getY() ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState());
 			}
 			BlockState cinza = ModBlocos.CINZA_ESPALHADA.defaultBlockState();
@@ -122,10 +127,10 @@ public class TestesDeCliente implements FabricClientGameTest {
 		});
 		context.waitTicks(30);
 		context.takeScreenshot("03-itens-bancada");
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~2.5 ~-1.5 180 75");
+		camera(mundo, partida, 0, -1, 62);
 		context.waitTicks(10);
 		context.takeScreenshot("04-itens-de-cima");
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~-2.5 ~-1.5 180 20");
+		camera(mundo, partida, 0, -1, 12);
 		context.waitTicks(10);
 		context.takeScreenshot("05-itens-lampioes");
 		// De noite, para ver a luz de cada chama.
@@ -135,7 +140,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 		mundo.getServer().runCommand("time set noon");
 
 		// Os ossos: quatro desfechos, vistos de cima. Cada jogada cai 1,6 bloco à frente.
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~4.5 180 60");
+		camera(mundo, partida, 0, 5, 60);
 		context.waitTicks(10);
 		String[] desfechos = {"silencio", "tregua", "presenca", "conta"};
 		for (int i = 0; i < desfechos.length; i++) {
@@ -150,21 +155,35 @@ public class TestesDeCliente implements FabricClientGameTest {
 
 		// A vela aos pés, e os ícones no inventário.
 		mundo.getServer().runOnServer(server -> Diretor.acenderVela(server.getPlayerList().getPlayers().get(0)));
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~1.2 180 55");
+		camera(mundo, partida, 0, 7, 50);
 		context.waitTicks(10);
 		context.takeScreenshot("08-vela-acesa");
 		context.setScreen(() -> new InventoryScreen(Minecraft.getInstance().player));
 		context.waitTicks(10);
 		context.takeScreenshot("09-inventario");
 		context.setScreen(() -> null);
+		// Desmonta a bancada (fica só o piso de pedra) e devolve o jogador ao ponto de partida, de costas para ela.
 		mundo.getServer().runOnServer(server -> {
 			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = p.level();
+			for (BlockPos pos : BlockPos.betweenClosed(partida.offset(-5, 0, -9), partida.offset(5, 4, 9))) {
+				level.setBlockAndUpdate(pos.immutable(), Blocks.AIR.defaultBlockState());
+			}
 			p.getInventory().clearContent();
+			p.setHealth(p.getMaxHealth());
 			Diretor.esquecer(p);
 		});
 		mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
-		mundo.getServer().runCommand("execute as @p at @s run tp @s ~12 ~ ~ 0 0");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_oferenda]");
+		mundo.getServer().runCommand("kill @e[type=item]");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
+	}
+
+	/** Põe o jogador no chão, a "dx" e "dz" blocos do ponto de partida, olhando para o norte com a inclinação dada. */
+	private static void camera(TestSingleplayerContext mundo, BlockPos partida, int dx, int dz, int inclinacao) {
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 %d",
+				partida.getX() + dx + 0.5, partida.getY(), partida.getZ() + dz + 0.5, inclinacao));
 	}
 
 	/** A caçada vista pelo jogador: o aviso, ele parado ao longe, e o que sobra na tela quando ele chega. */
