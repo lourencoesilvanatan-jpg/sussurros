@@ -131,6 +131,9 @@ final class ContextoMundo {
 				case TOCHA -> 1.20;
 				case PRESENCA -> 0.75;
 				case PASSOS -> 0.80;
+				case VIGIA -> 1.30;
+				case ECO_PASSOS -> 0.60;
+				case NEBLINA -> 0.30;
 				default -> 1.0;
 			};
 			case SUBSOLO -> switch (ev) {
@@ -148,6 +151,9 @@ final class ContextoMundo {
 				case PRESENCA -> 1.10;
 				case PORTA, BATIDA -> 0.15;
 				case TOCHA -> 0.60;
+				case ECO_PASSOS -> 1.60;
+				case VIGIA -> 1.20;
+				case CANTIGA -> 1.30;
 				default -> 1.0;
 			};
 			case ABERTO -> switch (ev) {
@@ -164,6 +170,8 @@ final class ContextoMundo {
 				case PASSO_UNICO -> 1.15;
 				case ECO -> 0.80;
 				case PORTA, BATIDA, TOCHA -> 0.10;
+				case NEBLINA -> 1.60;
+				case CANTIGA, VIGIA -> 1.20;
 				default -> 1.0;
 			};
 			case FLORESTA -> switch (ev) {
@@ -180,6 +188,8 @@ final class ContextoMundo {
 				case PASSO_UNICO -> 1.25;
 				case ECO -> 0.95;
 				case PORTA, BATIDA, TOCHA -> 0.10;
+				case NEBLINA -> 1.80;
+				case ECO_PASSOS, CANTIGA, VIGIA -> 1.30;
 				default -> 1.0;
 			};
 			case OUTRO -> switch (ev) {

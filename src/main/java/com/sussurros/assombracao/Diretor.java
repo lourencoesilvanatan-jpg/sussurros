@@ -910,6 +910,11 @@ public final class Diretor {
 			case SEGUIDOR -> e.rastro.tamanho() >= 8;
 			case PEGADAS -> e.rastro.tamanho() >= 6;
 			case VULTO -> podeVulto(level, p);
+			// Os três abaixo só existem no cliente: sem o mod do outro lado, não acontece nada.
+			case ECO_PASSOS -> Rede.temCliente(p) && p.onGround() && e.velocidade > 1.0;
+			case VIGIA -> Rede.temCliente(p) && level.getGameTime() >= e.vigiaFalsaAte;
+			case NEBLINA -> Rede.temCliente(p) && level.getGameTime() >= e.neblinaAte && level.canSeeSky(p.blockPosition().above());
+			case CANTIGA -> true;
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
@@ -1186,6 +1191,35 @@ public final class Diretor {
 			}
 			// A reação ao vulto só é lida quando (e se) ele for avistado: ver criaturaAvistada.
 			case VULTO -> ok = invocarVulto(level, p, e, pedido);
+			case ECO_PASSOS -> {
+				// Por meio minuto, parte dos passos dele toca de novo logo depois, um pouco atrás (ver EcoDePasso).
+				e.ecoPassoAte = tick + 20L * (25 + rnd.nextInt(16));
+				fonte = pontoRelativo(p, 180, 2.0);
+				obs = 0.55 * barulho;
+				Depuracao.log(p, seg, "ECO_PASSOS janela=" + (e.ecoPassoAte - tick) / 20 + "s");
+			}
+			case VIGIA -> {
+				// A mesma sensação de quando ele olha de fora da tela, sem ele. Aviso que nunca falha vira radar.
+				e.vigiaFalsaAte = tick + 20L * (15 + rnd.nextInt(16));
+				e.vigiaFalsaForca = 0.45F + rnd.nextFloat() * 0.35F;
+				fonte = pontoRelativo(p, 180, 12.0);
+				obs = 0.5;
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "VIGIA falsa forca=%.2f duracao=%ds",
+						e.vigiaFalsaForca, (e.vigiaFalsaAte - tick) / 20));
+			}
+			case NEBLINA -> {
+				e.neblinaAte = tick + 20L * (60 + rnd.nextInt(61));
+				e.neblinaForca = 0.45F + rnd.nextFloat() * 0.25F;
+				// Sem fonte e sem leitura: não há para onde virar. Conta para o ritmo, não para o aprendizado.
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "NEBLINA forca=%.2f duracao=%ds",
+						e.neblinaForca, (e.neblinaAte - tick) / 20));
+			}
+			case CANTIGA -> {
+				fonte = assobiar(level, p, rnd);
+				obs = limitar(1 - distancia(p, fonte) / 60.0, 0.3, 1) * barulho;
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "CANTIGA pos=%s dist=%.0f",
+						pos(fonte.x, fonte.y, fonte.z), distancia(p, fonte)));
+			}
 			case PORTA -> {
 				BlockPos porta = mexerNaPorta(level, p);
 				ok = porta != null;
@@ -1517,14 +1551,18 @@ public final class Diretor {
 			case RUIDO_RETORNO -> new Evento[] {Evento.PASSO_UNICO, Evento.SEGUIDOR};
 			case OBJETO_FORA_LUGAR -> new Evento[] {Evento.SINAL, Evento.PASSO_UNICO};
 			case TRILHA_INTERROMPIDA -> new Evento[] {Evento.VESTIGIO, Evento.SINAL, Evento.PEGADAS};
+			case ECO_PASSOS -> new Evento[] {Evento.PASSO_UNICO, Evento.VIGIA, Evento.SEGUIDOR};
+			case VIGIA -> new Evento[] {Evento.PASSO_UNICO, Evento.SUSSURRO, Evento.PRESENCA};
+			case NEBLINA -> new Evento[] {Evento.VULTO, Evento.SINAL_DISTANTE, Evento.CANTIGA};
+			case CANTIGA -> new Evento[] {Evento.VIGIA, Evento.PASSOS, Evento.SINAL_DISTANTE};
 			case ECO -> new Evento[] {Evento.ECO, Evento.RUIDO_RETORNO, Evento.PASSO_UNICO, Evento.SEGUIDOR};
-			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA};
+			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA, Evento.ECO_PASSOS};
 			case PEGADAS -> new Evento[] {Evento.SINAL, Evento.PRESENCA};
 			case VULTO -> new Evento[] {Evento.SINAL_DISTANTE, Evento.PASSO_UNICO};
 			case PORTA -> new Evento[] {Evento.BATIDA, Evento.SUSSURRO, Evento.TOCHA};
 			case BATIDA -> new Evento[] {Evento.PORTA, Evento.PASSO_UNICO};
 			case TOCHA -> new Evento[] {Evento.ATRAS, Evento.SUSSURRO};
-			case SUSSURRO -> new Evento[] {Evento.PASSO_UNICO, Evento.ECO_CHAT};
+			case SUSSURRO -> new Evento[] {Evento.PASSO_UNICO, Evento.ECO_CHAT, Evento.VIGIA};
 			case ECO_CHAT -> new Evento[] {Evento.SUSSURRO};
 			case PRESENCA -> new Evento[] {Evento.ATRAS, Evento.VISTO};
 			default -> new Evento[0];
@@ -1905,9 +1943,27 @@ public final class Diretor {
 		int n = rnd.nextInt(limite);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.sussurro." + n, p.getName())
 				.withStyle(s -> s.withColor(0x5A5A5A).withItalic(true)));
-		// Enquanto não existem as gravações de voz, o sussurro vem com uma respiração "dentro da cabeça":
-		// sem direção e só para este jogador.
-		ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.5F, 0.82F + rnd.nextFloat() * 0.12F);
+		// O texto vem com uma voz "dentro da cabeça": sem direção e só para este jogador. Na maioria das
+		// vezes é um sussurro que não dá para entender; nas outras, só uma respiração.
+		if (rnd.nextFloat() < 0.7F) {
+			ModSons.tocarNaCabeca(p, ModSons.Som.SUSSURRO_VOZ, 0.55F, 0.9F + rnd.nextFloat() * 0.16F);
+		} else {
+			ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.5F, 0.82F + rnd.nextFloat() * 0.12F);
+		}
+	}
+
+	/**
+	 * Um pedaço do tema, assobiado de longe, de algum lugar que o jogador não está vendo. Só ele ouve.
+	 * Devolve de onde veio.
+	 */
+	static Vec3 assobiar(ServerLevel level, ServerPlayer p, RandomSource rnd) {
+		double angulo = (rnd.nextBoolean() ? 1 : -1) * (95 + rnd.nextDouble() * 85);
+		Vec3 ponto = pontoRelativo(p, angulo, 24 + rnd.nextDouble() * 18);
+		double y = p.getY() + 1.0;
+		// Volume acima de 1 só dá alcance: de longe e baixo, como alguém que não sabe que está sendo ouvido.
+		ModSons.tocarPara(p, ponto.x, y, ponto.z, ModSons.Som.ASSOBIO, volumePara(p, ponto.x, y, ponto.z, 0.5F),
+				0.95F + rnd.nextFloat() * 0.08F);
+		return new Vec3(ponto.x, y, ponto.z);
 	}
 
 	/**
@@ -3443,6 +3499,7 @@ public final class Diretor {
 				yield d > 100 * 100 ? "você está a mais de 100 blocos de onde morreu." : null;
 			}
 			case ESPERA -> !temZonaCalma(p) ? "precisa de uma Vela Pálida acesa." : null;
+			case NEBLINA -> !level.canSeeSky(p.blockPosition().above()) ? "precisa estar a céu aberto." : null;
 			default -> null;
 		};
 	}

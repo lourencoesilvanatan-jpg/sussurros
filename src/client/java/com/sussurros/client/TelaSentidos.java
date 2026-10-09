@@ -15,12 +15,13 @@ import com.sussurros.Sussurros;
 /**
  * O que os sentidos desenham por cima do mundo: a borda escura de "tem algo olhando" e os olhos fechando.
  *
- * A borda usa a mesma textura e a mesma mistura da vinheta do próprio jogo, então não parece um filtro
- * colado: parece o jogo um pouco mais escuro nas beiradas. Fica por baixo da barra de itens. Os olhos
- * fechando ficam por cima de tudo.
+ * A borda usa a mesma mistura da vinheta do próprio jogo (escurece o que está atrás, sem pintar por cima),
+ * então não parece um filtro colado: parece o jogo mais escuro nas beiradas. A textura é própria
+ * (ferramentas/texturas/gerar_vinheta.py), porque a do jogo escurece no máximo um quarto. Fica por baixo da
+ * barra de itens. Os olhos fechando ficam por cima de tudo.
  */
 final class TelaSentidos {
-	private static final Identifier VINHETA = Identifier.withDefaultNamespace("textures/misc/vignette.png");
+	private static final Identifier VINHETA = Sussurros.id("textures/misc/vinheta.png");
 
 	private TelaSentidos() {
 	}
@@ -33,11 +34,11 @@ final class TelaSentidos {
 	private static void vinheta(GuiGraphicsExtractor g, DeltaTracker delta) {
 		// Respira devagar: uma borda parada o olho esquece em segundos.
 		float respiracao = 0.85F + 0.15F * Mth.sin(SentidosCliente.idade * 0.05F);
-		float forca = SentidosCliente.vigia * 0.5F * respiracao + SentidosCliente.caca * 0.35F;
+		float forca = SentidosCliente.vigia * 0.55F * respiracao + SentidosCliente.caca * 0.4F;
 		if (SentidosCliente.noAvesso()) {
-			forca += 0.25F;
+			forca += 0.3F;
 		}
-		forca = Mth.clamp(forca, 0.0F, 0.85F);
+		forca = Mth.clamp(forca, 0.0F, 0.9F);
 		if (forca < 0.01F) {
 			return;
 		}

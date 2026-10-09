@@ -22,6 +22,11 @@ public final class Rede {
 				Percepcao.definirCampo(contexto.player(), pacote.fov(), pacote.proporcao()));
 	}
 
+	/** O cliente deste jogador tem o mod e entende os sentidos? Efeitos que só existem no cliente dependem disso. */
+	public static boolean temCliente(ServerPlayer p) {
+		return ServerPlayNetworking.canSend(p, PacoteSentidos.TIPO);
+	}
+
 	/** Só envia a quem declarou que entende o pacote. Jogador de teste e cliente sem o mod ficam de fora. */
 	public static void enviar(ServerPlayer p, CustomPacketPayload pacote) {
 		if (ServerPlayNetworking.canSend(p, pacote.type())) {
