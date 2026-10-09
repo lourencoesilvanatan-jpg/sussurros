@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha8: mais uma coisa para encontrar no mundo, longe de casa. Vale olhar o horizonte de vez em quando.
+
 Versão 0.9.0-alpha7: duas correções por baixo do pano. Uma delas só aparece jogando com amigos. Não muda nada no que você precisa fazer.
 
 Versão 0.9.0-alpha6: aprofunda a novidade da alpha5. Não muda nada no que você precisa fazer.

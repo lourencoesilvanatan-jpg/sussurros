@@ -277,11 +277,15 @@ public final class Diretor {
 		return Avesso.testar(p, ir);
 	}
 
-	/** Comando de teste: ergue a soleira à frente do jogador, ou faz o boneco andar uma noite agora. */
+	/** Comando de teste: ergue a soleira ou a casa à frente do jogador, ou faz o boneco andar uma noite agora. */
 	public static String testarLugar(ServerPlayer p, String qual) {
 		ServerLevel level = p.level();
 		Memoria m = Memoria.de(p);
-		String msg = "soleira".equals(qual) ? Erguidos.testarSoleira(level, p, m) : Erguidos.testarBoneco(level, p, m, estado(p));
+		String msg = switch (qual) {
+			case "soleira" -> Erguidos.testarSoleira(level, p, m);
+			case "casa" -> CasaDoVigia.testar(level, p, m);
+			default -> Erguidos.testarBoneco(level, p, m, estado(p));
+		};
 		m.salvar();
 		return msg;
 	}
@@ -621,6 +625,7 @@ public final class Diretor {
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
 		Veu.segundo(level, p, e, tick);
 		Erguidos.segundo(level, p, m, e, fase, noite, seg, tick);
+		CasaDoVigia.segundo(level, p, m, e, fase, seg);
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();

@@ -640,3 +640,14 @@ CACA devida cobrada
 ```
 
 Depois de `CACA devida cobrada` vêm as linhas normais de uma caçada (`PRENUNCIO real=sim`, `CACA id=...`).
+
+## 0.9.0-alpha8 — a Casa do Vigia
+
+```
+CASA_DO_VIGIA erguida pos=x, y, z
+CASA_DO_VIGIA visita n=1
+CASA_DO_VIGIA mudou depois da visita 1: riscos=38 fogueira=fria porta=aberta
+CASA_DO_VIGIA mudou depois da visita 2: riscos=39 lampiao=aceso tigela=limpa
+```
+
+`pos` é o centro do piso. `/sussurros teste lugar casa` ergue uma doze blocos à frente.

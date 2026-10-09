@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha8
+
+Mais uma coisa para encontrar no mundo, longe de casa.
+
 ## 0.9.0-alpha7
 
 Duas correções por baixo do pano. Uma delas só aparece jogando com amigos.
