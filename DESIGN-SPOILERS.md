@@ -924,3 +924,18 @@ A criatura deixou de ser apagada pelo jogo quando fica longe de todos: quem deci
 Dezenove sons que ainda tocavam para qualquer um por perto passaram a tocar só para o alvo: os presságios e as perturbações de ambiente, os sons das quatro cenas compostas, o som atrás do jogador, a respiração, os sinais falsos e as respostas distantes do sino.
 
 Continuam tocando para todos, de propósito, porque aconteceram de verdade no mundo: a caixa de música, a tigela, a linha de cinza que arrasta, o fio que rompe, os itens quando usados e os sons que saem do corpo da criatura (que os amigos também veem).
+
+---
+# Versão 0.9.0-alpha8 — "A Casa do Vigia"
+
+A casa de quem escreveu o diário (`CasaDoVigia`). Uma por jogador.
+
+- **Quando aparece:** fase 2 ou mais, com 20 chunks visitados; a cada 20 s, 15% de chance. De 90 a 140 blocos do jogador, na superfície, fora da tela, a mais de 90 blocos da cama e da porta dele, em terreno livre.
+- **Como ele a encontra:** do lado de fora há uma fogueira acesa sobre um fardo de feno. A fumaça sobe alto e se vê de longe.
+- **O que é:** uma cabana de abeto de 7 x 5 por fora, com porta ao sul e três janelas. Dentro: a cama dele; um baú (uma Caixa de Música, duas páginas do diário, quatro cinzas, dois Ossos de Agouro, duas velas, pão e um livro); a Tigela de Oferenda com cinzas; o Lampião Pálido apagado e sem cinza, pendurado no teto; uma placa na parede do fundo com 37 riscos, em grupos de quatro; e, no chão diante da porta, a Linha de Cinza dele: gasta de um lado, riscada do outro e rompida no meio.
+- **Não há ninguém.** Nenhum evento é disparado pela casa. O que ela conta, conta pelos objetos: ele usava as mesmas coisas que o jogador está aprendendo a usar, e a linha dele rompeu.
+- **Ela muda quando o jogador vai embora.** Entrar (chegar a 5 blocos do centro) conta uma visita. Com ele a mais de 40 blocos, uma coisa muda, e a placa ganha um risco:
+  - depois da primeira visita, a fogueira está fria e a porta, aberta;
+  - depois da segunda, o lampião está aceso e a tigela, limpa;
+  - depois, a porta alterna entre aberta e fechada, e os riscos continuam.
+- As mudanças só mexem no que ainda é o que a casa pôs. O que o jogador tirou ou trocou fica como ele deixou.

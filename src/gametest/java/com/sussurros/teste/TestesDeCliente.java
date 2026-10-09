@@ -522,6 +522,32 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.waitTicks(20);
 		context.takeScreenshot("09w3-boneco-de-perto");
 
+		// A casa: de fora (com a fumaça), e por dentro, olhando para o fundo.
+		camera(mundo, partida, 0, 0, 0);
+		context.waitTicks(5);
+		mundo.getServer().runCommand("execute as @p run sussurros teste lugar casa");
+		context.waitTicks(60);
+		context.takeScreenshot("09w4-casa-de-fora");
+		BlockPos casa = mundo.getServer().computeOnServer(server -> {
+			Memoria m = Memoria.de(server.getPlayerList().getPlayers().get(0));
+			return new BlockPos(m.get("casa_vigia_x"), m.get("casa_vigia_y"), m.get("casa_vigia_z"));
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 8", casa.getX() + 0.5, casa.getY(), casa.getZ() + 1.5));
+		context.waitTicks(20);
+		context.takeScreenshot("09w5-casa-por-dentro");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 300 20", casa.getX() - 1.5, casa.getY(), casa.getZ() + 0.5));
+		context.waitTicks(20);
+		context.takeScreenshot("09w6-casa-por-dentro-outro-lado");
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.overworld();
+			if (level.getBlockEntity(casa.offset(2, 0, -1)) instanceof Container bau) {
+				bau.clearContent();
+			}
+			for (BlockPos pos : BlockPos.betweenClosed(casa.offset(-3, 0, -2), casa.offset(3, 3, 4))) {
+				level.setBlockAndUpdate(pos.immutable(), Blocks.AIR.defaultBlockState());
+			}
+		});
+
 		mundo.getServer().runOnServer(server -> {
 			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
 			ServerLevel level = p.level();

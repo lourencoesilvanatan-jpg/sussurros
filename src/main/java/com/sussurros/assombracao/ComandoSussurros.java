@@ -301,7 +301,7 @@ public final class ComandoSussurros {
 						return 1;
 					})));
 			LiteralArgumentBuilder<CommandSourceStack> testeLugar = Commands.literal("lugar");
-			for (String qual : new String[] {"soleira", "boneco"}) {
+			for (String qual : new String[] {"soleira", "boneco", "casa"}) {
 				testeLugar.then(Commands.literal(qual).executes(ctx -> {
 					String msg = Diretor.testarLugar(ctx.getSource().getPlayerOrException(), qual);
 					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);

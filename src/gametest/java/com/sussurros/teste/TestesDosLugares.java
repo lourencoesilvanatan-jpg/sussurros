@@ -5,15 +5,26 @@ import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
 import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.world.level.block.LanternBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CarvedPumpkinBlock;
 import net.minecraft.world.level.block.DoorBlock;
 
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
+import com.sussurros.assombracao.CasaDoVigia;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
+import com.sussurros.bloco.CinzaEspalhadaBlock;
+import com.sussurros.bloco.LampiaoPalidoBlock;
+import com.sussurros.bloco.TigelaOferendaBlock;
+import com.sussurros.registro.ModBlocos;
+import com.sussurros.registro.ModItems;
 
 /** O que o mod ergue no mundo: a porta sozinha e a figura de palha. */
 public class TestesDosLugares {
@@ -62,6 +73,68 @@ public class TestesDosLugares {
 						&& !level.getBlockState(pos).is(Blocks.BEDROCK)) {
 					level.removeBlock(pos.immutable(), false);
 				}
+			}
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
+	/** A casa é erguida inteira, guarda o que ele deixou, e alguma coisa muda cada vez que o jogador vai embora. */
+	@GameTest(maxTicks = 400)
+	public void aCasaMudaQuandoEleVaiEmbora(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -2000, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 2);
+		ServerLevel level = helper.getLevel();
+		BlockPos[] c = new BlockPos[1];
+
+		helper.runAfterDelay(5, () -> {
+			helper.assertTrue(Diretor.testarLugar(jogador, "casa").startsWith("Casa erguida"), "deveria erguer a casa");
+			c[0] = lido(jogador, "casa_vigia");
+			BlockPos o = c[0];
+			helper.assertTrue(level.getBlockState(o.offset(0, 0, 2)).getBlock() instanceof DoorBlock, "porta ao sul");
+			helper.assertTrue(level.getBlockState(o.offset(-2, 0, -1)).getBlock() instanceof BedBlock
+					&& level.getBlockState(o.offset(-1, 0, -1)).getBlock() instanceof BedBlock, "a cama, inteira");
+			boolean temCaixa = false;
+			Container bau = (Container) level.getBlockEntity(o.offset(2, 0, -1));
+			for (int i = 0; i < bau.getContainerSize(); i++) {
+				temCaixa |= bau.getItem(i).is(ModItems.CAIXA_DE_MUSICA);
+			}
+			helper.assertTrue(temCaixa, "o baú deveria guardar a caixa de música");
+			helper.assertTrue(level.getBlockState(o.offset(2, 0, 1)).getValue(TigelaOferendaBlock.CONTEUDO) == TigelaOferendaBlock.Conteudo.CINZAS,
+					"a tigela com cinzas");
+			BlockState lampiao = level.getBlockState(o.offset(0, 2, 0));
+			helper.assertTrue(lampiao.is(ModBlocos.LAMPIAO_PALIDO) && lampiao.getValue(LampiaoPalidoBlock.CHAMA) == LampiaoPalidoBlock.Chama.APAGADA
+					&& lampiao.getValue(LanternBlock.HANGING), "o lampião apagado, pendurado no teto");
+			helper.assertTrue(CinzaEspalhadaBlock.estadoEm(level, o.offset(0, 0, 1)) == CinzaEspalhadaBlock.Estado.ROMPIDA, "a linha rompida diante da porta");
+			helper.assertTrue(level.getBlockState(o.offset(2, 0, 4)).getValue(CampfireBlock.LIT), "a fogueira acesa lá fora");
+			helper.assertTrue(CasaDoVigia.riscosNaPlaca(level, o) == 37, "trinta e sete riscos na placa, há " + CasaDoVigia.riscosNaPlaca(level, o));
+			jogador.snapTo(o.getX() + 0.5, o.getY(), o.getZ() + 0.5, 0.0F, 0.0F);
+		});
+		helper.runAfterDelay(50, () -> {
+			helper.assertTrue(Memoria.de(jogador).get("casa_vigia_visitas") == 1, "entrar conta uma visita");
+			helper.assertTrue(level.getBlockState(c[0].offset(2, 0, 4)).getValue(CampfireBlock.LIT), "com ele lá dentro nada muda");
+			jogador.snapTo(c[0].getX() + 60.5, c[0].getY(), c[0].getZ() + 0.5, 0.0F, 0.0F);
+		});
+		helper.runAfterDelay(100, () -> {
+			helper.assertFalse(level.getBlockState(c[0].offset(2, 0, 4)).getValue(CampfireBlock.LIT), "depois da primeira visita a fogueira deveria estar fria");
+			helper.assertTrue(level.getBlockState(c[0].offset(0, 0, 2)).getValue(DoorBlock.OPEN), "e a porta, aberta");
+			helper.assertTrue(CasaDoVigia.riscosNaPlaca(level, c[0]) == 38, "um risco a mais na placa");
+			jogador.snapTo(c[0].getX() + 0.5, c[0].getY(), c[0].getZ() + 0.5, 0.0F, 0.0F);
+		});
+		helper.runAfterDelay(150, () -> {
+			helper.assertTrue(Memoria.de(jogador).get("casa_vigia_visitas") == 2, "voltar conta a segunda visita");
+			jogador.snapTo(c[0].getX() + 60.5, c[0].getY(), c[0].getZ() + 0.5, 0.0F, 0.0F);
+		});
+		helper.runAfterDelay(200, () -> {
+			BlockState lampiao = level.getBlockState(c[0].offset(0, 2, 0));
+			helper.assertTrue(lampiao.getValue(LampiaoPalidoBlock.CHAMA) != LampiaoPalidoBlock.Chama.APAGADA, "depois da segunda visita o lampião deveria estar aceso");
+			helper.assertTrue(level.getBlockState(c[0].offset(2, 0, 1)).getValue(TigelaOferendaBlock.CONTEUDO) == TigelaOferendaBlock.Conteudo.VAZIA,
+					"e a tigela, limpa");
+			helper.assertTrue(CasaDoVigia.riscosNaPlaca(level, c[0]) == 39, "mais um risco");
+			((Container) level.getBlockEntity(c[0].offset(2, 0, -1))).clearContent();
+			for (BlockPos pos : BlockPos.betweenClosed(c[0].offset(-3, 0, -2), c[0].offset(3, 3, 4))) {
+				level.removeBlock(pos.immutable(), false);
 			}
 			JogadorDeTeste.remover(jogador);
 			helper.succeed();
