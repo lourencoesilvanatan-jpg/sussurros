@@ -320,6 +320,11 @@ public final class ComandoSussurros {
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
 					})));
+			teste.then(Commands.literal("baralho").executes(ctx -> {
+				String msg = Diretor.testarBaralho(ctx.getSource().getPlayerOrException());
+				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] Carta: " + msg), false);
+				return 1;
+			}));
 			teste.then(Commands.literal("conta").executes(ctx -> {
 				String msg = Diretor.resumoDaConta(ctx.getSource().getPlayerOrException());
 				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);

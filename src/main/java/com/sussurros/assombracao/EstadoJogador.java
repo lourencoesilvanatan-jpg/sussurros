@@ -292,6 +292,8 @@ final class EstadoJogador {
 	double soleiraLado;
 	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
 	long cacaAvisoAte = -1;
+	/** Uma carta do baralho deixou mais tochas empalidecerem até este segundo. */
+	long chamasExtraAteSeg;
 	/** A caçada devida só é cobrada depois deste segundo (um ou dois minutos depois de entrar ou de fugir). */
 	long cacaDevidaApos;
 

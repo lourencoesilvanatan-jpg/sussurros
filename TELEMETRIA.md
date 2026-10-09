@@ -651,3 +651,15 @@ CASA_DO_VIGIA mudou depois da visita 2: riscos=39 lampiao=aceso tigela=limpa
 ```
 
 `pos` é o centro do piso. `/sussurros teste lugar casa` ergue uma doze blocos à frente.
+
+## 0.9.0-alpha9 — o baralho
+
+```
+BARALHO carta=CASA efeito=erguida pos=x, y, z pos=3/12 ciclo=1 proximaEm=4338s
+BARALHO carta=VEU adiada tentativa=2
+BARALHO carta=SONO efeito=nada pos=8/12 ciclo=1 proximaEm=3551s
+```
+
+- `pos=3/12` é a posição da carta no baralho daquele ciclo. `efeito` diz o que ela fez: `nada`, `ja_existe`, `sem_cama`, `nao_coube` ou o próprio efeito.
+- Depois de uma carta vêm as linhas normais do que ela adiantou (`VEU abriu`, `CACA devida cobrada`, `AVESSO levado origem=SONO`...).
+- `/sussurros teste baralho` vira agora a próxima carta de quem pediu.

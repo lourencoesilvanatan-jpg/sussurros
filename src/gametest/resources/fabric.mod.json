@@ -12,7 +12,8 @@
 			"com.sussurros.teste.TestesDosItens",
 			"com.sussurros.teste.TestesDoVeu",
 			"com.sussurros.teste.TestesDosLugares",
-			"com.sussurros.teste.TestesDoAvesso"
+			"com.sussurros.teste.TestesDoAvesso",
+			"com.sussurros.teste.TestesDoBaralho"
 		],
 		"fabric-client-gametest": [
 			"com.sussurros.teste.TestesDeCliente"

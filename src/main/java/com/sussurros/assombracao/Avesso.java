@@ -68,6 +68,7 @@ public final class Avesso {
 	static final String VOLTA_Z = "avesso_volta_z";
 	static final String VISITAS = "avesso_visitas";
 	static final String ULTIMO_DIA = "avesso_dia";
+	static final String MARCADO = "avesso_marcado";   // uma carta do baralho: na próxima vez que deitar, ele é levado
 
 	static final int RAIO = 14;
 	static final int ABAIXO = 5;
@@ -134,13 +135,19 @@ public final class Avesso {
 		}
 		int dia = (int) (mundo.getDefaultClockTime() / 24000L);
 		int visitas = m.get(VISITAS);
+		boolean marcado = m.get(MARCADO) == 1;
 		// Pelo menos três dias de jogo entre uma visita e outra. A primeira é mais provável que as seguintes.
-		if (visitas > 0 && dia - m.get(ULTIMO_DIA) < 3) {
+		// A carta do baralho passa por cima das duas coisas, uma vez.
+		if (!marcado && visitas > 0 && dia - m.get(ULTIMO_DIA) < 3) {
 			return;
 		}
 		float chance = visitas == 0 ? 0.15F : 0.08F;
-		if (p.getRandom().nextFloat() >= chance) {
+		if (!marcado && p.getRandom().nextFloat() >= chance) {
 			return;
+		}
+		if (marcado) {
+			m.set(MARCADO, 0);
+			m.salvar();
 		}
 		// Dois segundos de olhos fechados na cama, e então não é sono.
 		Diretor.agendar(mundo, 40, () -> {

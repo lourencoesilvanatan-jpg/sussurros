@@ -272,6 +272,16 @@ public final class Diretor {
 	}
 
 
+	/** Só para os testes: o que acontece quando ele acorda, sem precisar de uma cama (o jogador de mentira não dorme). */
+	public static void acordarParaTeste(ServerPlayer p) {
+		aoAcordar(p, p.blockPosition());
+	}
+
+	/** Comando de teste: vira agora a próxima carta do baralho de quem pediu. */
+	public static String testarBaralho(ServerPlayer p) {
+		return Baralho.virarParaTeste(p);
+	}
+
 	/** Comando de teste: leva ao Avesso agora (sem contar como visita) ou traz de volta. */
 	public static String testarAvesso(ServerPlayer p, boolean ir) {
 		return Avesso.testar(p, ir);
@@ -626,6 +636,7 @@ public final class Diretor {
 		Veu.segundo(level, p, e, tick);
 		Erguidos.segundo(level, p, m, e, fase, noite, seg, tick);
 		CasaDoVigia.segundo(level, p, m, e, fase, seg);
+		Baralho.segundo(level, p, m, e, fase, seg, tick);
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
@@ -3206,8 +3217,16 @@ public final class Diretor {
 
 		// 0.9: enquanto ele dormia, uma das linhas de cinza perto da cama foi testada. Sem som: ele só descobre
 		// de manhã, pela linha riscada e por uma pegada do lado de fora.
-		if (fase >= 2 && rnd.nextFloat() < 0.45F) {
+		boolean cartaLinhas = m.get(Baralho.LINHAS) == 1;
+		if (cartaLinhas) {
+			m.set(Baralho.LINHAS, 0);
+		}
+		if (fase >= 2 && (rnd.nextFloat() < 0.45F || cartaLinhas)) {
 			BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, pos, 12);
+			// Com a carta do baralho, ele não tentou uma vez só: a linha amanhece rompida.
+			for (int extra = 0; linha != null && cartaLinhas && extra < 2; extra++) {
+				CinzaEspalhadaBlock.desgastar(level, linha);
+			}
 			if (linha != null && CinzaEspalhadaBlock.desgastar(level, linha)) {
 				boolean pegada = false;
 				// Do lado de fora: primeiro o lado da linha mais longe da cama. A pegada aponta para a linha.
@@ -3232,7 +3251,20 @@ public final class Diretor {
 		}
 
 		// Ele deixou algo ao lado da cama enquanto você dormia.
-		if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS && rnd.nextFloat() < 0.45F) {
+		boolean cartaPresente = m.get(Baralho.PRESENTE) == 1;
+		if (cartaPresente) {
+			m.set(Baralho.PRESENTE, 0);
+			if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) >= Diario.TOTAL_PAGINAS) {
+				// Não há mais página para deixar: deixa cinza.
+				BlockPos chao = acharChao(level, pos.getX() + 0.5 + p.getRandom().nextInt(3) - 1, pos.getY(), pos.getZ() + 0.5 + p.getRandom().nextInt(3) - 1);
+				if (chao != null) {
+					ItemEntity item = new ItemEntity(level, chao.getX() + 0.5, chao.getY() + 0.1, chao.getZ() + 0.5, new ItemStack(ModItems.CINZA_PALIDA));
+					item.setDeltaMovement(0, 0, 0);
+					level.addFreshEntity(item);
+				}
+			}
+		}
+		if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS && (rnd.nextFloat() < 0.45F || cartaPresente)) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
 			BlockPos chao = acharChao(level, pos.getX() + 0.5 + rnd.nextInt(3) - 1, pos.getY(), pos.getZ() + 0.5 + rnd.nextInt(3) - 1);
 			if (chao != null) {
