@@ -70,6 +70,7 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Item mostrado no mundo.** O que aparece deitado (a oferenda na tigela, os ossos caídos) é um `item_display` criado por `Mostruario`, com etiqueta. Quem cria limpa: ao esvaziar, ao quebrar o bloco e por tempo.
 - **Mixin.** Há um só, no cliente (`EsconderNoVeuMixin`). Nenhum teste local o carrega: só o job de fotos prova que ele ainda encaixa no jogo. Antes de criar outro, veja se um evento da Fabric ou uma miragem resolve.
 - **De olhos fechados.** O que precisa mudar de uma vez na tela muda durante uma piscada (`Rede.efeito(p, PISCAR, ...)` e, no meio dela, o pacote novo): o cliente pula direto para o valor novo enquanto a tela está preta.
+- **Tags do jogo.** Na 26.2 a tag `dirt` só tem terra; a grama está em `grass_blocks`. Antes de usar uma tag, abra o JSON dela no jar do jogo.
 - **Receita nova.** Além do arquivo em `data/sussurros/recipe`, precisa do desbloqueio em `data/sussurros/advancement/recipes`, senão não aparece no livro de receitas e o dono (que não lê spoiler) não tem como descobrir. `ferramentas/texturas/conferir_recursos.py` confere texturas, modelos e estados de bloco.
 
 ## Onde olhar primeiro
@@ -82,3 +83,4 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - `assombracao/Captura` e `assombracao/ApoioCaca`: o que a caçada faz ao jogador.
 - `assombracao/Conta`, `Cantiga`, `Oferenda`, `Ossos`, `ChamasPalidas` e `bloco/`: os itens da 0.9 e a dívida que os une.
 - `assombracao/Veu` e `client/mixin/`: o Véu e o único mixin do mod.
+- `assombracao/Erguidos` e `EstruturasSussurros`: o que o mod põe no mundo. (`Lugares` é outra coisa: o mapa dos lugares que o jogador frequenta.)

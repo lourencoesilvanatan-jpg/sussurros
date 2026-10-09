@@ -4,7 +4,11 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
-Versão 0.9.0-alpha3, terceira parte da expansão:
+Versão 0.9.0-alpha4, quarta parte da expansão:
+
+- coisas novas para encontrar no mundo, fora de casa. Vale explorar a pé e olhar em volta, de dia e de noite.
+
+Da versão 0.9.0-alpha3, que você ainda não jogou:
 
 - um acontecimento novo, raro, das fases mais avançadas.
 
@@ -64,5 +68,6 @@ Você não precisa repetir isto. Fica registrado para quem programa.
 - Cada item e bloco novo foi usado por um jogador de mentira (nove situações) e fotografado dentro do jogo.
 - As receitas carregam e aparecem no livro na hora certa.
 - O acontecimento novo foi exercitado em duas situações num servidor de verdade e fotografado dentro do jogo.
+- O que há de novo para encontrar no mundo foi gerado e usado por um jogador de mentira, e fotografado.
 
 O que nenhum teste automático mede: se assusta, e como soa. Isso é com você.

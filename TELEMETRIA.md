@@ -586,3 +586,21 @@ VEU fechou motivo=VELA
 - `luzes`, `porta` e `vidro` dizem o que foi trocado por miragem. As miragens aparecem depois como `MIRAGEM fim motivo=VEU` e `motivo=LUZ_APAGADA` só se vencerem pelo tempo; fechadas pelo Véu, não deixam linha.
 - `vulto=sim` na abertura quer dizer "vai tentar no meio"; a linha `VEU vulto=` diz se coube.
 - `/sussurros evento veu` abre um Véu de teste, sem respeitar o intervalo.
+
+## 0.9.0-alpha4 — a Soleira e o Boneco
+
+```
+SOLEIRA erguida pos=x, y, z eixo=0
+SOLEIRA atravessada n=1 resposta=GRAVE
+SOLEIRA atravessada n=2 resposta=SILENCIO
+SOLEIRA atravessada n=0 resposta=VEU
+SOLEIRA atravessada n=2 resposta=NAO_ABRIU
+SOLEIRA atravessada (descansando hoje)
+SOLEIRA desfeita (a porta não está mais lá)
+BONECO ANDOU passo=3 dist=29 pos=x, y, z rosto=south
+BONECO SUMIU
+```
+
+- `eixo=0`: atravessa-se de norte a sul. `n` é a contagem depois desta travessia (volta a 0 quando o Véu abre).
+- Noite sem linha `BONECO`: ou já andou, ou alguém olhava, ou não achou lugar válido.
+- `/sussurros teste lugar soleira` ergue uma cinco blocos à frente; `/sussurros teste lugar boneco` faz uma noite passar para ele.

@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha4
+
+Quarta parte da expansão. Entram coisas novas para encontrar no mundo, fora de casa.
+
 ## 0.9.0-alpha3
 
 Terceira parte da expansão. Entra um acontecimento novo, raro, das fases mais avançadas, e o primeiro mixin do mod (só no cliente).
