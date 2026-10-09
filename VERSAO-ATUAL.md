@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha6
+
+Aprofunda a novidade da alpha5, que tinha entrado na versão básica.
+
 ## 0.9.0-alpha5
 
 Quinta parte da expansão, e a maior até aqui. O que é, só jogando.

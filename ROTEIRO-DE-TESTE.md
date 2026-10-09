@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha6: aprofunda a novidade da alpha5. Não muda nada no que você precisa fazer.
+
 Versão 0.9.0-alpha5, quinta parte da expansão:
 
 - a maior novidade até aqui. Não há o que fazer para encontrá-la: jogue normalmente, numa sobrevivência longa, e durma quando for noite.

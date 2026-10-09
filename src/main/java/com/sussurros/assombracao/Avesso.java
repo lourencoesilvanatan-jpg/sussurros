@@ -35,6 +35,7 @@ import com.sussurros.Sussurros;
 import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.rede.PacoteEfeito;
+import com.sussurros.registro.ModSons;
 import com.sussurros.rede.PacoteSentidos;
 import com.sussurros.rede.Rede;
 
@@ -71,6 +72,9 @@ public final class Avesso {
 	static final int RAIO = 14;
 	static final int ABAIXO = 5;
 	static final int ACIMA = 10;
+	/** Segundos de visita até ele estar lá (da segunda visita em diante) e até ele vir (da terceira). */
+	static final int VULTO_AOS = 20;
+	static final int VEM_AOS = 45;
 	private static final int LONGE_DEMAIS = 40;
 
 	private Avesso() {
@@ -146,6 +150,46 @@ public final class Avesso {
 		});
 	}
 
+	/** Só para os testes: a próxima captura leva para lá, sem sorteio (e sem exigir uma visita anterior). */
+	public static boolean forcarNaProximaCaptura;
+
+	/**
+	 * Ele foi pego. Em parte das vezes, em vez de acordar deslocado, acorda do outro lado. Só depois de já ter
+	 * estado lá uma vez (a primeira é sempre pela cama), e no máximo uma vez por dia de jogo.
+	 */
+	static boolean sorteiaCaptura(ServerLevel mundo, ServerPlayer p, boolean teste) {
+		if (mundo.dimension() != Level.OVERWORLD || !existe(mundo.getServer())) {
+			return false;
+		}
+		if (forcarNaProximaCaptura) {
+			forcarNaProximaCaptura = false;
+			return true;
+		}
+		Memoria m = Memoria.de(p);
+		if (teste || !Rede.temCliente(p) || m.get(VISITAS) < 1 || m.get(DENTRO) == 1) {
+			return false;
+		}
+		int dia = (int) (mundo.getDefaultClockTime() / 24000L);
+		return dia - m.get(ULTIMO_DIA) >= 1 && p.getRandom().nextFloat() < 0.35F;
+	}
+
+	/**
+	 * A tela já está preta (é o apagão da captura): atravessa agora, e a tela só abre três segundos depois,
+	 * como na captura comum. Ele volta para o ponto onde foi pego.
+	 */
+	static void atravessarNaCaptura(ServerLevel mundo, ServerPlayer p, boolean teste) {
+		ServerLevel avesso = mundo.getServer().getLevel(DIMENSAO);
+		if (avesso == null) {
+			return;
+		}
+		Memoria m = Memoria.de(p);
+		m.set(DENTRO, 1);
+		m.salvar();
+		Depuracao.log(p, mundo.getGameTime() / 20, "AVESSO levado origem=CAPTURA visita=" + (m.get(VISITAS) + 1)
+				+ " teste=" + (teste ? "sim" : "nao"));
+		atravessar(mundo, avesso, p, teste, 60);
+	}
+
 	/** Leva o jogador agora. Abre e salva a Memoria: chamar de fora do tick do Diretor. */
 	static boolean levar(ServerPlayer p, String origem, boolean teste) {
 		ServerLevel mundo = p.level();
@@ -164,11 +208,11 @@ public final class Avesso {
 		Diretor.emudecer(mundo, p, 6, "AVESSO");
 		Depuracao.log(p, mundo.getGameTime() / 20, "AVESSO levado origem=" + origem + " visita=" + (m.get(VISITAS) + 1)
 				+ " teste=" + (teste ? "sim" : "nao"));
-		Diretor.agendar(mundo, 16, () -> atravessar(mundo, avesso, p, teste));
+		Diretor.agendar(mundo, 16, () -> atravessar(mundo, avesso, p, teste, 0));
 		return true;
 	}
 
-	private static void atravessar(ServerLevel mundo, ServerLevel avesso, ServerPlayer p, boolean teste) {
+	private static void atravessar(ServerLevel mundo, ServerLevel avesso, ServerPlayer p, boolean teste, int esperaParaAbrir) {
 		Memoria m = Memoria.de(p);
 		if (p.isRemoved() || p.hasDisconnected() || p.level() != mundo) {
 			m.set(DENTRO, 0);
@@ -195,11 +239,21 @@ public final class Avesso {
 		e.avessoAte = tick + 20L * (visita == 1 ? 45 + sorte.nextInt(31) : 60 + sorte.nextInt(91));
 		e.avessoVisita = visita;
 		e.avessoVulto = false;
+		e.avessoVem = false;
 		e.avessoTeste = teste;
 		p.teleportTo(avesso, p.getX(), p.getY(), p.getZ(), Set.of(), p.getYRot(), p.getXRot(), false);
 		p.fallDistance = 0;
 		sentir(p, e, 0.0F);
-		Rede.efeito(p, PacoteEfeito.Tipo.ACORDAR, 60, 1.0F);
+		if (esperaParaAbrir <= 0) {
+			Rede.efeito(p, PacoteEfeito.Tipo.ACORDAR, 60, 1.0F);
+		} else {
+			Diretor.agendar(mundo, esperaParaAbrir, () -> {
+				if (!p.isRemoved()) {
+					Rede.efeito(p, PacoteEfeito.Tipo.ACORDAR, 60, 1.0F);
+					ModSons.tocarNaCabeca(p, ModSons.Som.DESPERTAR, 0.6F, 1.0F);
+				}
+			});
+		}
 		Depuracao.log(p, tick / 20, String.format(Locale.ROOT, "AVESSO chegou visita=%d ancora=%s duracao=%ds erros=%d",
 				visita, ancora.toShortString(), (e.avessoAte - tick) / 20, erros));
 	}
@@ -226,7 +280,7 @@ public final class Avesso {
 		int minY = Math.max(mundo.getMinY(), de.getY());
 		int maxY = Math.min(mundo.getMaxY() - 1, ate.getY());
 		for (BlockPos pos : BlockPos.betweenClosed(de.getX(), minY, de.getZ(), ate.getX(), maxY, ate.getZ())) {
-			BlockState copia = apagado(mundo.getBlockState(pos));
+			BlockState copia = apagado(mundo.getBlockState(fonte(pos, ancora, visita)));
 			if (!avesso.getBlockState(pos).equals(copia)) {
 				avesso.setBlock(pos, copia, sinal);
 			}
@@ -243,6 +297,15 @@ public final class Avesso {
 			erros++;
 		}
 		return erros;
+	}
+
+	/**
+	 * De onde vem cada bloco da cópia. Até a segunda visita, do mesmo lugar. Da terceira em diante a medida
+	 * está errada: dois blocos a leste do jogador há uma fatia repetida, e tudo depois dela está um bloco mais
+	 * longe. A sala em que ele está ficou um bloco mais comprida, e nada mais mudou.
+	 */
+	public static BlockPos fonte(BlockPos pos, BlockPos ancora, int visita) {
+		return visita >= 3 && pos.getX() > ancora.getX() + 2 ? pos.west() : pos;
 	}
 
 	/** O mesmo bloco, sem luz e sem vida: é assim que ele existe do outro lado. */
@@ -294,16 +357,23 @@ public final class Avesso {
 			voltar(p, "LONGE");
 			return;
 		}
-		// Da segunda visita em diante, depois de vinte segundos, ele está lá: de lado, parado, até o fim.
-		if (e.avessoVisita >= 2 && !e.avessoVulto && tick - e.avessoDesde >= 20 * 20) {
+		// Da segunda visita em diante, depois de vinte segundos, ele está lá: de lado, parado. Lá, olhar para
+		// ele não o faz sumir.
+		if (e.avessoVisita >= 2 && !e.avessoVulto && tick - e.avessoDesde >= 20 * VULTO_AOS) {
 			e.avessoVulto = true;
-			int resta = (int) Math.max(60, e.avessoAte - tick);
-			boolean veio = Diretor.invocar(avesso, p, e, HospedeEntity.Modo.OBSERVAR, 75, 130, 10, 16, resta, 1.0, false,
+			int resta = (int) Math.max(60, e.avessoAte - tick + 40);
+			boolean veio = Diretor.invocar(avesso, p, e, HospedeEntity.Modo.AVESSO, 75, 130, 10, 16, resta, 1.0, false,
 					PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null));
 			Depuracao.log(p, tick / 20, "AVESSO vulto=" + (veio ? "sim" : "nao_coube"));
 		}
 		HospedeEntity h = e.criatura;
 		boolean olhando = h != null && !h.isRemoved() && h.level() == avesso;
+		// Da terceira em diante, aos quarenta e cinco segundos ele vem. Devagar, sem parar, olhado ou não.
+		if (e.avessoVisita >= 3 && olhando && !e.avessoVem && tick - e.avessoDesde >= 20 * VEM_AOS) {
+			e.avessoVem = true;
+			h.virNoAvesso();
+			Depuracao.log(p, tick / 20, String.format(Locale.ROOT, "AVESSO ele vem dist=%.0f", Math.sqrt(h.distanceToSqr(p))));
+		}
 		sentir(p, e, olhando ? 0.6F : 0.0F);
 	}
 
@@ -316,6 +386,24 @@ public final class Avesso {
 	// =====================================================================
 	// Voltar
 	// =====================================================================
+
+	/** Ele encostou no jogador (chamado pela criatura). Do outro lado isso é acordar, e mais nada. */
+	public static void tocado(ServerPlayer p) {
+		if (p.level().dimension() == DIMENSAO) {
+			voltar(p, "TOCADO");
+		}
+	}
+
+	/** Só para os testes: põe ao lado do jogador a criatura como ela é do outro lado, parada ou já vindo. */
+	public static boolean criaturaParaTeste(ServerPlayer p, boolean vem) {
+		EstadoJogador e = Diretor.estadoParaTeste(p);
+		boolean veio = Diretor.invocar(p.level(), p, e, HospedeEntity.Modo.AVESSO, 75, 130, 10, 16, 20 * 120, 1.0, false,
+				PedidoManifestacao.deOrigem(HospedeEntity.Origem.COMANDO, null));
+		if (veio && vem && e.criatura != null) {
+			e.criatura.virNoAvesso();
+		}
+		return veio;
+	}
 
 	/** "Acordar": apagão, e ele está de volta no ponto de onde saiu. */
 	static void voltar(ServerPlayer p, String motivo) {

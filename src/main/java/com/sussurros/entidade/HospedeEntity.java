@@ -18,6 +18,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
+import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
 import com.sussurros.assombracao.Percepcao;
@@ -56,7 +57,8 @@ public class HospedeEntity extends PathfinderMob {
 		ESPREITAR, // quando você tira os olhos dele, muda de lugar (mais perto, outro lado, fica, ou some)
 		ESPERAR,   // fica na borda da luz da vela, esperando ela apagar.
 		CACAR,     // procura pela última posição conhecida e só se aproxima quando não está vendo.
-		VULTO      // parado a dezenas de blocos. Some um segundo depois de você mirar nele, ou se você chegar perto.
+		VULTO,     // parado a dezenas de blocos. Some um segundo depois de você mirar nele, ou se você chegar perto.
+		AVESSO     // do outro lado: não some ao ser visto. Fica parado; depois vem andando devagar, olhado ou não.
 	}
 
 	/** Quem criou esta criatura. Fica gravado nela (0.4.1 guardava no jogador e confundia aparições). */
@@ -100,6 +102,8 @@ public class HospedeEntity extends PathfinderMob {
 	private int vistoTicks = 0;  // quanto você está olhando para ele
 	private int semAlvo = 0;
 	private boolean jaAvistada = false;
+	/** No modo AVESSO: já começou a vir. */
+	private boolean avessoAnda = false;
 	private double velocidade = 1.0;
 
 	// Telemetria (0.4.2a-test): só para o log, nada disso muda o comportamento.
@@ -415,7 +419,8 @@ public class HospedeEntity extends PathfinderMob {
 		}
 
 		boolean naZonaCalma = Diretor.emZonaCalma(this.alvo, this.getX(), this.getY(), this.getZ());
-		if (naZonaCalma && this.modo != Modo.ESPERAR) {
+		// As zonas de vela são do mundo normal: do outro lado não valem.
+		if (naZonaCalma && this.modo != Modo.ESPERAR && this.modo != Modo.AVESSO) {
 			this.sumir(level, true, "ZONA_CALMA");
 			return;
 		}
@@ -455,6 +460,35 @@ public class HospedeEntity extends PathfinderMob {
 			case ESPERAR -> this.tickEsperar(level, encarado, distSqr);
 			case CACAR -> this.tickCacar(level, percebido, distSqr);
 			case VULTO -> this.tickVulto(level, percebido, distSqr);
+			case AVESSO -> this.tickAvesso(level, distSqr);
+		}
+	}
+
+	/** Do outro lado ele deixa de ficar parado e vem. */
+	public void virNoAvesso() {
+		this.avessoAnda = true;
+	}
+
+	/**
+	 * Do outro lado as regras de cá não valem: olhar não o faz sumir nem o segura. Parado, ele só olha.
+	 * Quando vem, vem devagar (2,2 blocos por segundo: metade do passo do jogador), sem parar. Encostar é o fim
+	 * da visita, e mais nada.
+	 */
+	private void tickAvesso(ServerLevel level, double distSqr) {
+		if (distSqr < 2.3 * 2.3 && this.hasLineOfSight(this.alvo)) {
+			ServerPlayer tocado = this.alvo;
+			this.discard();
+			Avesso.tocado(tocado);
+			return;
+		}
+		if (!this.avessoAnda) {
+			this.ficarParadoOlhando();
+			return;
+		}
+		this.setObservando(false);
+		this.olharPara(this.alvo);
+		if (this.tickCount % 10 == 0 || this.getNavigation().isDone()) {
+			this.getNavigation().moveTo(this.alvo, 0.75);
 		}
 	}
 

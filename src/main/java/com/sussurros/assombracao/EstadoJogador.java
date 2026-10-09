@@ -284,6 +284,7 @@ final class EstadoJogador {
 	long avessoAte;
 	int avessoVisita;
 	boolean avessoVulto;
+	boolean avessoVem;
 	boolean avessoTeste;
 	boolean avessoSaindo;
 	// --- A Soleira (0.9): de que lado da porta ele estava na última olhada ---

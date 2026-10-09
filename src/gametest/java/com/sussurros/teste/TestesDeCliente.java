@@ -61,6 +61,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			avesso(context, mundo);
 			sentidos(context, mundo);
 			cacada(context, mundo);
+			capturaQueLeva(context, mundo);
 		}
 		// Um segundo mundo, de terreno normal, só para a dimensão: o mundo de cima é plano, e num mundo plano
 		// não dá para ver se os morros de lá são os mesmos daqui.
@@ -390,6 +391,40 @@ public class TestesDeCliente implements FabricClientGameTest {
 			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
 			conferir(p.level() == server.overworld(), "deveria ter voltado da segunda visita");
 			conferir(Diretor.criatura(p) == null || Diretor.criatura(p).isRemoved(), "ele não vem junto");
+			Avesso.definirVisitas(p, 2);
+		});
+
+		// Terceira visita: a medida está errada, e aos quarenta e cinco segundos ele vem até encostar.
+		camera(mundo, partida, 0, 0, 10);
+		mundo.getServer().runCommand("execute as @p run sussurros teste avesso");
+		context.waitTicks(120);
+		long chegada = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel la = server.getLevel(Avesso.DIMENSAO);
+			conferir(p.level() == la && Avesso.visitaAtual(p) == 3, "deveria estar lá, na terceira visita");
+			conferir(la.getBlockState(ouro).is(Blocks.GOLD_BLOCK) && la.getBlockState(ouro.east()).is(Blocks.GOLD_BLOCK),
+					"na terceira visita a fatia do bloco de ouro deveria estar repetida");
+			conferir(la.getBlockState(bau).is(Blocks.CHEST) && !la.getBlockState(bau.east()).is(Blocks.CHEST), "o lado de cá não muda");
+			return server.overworld().getGameTime();
+		});
+		context.takeScreenshot("09x6-avesso-terceira-visita-chegada");
+		// Espera ele começar a vir (aos 45 s de visita; a visita começou uns 5 s antes desta medida).
+		context.waitTicks(20 * 42);
+		mundo.getServer().runCommand("execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] eyes run tp @s ~ ~ ~ ~ ~");
+		context.waitTicks(30);
+		context.takeScreenshot("09x7-avesso-terceira-visita-ele-vem");
+		boolean voltou = false;
+		for (int i = 0; i < 40 && !voltou; i++) {
+			context.waitTicks(20);
+			voltou = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).level() == server.overworld());
+		}
+		conferir(voltou, "na terceira visita ele deveria ter encostado e o jogador, acordado");
+		context.waitTicks(80);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			long durou = (server.overworld().getGameTime() - chegada) / 20;
+			Sussurros.LOGGER.info("[teste] terceira visita: de volta {} s depois da conferência de chegada", durou);
+			conferir(p.blockPosition().equals(partida), "deveria voltar ao ponto de onde saiu");
 			ServerLevel level = server.overworld();
 			((Container) level.getBlockEntity(bau)).clearContent();
 			for (BlockPos pos : BlockPos.betweenClosed(partida.offset(-3, 0, -6), partida.offset(3, 3, -3))) {
@@ -401,6 +436,46 @@ public class TestesDeCliente implements FabricClientGameTest {
 		mundo.getServer().runCommand("execute as @p run sussurros fase 0");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
+	}
+
+	/** Uma captura que, em vez de deslocar, leva para o outro lado; a volta é para o ponto onde ele foi pego. */
+	private static void capturaQueLeva(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		mundo.getServer().runCommand("difficulty peaceful");
+		mundo.getServer().runCommand("time set 18000");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		context.waitTicks(20);
+		BlockPos partida = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			Diretor.esquecer(p);
+			Avesso.forcarNaProximaCaptura = true;
+			return p.blockPosition();
+		});
+		mundo.getServer().runCommand("execute as @p run sussurros fase 4");
+		context.waitTicks(20);
+		mundo.getServer().runCommand("execute as @p run sussurros evento caca");
+		boolean levado = false;
+		for (int i = 0; i < 110 && !levado; i++) {
+			context.waitTicks(20);
+			levado = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).level().dimension() == Avesso.DIMENSAO);
+		}
+		conferir(levado, "a captura deveria ter levado o jogador para o outro lado");
+		context.waitTicks(130);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			conferir(p.blockPosition().distManhattan(partida) <= 2, "deveria acordar lá no mesmo ponto em que foi pego: " + p.blockPosition() + " e " + partida);
+			conferir(!p.isInWall(), "não pode acordar dentro de um bloco");
+		});
+		context.takeScreenshot("37-captura-do-outro-lado");
+		mundo.getServer().runCommand("execute as @p run sussurros teste avesso voltar");
+		context.waitTicks(100);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			conferir(p.level() == server.overworld() && p.blockPosition().distManhattan(partida) <= 2, "deveria voltar para onde foi pego");
+			Avesso.forcarNaProximaCaptura = false;
+			Diretor.esquecer(p);
+		});
+		mundo.getServer().runCommand("kill @e[type=item]");
 	}
 
 	private static void conferir(boolean certo, String mensagem) {

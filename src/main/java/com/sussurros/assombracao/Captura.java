@@ -97,7 +97,9 @@ public final class Captura {
 		long tick = level.getGameTime();
 		long seg = tick / 20;
 		Vec3 de = p.position();
-		BlockPos destino = escolherDestino(level, p, e, seg);
+		// Em parte das capturas ele não é deslocado: acorda do outro lado, e volta depois para onde foi pego.
+		boolean avesso = Avesso.sorteiaCaptura(level, p, teste);
+		BlockPos destino = avesso ? null : escolherDestino(level, p, e, seg);
 		if (destino != null) {
 			p.stopRiding();
 			p.teleportTo(level, destino.getX() + 0.5, destino.getY(), destino.getZ() + 0.5, Set.of(),
@@ -127,6 +129,11 @@ public final class Captura {
 				destino == null ? "-" : Diretor.pos(destino.getX(), destino.getY(), destino.getZ()),
 				destino == null ? 0.0 : Math.sqrt(destino.distToCenterSqr(de)), p.getHealth(),
 				teste ? 0 : Memoria.de(p).get(Memoria.MARCAS)));
+
+		if (avesso) {
+			Avesso.atravessarNaCaptura(level, p, teste);
+			return;
+		}
 
 		// Acorda devagar, três segundos depois, no silêncio.
 		Agenda.agendar(level, 60, () -> {
