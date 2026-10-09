@@ -629,3 +629,14 @@ AVESSO saindo motivo=TOCADO
 
 - `origem=CAPTURA`: a linha `CAPTURA deslocou` daquela captura sai com `para=-`, porque não houve deslocamento.
 - `motivo=TOCADO`: ele encostou. A criatura de lá aparece nas linhas `HOSPEDE` com `modo=AVESSO`.
+
+## 0.9.0-alpha7 — a caçada devida
+
+```
+CACA devida motivo=DESLOGOU manifestacao=M003
+CACA devida motivo=FUGIU_LONGE manifestacao=M006
+CACA devida motivo=TROCOU_DE_MUNDO manifestacao=M009
+CACA devida cobrada
+```
+
+Depois de `CACA devida cobrada` vêm as linhas normais de uma caçada (`PRENUNCIO real=sim`, `CACA id=...`).

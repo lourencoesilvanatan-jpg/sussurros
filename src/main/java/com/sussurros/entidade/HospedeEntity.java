@@ -404,6 +404,10 @@ public class HospedeEntity extends PathfinderMob {
 				|| this.alvo.level() != level || this.distanceToSqr(this.alvo) > 110 * 110) {
 			if (++this.semAlvo > 40) {
 				if (this.alvo != null) {
+					// Vivo e no jogo, mas a mais de 110 blocos ou em outra dimensão: fugiu no meio da caçada.
+					if (this.modo == Modo.CACAR && !this.alvo.isRemoved() && this.alvo.isAlive()) {
+						Diretor.cacadaFugiu(this.alvo, this, this.alvo.level() != level ? "TROCOU_DE_MUNDO" : "FUGIU_LONGE");
+					}
 					Diretor.registrarFimSemAlvo(this.alvo, this); // só log
 					this.avisarFimDaCacada("SEM_ALVO");
 				}
@@ -462,6 +466,15 @@ public class HospedeEntity extends PathfinderMob {
 			case VULTO -> this.tickVulto(level, percebido, distSqr);
 			case AVESSO -> this.tickAvesso(level, distSqr);
 		}
+	}
+
+	/**
+	 * A mais de 128 blocos de qualquer jogador o jogo apagaria a criatura sem avisar ninguém: a caçada de quem
+	 * saiu voando acabava em silêncio, sem registro. Quem decide quando ela some é ela (ver "sem alvo válido").
+	 */
+	@Override
+	public boolean removeWhenFarAway(double distanciaAoQuadrado) {
+		return false;
 	}
 
 	/** Do outro lado ele deixa de ficar parado e vem. */

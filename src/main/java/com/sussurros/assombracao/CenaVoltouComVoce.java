@@ -232,7 +232,7 @@ final class CenaVoltouComVoce {
 		}
 		boolean comEstalo = rnd.nextFloat() < 0.3F; // mesma chamada de antes, só guardada para o log
 		if (comEstalo) {
-			Diretor.agendar(level, n * 12 + 6, () -> ModSons.tocar(level, lugar.x, lugar.y + 0.5, lugar.z, ModSons.Som.ESTALO, volume, 0.9F));
+			Diretor.agendar(level, n * 12 + 6, () -> ModSons.tocarPara(p, lugar.x, lugar.y + 0.5, lugar.z, ModSons.Som.ESTALO, volume, 0.9F));
 		}
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s etapa=RASTRO som=%dxPASSO%s motivoPosicao=%s pos=%s dist=%.1f",
 				e.cenaCasaId, n, comEstalo ? "+ESTALO" : "", nota, Diretor.pos(lugar.x, lugar.y, lugar.z), Diretor.distancia(p, lugar)));

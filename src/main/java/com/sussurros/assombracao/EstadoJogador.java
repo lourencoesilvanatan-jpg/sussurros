@@ -292,6 +292,8 @@ final class EstadoJogador {
 	double soleiraLado;
 	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
 	long cacaAvisoAte = -1;
+	/** A caçada devida só é cobrada depois deste segundo (um ou dois minutos depois de entrar ou de fugir). */
+	long cacaDevidaApos;
 
 	// --- Itens da 0.9 ---
 	/** A Caixa de Música: onde está tocando e até quando. */

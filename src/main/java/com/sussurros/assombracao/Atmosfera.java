@@ -253,7 +253,7 @@ final class Atmosfera {
 			case LUZ_DISTANTE -> luzFantasma(level, p, e, seg, tick, rnd, true);
 			case RUIDO_NA_PAREDE -> {
 				Vec3 pt = pontoRelativo(p, 100 + rnd.nextDouble() * 160, 9 + rnd.nextInt(10));
-				ModSons.tocar(level, pt.x, p.getY() + 0.5, pt.z,
+				ModSons.tocarPara(p, pt.x, p.getY() + 0.5, pt.z,
 						rnd.nextBoolean() ? ModSons.Som.MADEIRA : ModSons.Som.ESTALO,
 						Diretor.volumePara(p, pt.x, pt.y, pt.z, 0.36F), 0.88F);
 				yield gastar(e, Familia.RUIDO, 1.0, seg, rnd, 120, 240);
@@ -509,7 +509,7 @@ final class Atmosfera {
 		level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
 				rnd.nextBoolean() ? SoundEvents.WOODEN_DOOR_OPEN : SoundEvents.WOODEN_DOOR_CLOSE,
 				SoundSource.BLOCKS, volumePorta, 0.88F);
-		Agenda.agendar(level, 30 + rnd.nextInt(31), () -> ModSons.tocar(level, fonte.x, fonte.y, fonte.z,
+		Agenda.agendar(level, 30 + rnd.nextInt(31), () -> ModSons.tocarPara(p, fonte.x, fonte.y, fonte.z,
 				ModSons.Som.ESTALO, volumeEstalo, 0.9F));
 		if (!teste) gastar(e, Familia.OBJETO, 2.2, seg, rnd, 420, 780);
 		Depuracao.log(p, seg, "OBJETO tipo=NAO_FOI_VOCE porta=" + porta + " semCriatura=sim");
@@ -525,7 +525,7 @@ final class Atmosfera {
 			int n = i;
 			Vec3 pt = pontoRelativo(p, (110 - n * 35) * lado, 10 + n * 2);
 			float volume = Diretor.volumePara(p, pt.x, pt.y, pt.z, 0.38F);
-			Agenda.agendar(level, i * (7 + rnd.nextInt(5)), () -> ModSons.tocar(level, pt.x, p.getY(), pt.z,
+			Agenda.agendar(level, i * (7 + rnd.nextInt(5)), () -> ModSons.tocarPara(p, pt.x, p.getY(), pt.z,
 					n % 2 == 0 ? ModSons.Som.PANO : ModSons.Som.ESTALO, volume, 0.88F));
 		}
 		if (!gastar(e, Familia.RUIDO, sutil ? 1.0 : 1.5, seg, rnd, 180, 360)) return null;
@@ -555,7 +555,7 @@ final class Atmosfera {
 		Vec3 v = pt != null ? new Vec3(pt.x(), pt.y() + 0.7, pt.z())
 				: pontoRelativo(p, 100 + rnd.nextDouble() * 160, 24 + rnd.nextInt(17)).add(0, 0.7, 0);
 		// O ponto fica a 18-42 blocos: sem escalar o volume, o servidor nem chega a enviar o som (alcance de 16).
-		ModSons.tocar(level, v.x, v.y, v.z, rnd.nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.PANO,
+		ModSons.tocarPara(p, v.x, v.y, v.z, rnd.nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.PANO,
 				Diretor.volumePara(p, v.x, v.y, v.z, sutil ? 0.32F : 0.45F), 0.86F + rnd.nextFloat() * 0.10F);
 		if (!gastar(e, Familia.RUIDO, sutil ? 0.8 : 1.5, seg, rnd, 150, 330)) return null;
 		Depuracao.log(p, seg, "SINAL_DISTANTE pos=" + pos(v) + " dist=" + String.format(Locale.ROOT, "%.1f", distancia(p, v)) + " semCriatura=sim");

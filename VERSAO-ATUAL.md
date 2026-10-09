@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha7
+
+Duas correções por baixo do pano. Uma delas só aparece jogando com amigos.
+
 ## 0.9.0-alpha6
 
 Aprofunda a novidade da alpha5, que tinha entrado na versão básica.
