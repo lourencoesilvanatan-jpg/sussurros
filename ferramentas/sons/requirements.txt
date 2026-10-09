@@ -1,0 +1,5 @@
+# Versões fixas: é com elas que os arquivos saem idênticos de uma rodada para a outra.
+# O soundfile já traz a libsndfile (com Ogg Vorbis) dentro; não precisa de ffmpeg.
+numpy==2.5.3
+scipy==1.18.1
+soundfile==0.14.0

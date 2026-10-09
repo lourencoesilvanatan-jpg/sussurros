@@ -40,5 +40,226 @@
       "sussurros:grave_1",
       "sussurros:grave_2"
     ]
+  },
+  "assobio": {
+    "subtitle": "subtitles.sussurros.assobio",
+    "sounds": [
+      "sussurros:assobio_1",
+      "sussurros:assobio_2",
+      "sussurros:assobio_3"
+    ]
+  },
+  "cantarolar": {
+    "subtitle": "subtitles.sussurros.cantarolar",
+    "sounds": [
+      "sussurros:cantarolar_1",
+      "sussurros:cantarolar_2"
+    ]
+  },
+  "caixa_musica": {
+    "subtitle": "subtitles.sussurros.caixa_musica",
+    "sounds": [
+      {
+        "name": "sussurros:caixa_musica_1",
+        "stream": true
+      }
+    ]
+  },
+  "caixa_gasta": {
+    "subtitle": "subtitles.sussurros.caixa_gasta",
+    "sounds": [
+      {
+        "name": "sussurros:caixa_gasta_1",
+        "stream": true
+      },
+      {
+        "name": "sussurros:caixa_gasta_2",
+        "stream": true
+      }
+    ]
+  },
+  "caixa_quebrada": {
+    "subtitle": "subtitles.sussurros.caixa_quebrada",
+    "sounds": [
+      "sussurros:caixa_quebrada_1"
+    ]
+  },
+  "batimento": {
+    "subtitle": "subtitles.sussurros.batimento",
+    "sounds": [
+      "sussurros:batimento_1",
+      "sussurros:batimento_2"
+    ]
+  },
+  "arranhar": {
+    "subtitle": "subtitles.sussurros.arranhar",
+    "sounds": [
+      "sussurros:arranhar_1",
+      "sussurros:arranhar_2",
+      "sussurros:arranhar_3"
+    ]
+  },
+  "pancada": {
+    "subtitle": "subtitles.sussurros.pancada",
+    "sounds": [
+      "sussurros:pancada_1",
+      "sussurros:pancada_2"
+    ]
+  },
+  "sussurro_voz": {
+    "subtitle": "subtitles.sussurros.sussurro_voz",
+    "sounds": [
+      "sussurros:sussurro_voz_1",
+      "sussurros:sussurro_voz_2",
+      "sussurros:sussurro_voz_3",
+      "sussurros:sussurro_voz_4",
+      "sussurros:sussurro_voz_5",
+      "sussurros:sussurro_voz_6"
+    ]
+  },
+  "chamado": {
+    "subtitle": "subtitles.sussurros.chamado",
+    "sounds": [
+      "sussurros:chamado_1",
+      "sussurros:chamado_2"
+    ]
+  },
+  "sino_longe": {
+    "subtitle": "subtitles.sussurros.sino_longe",
+    "sounds": [
+      {
+        "name": "sussurros:sino_longe_1",
+        "stream": true
+      },
+      {
+        "name": "sussurros:sino_longe_2",
+        "stream": true
+      }
+    ]
+  },
+  "vento_oco": {
+    "subtitle": "subtitles.sussurros.vento_oco",
+    "sounds": [
+      {
+        "name": "sussurros:vento_oco_1",
+        "stream": true
+      },
+      {
+        "name": "sussurros:vento_oco_2",
+        "stream": true
+      },
+      {
+        "name": "sussurros:vento_oco_3",
+        "stream": true
+      }
+    ]
+  },
+  "zumbido": {
+    "subtitle": "subtitles.sussurros.zumbido",
+    "sounds": [
+      "sussurros:zumbido_1"
+    ]
+  },
+  "ranger": {
+    "subtitle": "subtitles.sussurros.ranger",
+    "sounds": [
+      "sussurros:ranger_1",
+      "sussurros:ranger_2",
+      "sussurros:ranger_3"
+    ]
+  },
+  "sopro": {
+    "subtitle": "subtitles.sussurros.sopro",
+    "sounds": [
+      "sussurros:sopro_1"
+    ]
+  },
+  "apagao": {
+    "subtitle": "subtitles.sussurros.apagao",
+    "sounds": [
+      "sussurros:apagao_1"
+    ]
+  },
+  "despertar": {
+    "subtitle": "subtitles.sussurros.despertar",
+    "sounds": [
+      "sussurros:despertar_1"
+    ]
+  },
+  "tigela": {
+    "subtitle": "subtitles.sussurros.tigela",
+    "sounds": [
+      "sussurros:tigela_1"
+    ]
+  },
+  "giz": {
+    "subtitle": "subtitles.sussurros.giz",
+    "sounds": [
+      "sussurros:giz_1",
+      "sussurros:giz_2"
+    ]
+  },
+  "sonho": {
+    "subtitle": "subtitles.sussurros.sonho",
+    "sounds": [
+      {
+        "name": "sussurros:sonho_1",
+        "stream": true
+      }
+    ]
+  },
+  "fundo_grave": {
+    "subtitle": "subtitles.sussurros.fundo_grave",
+    "sounds": [
+      {
+        "name": "sussurros:fundo_grave",
+        "stream": true
+      }
+    ]
+  },
+  "fundo_vigia": {
+    "subtitle": "subtitles.sussurros.fundo_vigia",
+    "sounds": [
+      {
+        "name": "sussurros:fundo_vigia",
+        "stream": true
+      }
+    ]
+  },
+  "caca_pulso": {
+    "subtitle": "subtitles.sussurros.caca_pulso",
+    "sounds": [
+      {
+        "name": "sussurros:caca_pulso",
+        "stream": true
+      }
+    ]
+  },
+  "caca_cordas": {
+    "subtitle": "subtitles.sussurros.caca_cordas",
+    "sounds": [
+      {
+        "name": "sussurros:caca_cordas",
+        "stream": true
+      }
+    ]
+  },
+  "caca_tema": {
+    "subtitle": "subtitles.sussurros.caca_tema",
+    "sounds": [
+      {
+        "name": "sussurros:caca_tema",
+        "stream": true
+      }
+    ]
+  },
+  "avesso_ar": {
+    "subtitle": "subtitles.sussurros.avesso_ar",
+    "sounds": [
+      {
+        "name": "sussurros:avesso_ar",
+        "stream": true
+      }
+    ]
   }
 }
