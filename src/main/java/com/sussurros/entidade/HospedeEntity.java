@@ -24,6 +24,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
+import com.sussurros.assombracao.Percepcao;
 import com.sussurros.registro.ModSons;
 
 /**
@@ -48,6 +49,11 @@ public class HospedeEntity extends PathfinderMob {
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> OLHOS_VISUAIS =
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> SUMINDO =
+			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+
+	/** Quando ele some na frente do jogador, dissolve por este tempo em vez de piscar para fora (ticks). */
+	public static final int TICKS_FADE = 4;
 
 	public enum Modo {
 		OBSERVAR,  // fica parado, olhando. Some quando é visto por tempo demais.
@@ -105,6 +111,9 @@ public class HospedeEntity extends PathfinderMob {
 	private int naTelaTicks = 0;         // vulto: quantos ticks já passou na tela
 	private int limiteNaTela = -1;       // vulto: quanto aguenta na borda da tela (sorteado na primeira vez)
 	private int atrasoMirado = -1;       // vulto: ticks entre ser mirado e sumir (sorteado na hora)
+	private int fadeRestante = 0;        // servidor: ticks até ser descartado, depois de começar a dissolver
+	private int fadeInicioCliente = -1;  // cliente: idade (ticks) em que começou a dissolver
+	private boolean avisaVigia = true;   // se esta manifestação é "sentida" quando olha de fora da tela
 
 	// Espreita
 	private int reposicoes = 0;
@@ -151,6 +160,36 @@ public class HospedeEntity extends PathfinderMob {
 		boolean eventoVisual = this.eventoOrigem == Evento.PRESENCA || this.eventoOrigem == Evento.ESPREITA
 				|| this.eventoOrigem == Evento.CACA || this.eventoOrigem == Evento.ATRAS;
 		this.entityData.set(OLHOS_VISUAIS, eventoVisual && h % 4 == 0);
+		// Sete em cada dez manifestações são sentidas quando olham de fora da tela. As outras chegam sem
+		// aviso nenhum: sensação que nunca falha vira radar. Também sai do ID, para não gastar sorteio.
+		this.avisaVigia = (h / 7) % 10 < 7;
+	}
+
+	/** Esta manifestação dá ao jogador a sensação de estar sendo olhado? (ver Sentidos) */
+	public boolean avisaVigia() {
+		return this.avisaVigia;
+	}
+
+	/** Já começou a dissolver: para todos os efeitos, não está mais lá. */
+	public boolean isSumindo() {
+		return this.entityData.get(SUMINDO);
+	}
+
+	/** Só no cliente: de 1 (inteiro) a 0 (sumiu), para o desenho. */
+	public float alfaVisual(float parcial) {
+		if (this.fadeInicioCliente < 0) {
+			return 1.0F;
+		}
+		float passado = (this.tickCount - this.fadeInicioCliente) + parcial;
+		return Math.max(0.0F, 1.0F - passado / TICKS_FADE);
+	}
+
+	@Override
+	public void onSyncedDataUpdated(EntityDataAccessor<?> dado) {
+		super.onSyncedDataUpdated(dado);
+		if (SUMINDO.equals(dado) && this.level().isClientSide() && this.isSumindo() && this.fadeInicioCliente < 0) {
+			this.fadeInicioCliente = this.tickCount;
+		}
 	}
 
 	public String getIdManifestacao() {
@@ -238,6 +277,7 @@ public class HospedeEntity extends PathfinderMob {
 		builder.define(AVISTADO_VISUAL, false);
 		builder.define(VARIANTE_VISUAL, 0);
 		builder.define(OLHOS_VISUAIS, false);
+		builder.define(SUMINDO, false);
 	}
 
 	public boolean isObservando() {
@@ -285,6 +325,14 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
+		// Dissolvendo: o Diretor já foi avisado do sumiço; falta só o corpo desaparecer para o jogador.
+		if (this.fadeRestante > 0) {
+			if (--this.fadeRestante == 0) {
+				this.discard();
+			}
+			return;
+		}
+
 		// Sem alvo válido (por exemplo, depois de recarregar o mundo): some.
 		if (this.alvo == null || this.alvo.isRemoved() || !this.alvo.isAlive()
 				|| this.alvo.level() != level || this.distanceToSqr(this.alvo) > 110 * 110) {
@@ -309,7 +357,7 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
-		boolean percebido = Diretor.estaVendo(this.alvo, this, CONE_PERCEBEU);
+		boolean percebido = Diretor.estaVendo(this.alvo, this, Percepcao.conePercebeu(this.alvo));
 		boolean encarado = percebido && Diretor.estaVendo(this.alvo, this, CONE_ENCAROU);
 		this.foraDaTelaTicks = percebido ? 0 : this.foraDaTelaTicks + 1;
 		if (encarado) {
@@ -576,7 +624,7 @@ public class HospedeEntity extends PathfinderMob {
 
 	/** Igual, com o motivo para o log (0.4.2a-test). O motivo não muda nada do comportamento. */
 	public void sumir(ServerLevel level, boolean comSom, String motivo) {
-		if (this.isRemoved()) {
+		if (this.isRemoved() || this.fadeRestante > 0) {
 			return;
 		}
 		if (comSom) {
@@ -594,6 +642,15 @@ public class HospedeEntity extends PathfinderMob {
 		}
 		if (this.alvo != null) {
 			Diretor.criaturaSumiu(this.alvo, this, motivo);
+		}
+		// Na frente do jogador ele dissolve em quatro ticks; "piscar para fora" parecia um mob sendo apagado.
+		// O vulto distante continua sumindo de um quadro para o outro: é o que deixa a dúvida.
+		if (this.modo != Modo.VULTO && this.foraDaTelaTicks == 0 && this.jaAvistada) {
+			this.fadeRestante = TICKS_FADE;
+			this.entityData.set(SUMINDO, true);
+			this.getNavigation().stop();
+			this.setDeltaMovement(0, 0, 0);
+			return;
 		}
 		this.discard();
 	}

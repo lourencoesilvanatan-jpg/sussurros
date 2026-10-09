@@ -25,7 +25,6 @@ import net.minecraft.world.phys.Vec3;
  * Diretor quanto às cenas compostas sem transformar cada cena em uma coleção de regras de spawn.
  */
 final class Aparicao {
-	private static final double CONE_TELA_SEGURA = 0.57;
 	private static final int MAX_RECENTES = 8;
 
 	private Aparicao() {
@@ -196,7 +195,7 @@ final class Aparicao {
 	private static boolean naTela(ServerPlayer p, BlockPos chao) {
 		Vec3 ponto = Vec3.atCenterOf(chao).add(0, 1.2, 0);
 		Vec3 direcao = ponto.subtract(p.getEyePosition()).normalize();
-		return p.getViewVector(1.0F).dot(direcao) > CONE_TELA_SEGURA;
+		return p.getViewVector(1.0F).dot(direcao) > Percepcao.coneSeguro(p);
 	}
 
 	private static boolean temCobertura(ServerLevel level, ServerPlayer p, BlockPos chao) {

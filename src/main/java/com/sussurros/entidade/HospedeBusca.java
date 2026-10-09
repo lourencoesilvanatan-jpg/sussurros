@@ -13,6 +13,7 @@ import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.Depuracao;
 import com.sussurros.assombracao.Diretor;
+import com.sussurros.assombracao.Percepcao;
 
 /**
  * Cérebro de busca do Hóspede.
@@ -35,7 +36,6 @@ final class HospedeBusca {
     private static final int MAX_PONTOS_BUSCA = 4;
     private static final int TEMPO_MAX_BUSCA = 300;
     private static final int TEMPO_DESISTINDO = 45;
-    private static final double CONE_TELA_SEGURA = 0.57;
 
     private Estado estado = Estado.ULTIMA_POSICAO;
     private Vec3 ultimaPosicaoConhecida = Vec3.ZERO;
@@ -304,7 +304,7 @@ final class HospedeBusca {
         }
         // Não escolhe um ponto que esteja claramente no campo de visão atual.
         Vec3 ponto = new Vec3(chao.getX() + 0.5, chao.getY() + 1.2, chao.getZ() + 0.5);
-        if (d < 20 && alvo.getViewVector(1.0F).dot(ponto.subtract(alvo.getEyePosition()).normalize()) > CONE_TELA_SEGURA) {
+        if (d < 20 && alvo.getViewVector(1.0F).dot(ponto.subtract(alvo.getEyePosition()).normalize()) > Percepcao.coneSeguro(alvo)) {
             return false;
         }
         return level.getBlockState(chao).isAir();

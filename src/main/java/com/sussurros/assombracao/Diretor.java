@@ -51,6 +51,9 @@ import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.assombracao.selecao.Seletor;
+import com.sussurros.rede.PacoteEfeito;
+import com.sussurros.rede.PacoteSentidos;
+import com.sussurros.rede.Rede;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -228,6 +231,7 @@ public final class Diretor {
 
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
+			Percepcao.limpar();
 			Agenda.limpar();
 			Atmosfera.limpar();
 			contadorManifestacao = 0;
@@ -244,6 +248,20 @@ public final class Diretor {
 		return estado(p);
 	}
 
+
+	/** O que o cliente deste jogador foi mandado sentir por último (para os testes e para o comando memoria). */
+	public static PacoteSentidos sentidos(ServerPlayer p) {
+		return estado(p).sentidos;
+	}
+
+	public static String testarSentidos(ServerPlayer p, float peso, float vigia, float caca, float neblina, int flags) {
+		return Sentidos.forcar(p, peso, vigia, caca, neblina, flags, 120);
+	}
+
+	public static String testarEfeito(ServerPlayer p, PacoteEfeito.Tipo tipo, int ticks) {
+		Rede.efeito(p, tipo, ticks, 1.0F);
+		return "Efeito " + tipo + " por " + ticks + " ticks.";
+	}
 
 	// Compatibilidade interna: mantém as chamadas curtas durante a refatoração.
 	static void agendar(ServerLevel level, int atrasoTicks, Runnable acao) {
@@ -545,6 +563,9 @@ public final class Diretor {
 		} else if (fase >= 1 && !criaturaPresente) {
 			decidir(level, p, m, e, fase, escuro, inq, calma, v, seg, tick, rnd);
 		}
+
+		// O que o cliente dele deve mostrar e tocar (cor, borda, neblina, trilha). Só apresentação.
+		Sentidos.atualizar(p, e, fase, calma, noite, tick);
 
 		m.salvar();
 	}
@@ -2367,7 +2388,7 @@ public final class Diretor {
 			if (d < distMin || d > distMax) {
 				continue;
 			}
-			if (foraDaTela && pontoNaFrente(p, new Vec3(pt.x(), pt.y() + 1.5, pt.z()), HospedeEntity.CONE_PERCEBEU)) {
+			if (foraDaTela && pontoNaFrente(p, new Vec3(pt.x(), pt.y() + 1.5, pt.z()), Percepcao.conePercebeu(p))) {
 				continue;
 			}
 			bons.add(pt);
@@ -2649,7 +2670,7 @@ public final class Diretor {
 	/** O ponto (na altura do corpo dele) está dentro da sua tela agora? */
 	static boolean naTela(ServerPlayer p, BlockPos chao) {
 		// Mais largo que PERCEBEU: evita materialização na borda do FOV real em 16:9/FOV 70.
-		return pontoNaFrente(p, new Vec3(chao.getX() + 0.5, chao.getY() + 1.5, chao.getZ() + 0.5), HospedeEntity.CONE_TELA_SEGURA);
+		return pontoNaFrente(p, new Vec3(chao.getX() + 0.5, chao.getY() + 1.5, chao.getZ() + 0.5), Percepcao.coneSeguro(p));
 	}
 
 	/** Luz que realmente ilumina um lugar (à noite o céu conta bem menos). */
@@ -3811,7 +3832,7 @@ public final class Diretor {
 		Vec3 corpo = alvo.position().add(0, alvo.getBbHeight() * 0.6, 0);
 		Vec3 direcao = corpo.subtract(olho).normalize();
 		double dot = p.getViewVector(1.0F).dot(direcao);
-		return dot > limiar && p.hasLineOfSight(alvo);
+		return dot > limiar && Percepcao.linhaDeVisao(p, alvo);
 	}
 
 	/**

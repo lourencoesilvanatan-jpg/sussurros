@@ -33,7 +33,40 @@ public final class ModSons {
 		MADEIRA,    // madeira tensionando
 		ARRASTO,    // algo pesado arrastado devagar
 		ESTALO,     // estalo seco, como galho pisado
-		GRAVE       // baque surdo e grave
+		GRAVE,      // baque surdo e grave
+
+		// --- 0.9: o tema e as variações dele ---
+		ASSOBIO,        // um pedaço da cantiga assobiado de longe: o aviso que mente
+		CANTAROLAR,     // a cantiga de boca fechada, grave
+		CAIXA_MUSICA,   // a Caixa de Música, limpa
+		CAIXA_GASTA,    // a mesma, mais lenta e desafinada
+		CAIXA_ARRUINADA, // quase irreconhecível, com a nota errada
+		CAIXA_QUEBRADA, // duas notas e um tranco
+
+		// --- 0.9: efeitos ---
+		BATIMENTO,   // um batimento de coração
+		ARRANHAR,    // unhas em madeira ou pedra
+		PANCADA,     // batida surda numa parede
+		SUSSURRO_VOZ, // sussurro que não dá para entender
+		CHAMADO,     // chamado distante, entre bicho e gente
+		SINO_LONGE,  // sino ao longe
+		VENTO_OCO,   // vento numa fresta
+		ZUMBIDO,     // zumbido de ouvido
+		RANGER,      // madeira rangendo
+		SOPRO,       // alguém soprando uma chama
+		APAGAO,      // tudo some
+		DESPERTAR,   // acordar de repente
+		TIGELA,      // cerâmica raspando
+		GIZ,         // giz na pedra
+		SONHO,       // a passagem para o sonho
+
+		// --- 0.9: camadas em loop, tocadas pelo cliente (ver TrilhaCliente) ---
+		FUNDO_GRAVE,
+		FUNDO_VIGIA,
+		CACA_PULSO,
+		CACA_CORDAS,
+		CACA_TEMA,
+		AVESSO_AR
 	}
 
 	private static final Map<Som, SoundEvent> SONS = new EnumMap<>(Som.class);
@@ -48,6 +81,11 @@ public final class ModSons {
 			Registry.register(BuiltInRegistries.SOUND_EVENT, ResourceKey.create(Registries.SOUND_EVENT, id), evento);
 			SONS.put(som, evento);
 		}
+	}
+
+	/** O evento de som registrado, para quem precisa tocá-lo de outro jeito (o cliente, um bloco). */
+	public static SoundEvent evento(Som som) {
+		return SONS.get(som);
 	}
 
 	/** Toca um som próprio no mundo. Volume acima de 1 só aumenta o alcance (16 blocos x volume). */

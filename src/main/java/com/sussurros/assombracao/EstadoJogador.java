@@ -17,6 +17,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.entidade.HospedeEntity;
+import com.sussurros.rede.PacoteSentidos;
 
 /**
  * Tudo o que o Diretor sabe sobre um jogador NESTA sessão (não é salvo no disco).
@@ -255,6 +256,23 @@ final class EstadoJogador {
 	final List<BlockPos> portas = new ArrayList<>();
 	final List<BlockPos> tochas = new ArrayList<>();
 	final List<BlockPos> janelas = new ArrayList<>();
+
+	// --- Sentidos (0.9): o que o cliente deste jogador mostra e toca. Só apresentação. ---
+	/** O último pacote calculado. Os testes leem daqui, porque jogador de teste não recebe pacote. */
+	PacoteSentidos sentidos = PacoteSentidos.NEUTRO;
+	/** Valores impostos por comando de teste, enquanto durar. */
+	@Nullable PacoteSentidos sentidosForcados;
+	long sentidosForcadosAte = -1;
+	/** Sensação de estar sendo olhado sem ninguém ali (o aviso que mente). */
+	long vigiaFalsaAte = -1;
+	float vigiaFalsaForca;
+	long neblinaAte = -1;
+	float neblinaForca;
+	/** Janela em que os próprios passos ecoam. */
+	long ecoPassoAte = -1;
+	long semMusicaAte = -1;
+	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
+	long cacaAvisoAte = -1;
 
 	// --- Lugar atual ---
 	long ultimoChunk = Long.MIN_VALUE;

@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import com.sussurros.Sussurros;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
+import com.sussurros.rede.PacoteSentidos;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 
@@ -47,6 +48,25 @@ public class TestesDeServidor {
 		}
 		helper.runAfterDelay(2L + eventos.length * 10L + 20L, () -> {
 			Diretor.pararCenas(jogador);
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
+	/** Na fase 4 o cliente tem de ser mandado sentir peso; na fase 0, nada. */
+	@GameTest(maxTicks = 200)
+	public void osSentidosAcompanhamAFase(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criar(helper, GameType.SURVIVAL, 4, 2, 4);
+		Diretor.esquecer(jogador);
+		helper.runAfterDelay(45, () -> {
+			PacoteSentidos calmo = Diretor.sentidos(jogador);
+			helper.assertTrue(calmo.peso() < 0.05F, "fase 0 deveria ter peso quase zero, veio " + calmo.peso());
+			helper.assertTrue(calmo.caca() == 0.0F, "sem caçada, caca deveria ser zero");
+			Diretor.definirFase(jogador, 4);
+		});
+		helper.runAfterDelay(100, () -> {
+			PacoteSentidos pesado = Diretor.sentidos(jogador);
+			helper.assertTrue(pesado.peso() >= 0.6F, "fase 4 deveria pesar pelo menos 0,6, veio " + pesado.peso());
 			JogadorDeTeste.remover(jogador);
 			helper.succeed();
 		});

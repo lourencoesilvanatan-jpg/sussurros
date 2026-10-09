@@ -681,7 +681,7 @@ final class Atmosfera {
 		Vec3 dir = pos.subtract(olho);
 		if (dir.lengthSqr() < 0.001) return true;
 		dir = dir.normalize();
-		return p.getLookAngle().dot(dir) > 0.58; // cone largo (~55°) para não materializar na borda
+		return p.getLookAngle().dot(dir) > Percepcao.coneSeguro(p); // fora da tela de verdade deste jogador
 	}
 
 	private static double distancia(ServerPlayer p, Vec3 v) {
