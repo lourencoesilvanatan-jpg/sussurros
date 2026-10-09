@@ -14,6 +14,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
@@ -21,6 +22,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 
+import com.sussurros.Sussurros;
 import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
@@ -60,6 +62,69 @@ public class TestesDeCliente implements FabricClientGameTest {
 			sentidos(context, mundo);
 			cacada(context, mundo);
 		}
+		// Um segundo mundo, de terreno normal, só para a dimensão: o mundo de cima é plano, e num mundo plano
+		// não dá para ver se os morros de lá são os mesmos daqui.
+		try (TestSingleplayerContext mundo = context.worldBuilder().setUseConsistentSettings(false).create()) {
+			mundo.getClientLevel().waitForChunksRender();
+			avessoEmTerrenoNormal(context, mundo);
+		}
+	}
+
+	/**
+	 * Num mundo de terreno normal: a altura do chão em nove pontos fora da cópia tem de ser a mesma dos dois
+	 * lados, e o jogador não pode chegar dentro de um bloco. As alturas vão para o log do jogo.
+	 */
+	private static void avessoEmTerrenoNormal(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		mundo.getServer().runCommand("difficulty peaceful");
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("weather clear");
+		mundo.getServer().runCommand("execute as @p run sussurros fase 3");
+		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~ 0 5");
+		context.waitTicks(40);
+		context.takeScreenshot("50-terreno-normal-antes");
+		int[][] pontos = {{-30, -30}, {0, -30}, {30, -30}, {-30, 0}, {30, 0}, {-30, 30}, {0, 30}, {30, 30}, {22, 22}};
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		int[] daqui = mundo.getServer().computeOnServer(server -> alturas(server.overworld(), partida, pontos));
+		mundo.getServer().runCommand("execute as @p run sussurros teste avesso");
+		context.waitTicks(160);
+		mundo.getClientLevel().waitForChunksRender();
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel la = server.getLevel(Avesso.DIMENSAO);
+			conferir(la != null && p.level() == la, "deveria estar na dimensão");
+			conferir(!p.isInWall(), "não pode chegar dentro de um bloco");
+			int[] deLa = alturas(la, partida, pontos);
+			int iguais = 0;
+			StringBuilder texto = new StringBuilder();
+			for (int i = 0; i < pontos.length; i++) {
+				iguais += Math.abs(daqui[i] - deLa[i]) <= 1 ? 1 : 0;
+				texto.append(daqui[i]).append('/').append(deLa[i]).append(' ');
+			}
+			Sussurros.LOGGER.info("[teste] alturas do chão, mundo normal/avesso: {}({} de {} iguais)", texto, iguais, pontos.length);
+			// Árvore conta como chão no mundo normal e não existe do outro lado: por isso não se exige os nove.
+			conferir(iguais >= 5, "o terreno de lá deveria ser o mesmo daqui: " + texto);
+		});
+		context.takeScreenshot("51-terreno-normal-do-outro-lado");
+		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~ 120 0");
+		context.waitTicks(20);
+		context.takeScreenshot("52-terreno-normal-do-outro-lado-virado");
+		mundo.getServer().runCommand("execute as @p run sussurros teste avesso voltar");
+		context.waitTicks(100);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			conferir(p.level() == server.overworld() && p.blockPosition().equals(partida), "deveria voltar ao ponto de onde saiu");
+		});
+	}
+
+	private static int[] alturas(ServerLevel level, BlockPos centro, int[][] pontos) {
+		int[] resultado = new int[pontos.length];
+		for (int i = 0; i < pontos.length; i++) {
+			int x = centro.getX() + pontos[i][0];
+			int z = centro.getZ() + pontos[i][1];
+			level.getChunk(x >> 4, z >> 4);
+			resultado[i] = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+		}
+		return resultado;
 	}
 
 	/**
