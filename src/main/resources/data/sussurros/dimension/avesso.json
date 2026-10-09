@@ -1,0 +1,11 @@
+{
+  "type": "sussurros:avesso",
+  "generator": {
+    "type": "minecraft:noise",
+    "biome_source": {
+      "type": "minecraft:fixed",
+      "biome": "sussurros:avesso"
+    },
+    "settings": "minecraft:overworld"
+  }
+}

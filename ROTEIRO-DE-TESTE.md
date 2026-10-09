@@ -4,7 +4,13 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
-Versão 0.9.0-alpha4, quarta parte da expansão:
+Versão 0.9.0-alpha5, quinta parte da expansão:
+
+- a maior novidade até aqui. Não há o que fazer para encontrá-la: jogue normalmente, numa sobrevivência longa, e durma quando for noite.
+
+Se, ao abrir o seu mundo, o jogo mostrar um aviso sobre "configurações experimentais", pode confirmar: é só porque o mod acrescenta coisas ao mundo.
+
+Da versão 0.9.0-alpha4, que você ainda não jogou:
 
 - coisas novas para encontrar no mundo, fora de casa. Vale explorar a pé e olhar em volta, de dia e de noite.
 
@@ -52,6 +58,7 @@ Se quiser ajudar mais, responda sem descrever o que viu:
 - Teve algum item que você **não entendeu para que serve**, mesmo depois de usar algumas vezes?
 - Algum item pareceu **forte demais** (resolve tudo) ou **inútil**?
 - Em algum momento pareceu **injusto**?
+- Em algum momento o jogo **travou** por um instante (um segundo ou mais parado)? Se sim, o que você estava fazendo?
 - De 0 a 10, quanto a sessão te deixou desconfortável?
 
 ## Já conferido antes desta versão
@@ -69,5 +76,6 @@ Você não precisa repetir isto. Fica registrado para quem programa.
 - As receitas carregam e aparecem no livro na hora certa.
 - O acontecimento novo foi exercitado em duas situações num servidor de verdade e fotografado dentro do jogo.
 - O que há de novo para encontrar no mundo foi gerado e usado por um jogador de mentira, e fotografado.
+- A maior novidade desta versão foi percorrida de ponta a ponta dentro do jogo, numa máquina do GitHub, com fotos e verificações.
 
 O que nenhum teste automático mede: se assusta, e como soa. Isso é com você.

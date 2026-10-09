@@ -11,7 +11,8 @@
 			"com.sussurros.teste.TestesDaCacada",
 			"com.sussurros.teste.TestesDosItens",
 			"com.sussurros.teste.TestesDoVeu",
-			"com.sussurros.teste.TestesDosLugares"
+			"com.sussurros.teste.TestesDosLugares",
+			"com.sussurros.teste.TestesDoAvesso"
 		],
 		"fabric-client-gametest": [
 			"com.sussurros.teste.TestesDeCliente"
