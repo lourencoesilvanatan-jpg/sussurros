@@ -46,6 +46,9 @@ public final class JogadorDeTeste {
 	/** O primeiro bloco de ar acima do chão, numa coluna relativa à origem da estrutura do teste. */
 	public static BlockPos chao(GameTestHelper helper, int dx, int dz) {
 		BlockPos coluna = helper.absolutePos(new BlockPos(dx, 0, dz));
+		// Carrega o chunk antes de perguntar a altura: num chunk ainda não carregado a resposta é o fundo do
+		// mundo, e o jogador nasceria dentro da rocha-mãe (acontecia às vezes, longe da estrutura do teste).
+		helper.getLevel().getChunk(coluna);
 		int y = helper.getLevel().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, coluna.getX(), coluna.getZ());
 		return new BlockPos(coluna.getX(), y, coluna.getZ());
 	}
@@ -71,6 +74,8 @@ public final class JogadorDeTeste {
 		Connection conexao = new Connection(PacketFlow.SERVERBOUND);
 		new EmbeddedChannel(conexao);
 		level.getServer().getPlayerList().placeNewPlayer(conexao, jogador, cookie);
+		// O modo de jogo de verdade, não só o que a criatura consulta: em criativo os itens não são gastos.
+		jogador.setGameMode(modo);
 		modo.updatePlayerAbilities(jogador.getAbilities());
 		Vec3 pos = helper.absoluteVec(new Vec3(x, y, z));
 		jogador.teleportTo(level, pos.x, pos.y, pos.z, java.util.Set.of(), 0.0F, 0.0F, false);

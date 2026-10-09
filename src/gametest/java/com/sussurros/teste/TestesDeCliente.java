@@ -1,8 +1,30 @@
 package com.sussurros.teste;
 
+import java.util.Locale;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LanternBlock;
+import net.minecraft.world.level.block.state.BlockState;
+
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+
+import com.sussurros.assombracao.Diretor;
+import com.sussurros.bloco.CinzaEspalhadaBlock;
+import com.sussurros.bloco.LampiaoPalidoBlock;
+import com.sussurros.bloco.TigelaBlockEntity;
+import com.sussurros.bloco.TigelaOferendaBlock;
+import com.sussurros.registro.ModBlocos;
+import com.sussurros.registro.ModItems;
 
 /**
  * Testes que abrem o jogo de verdade, entram num mundo e tiram fotos (./gradlew runClientGameTest).
@@ -26,9 +48,154 @@ public class TestesDeCliente implements FabricClientGameTest {
 			context.takeScreenshot("02-criatura-de-perto");
 			context.waitTicks(60);
 
+			itens(context, mundo);
 			sentidos(context, mundo);
 			cacada(context, mundo);
 		}
+	}
+
+	/**
+	 * Os blocos e itens da 0.9 numa bancada de pedra, de dia: cada estado de cada bloco, as duas direções da
+	 * linha, os ossos caídos, a vela aos pés e os ícones no inventário. Confere desenho, recorte e posição.
+	 */
+	private static void itens(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runCommand("weather clear");
+		// A câmera anda por coordenadas absolutas, sempre com os pés no chão: em sobrevivência, um salto
+		// relativo para cima vira queda, e o salto de volta enterra o jogador (aconteceu na primeira versão).
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		// De frente para o norte: daqui em diante "na frente" é z negativo.
+		camera(mundo, partida, 0, 0, 35);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = p.level();
+			BlockPos pe = p.blockPosition();
+			for (BlockPos pos : BlockPos.betweenClosed(pe.offset(-5, -1, -9), pe.offset(5, 4, 9))) {
+				level.setBlockAndUpdate(pos.immutable(), pos.getY() < pe.getY() ? Blocks.STONE.defaultBlockState() : Blocks.AIR.defaultBlockState());
+			}
+			BlockState cinza = ModBlocos.CINZA_ESPALHADA.defaultBlockState();
+			// Uma linha de três, de oeste a leste, e os estágios do desgaste ao lado.
+			CinzaEspalhadaBlock.Estado[] fileira = {CinzaEspalhadaBlock.Estado.INTACTA, CinzaEspalhadaBlock.Estado.INTACTA,
+					CinzaEspalhadaBlock.Estado.INTACTA, CinzaEspalhadaBlock.Estado.RISCADA, CinzaEspalhadaBlock.Estado.GASTA,
+					CinzaEspalhadaBlock.Estado.ROMPIDA};
+			for (int i = 0; i < fileira.length; i++) {
+				level.setBlockAndUpdate(pe.offset(i - 4, 0, -2), cinza.setValue(CinzaEspalhadaBlock.ESTADO, fileira[i]));
+			}
+			// Uma linha de norte a sul, e as pegadas viradas para os quatro lados.
+			for (int i = 0; i < 3; i++) {
+				level.setBlockAndUpdate(pe.offset(4, 0, -2 - i), cinza.setValue(CinzaEspalhadaBlock.FRENTE, Direction.EAST));
+			}
+			Direction[] rumos = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+			for (int i = 0; i < 4; i++) {
+				level.setBlockAndUpdate(pe.offset(i - 3, 0, -3), cinza.setValue(CinzaEspalhadaBlock.ESTADO, CinzaEspalhadaBlock.Estado.PEGADA)
+						.setValue(CinzaEspalhadaBlock.FRENTE, rumos[i]));
+			}
+			// Os lampiões: as quatro chamas no chão e, atrás, as quatro penduradas.
+			LampiaoPalidoBlock.Chama[] chamas = LampiaoPalidoBlock.Chama.values();
+			for (int i = 0; i < chamas.length; i++) {
+				BlockState lampiao = ModBlocos.LAMPIAO_PALIDO.defaultBlockState().setValue(LampiaoPalidoBlock.COMBUSTIVEL, 3)
+						.setValue(LampiaoPalidoBlock.CHAMA, chamas[i]);
+				BlockPos noChao = pe.offset(i * 2 - 3, 0, -5);
+				BlockPos pendurado = pe.offset(i * 2 - 3, 1, -7);
+				level.setBlockAndUpdate(noChao, lampiao);
+				level.setBlockAndUpdate(pendurado.above(), Blocks.STONE.defaultBlockState());
+				level.setBlockAndUpdate(pendurado, lampiao.setValue(LanternBlock.HANGING, true));
+				// Sem isto, em um segundo todos voltariam à chama calma.
+				LampiaoPalidoBlock.perturbar(level, noChao, 0, chamas[i], 20 * 600);
+				LampiaoPalidoBlock.perturbar(level, pendurado, 0, chamas[i], 20 * 600);
+			}
+			// As tigelas: vazia, com um pão, com cinzas.
+			TigelaOferendaBlock.Conteudo[] conteudos = TigelaOferendaBlock.Conteudo.values();
+			for (int i = 0; i < conteudos.length; i++) {
+				BlockPos pos = pe.offset(i * 2 - 2, 0, -4);
+				BlockState tigela = ModBlocos.TIGELA_OFERENDA.defaultBlockState();
+				level.setBlockAndUpdate(pos, tigela);
+				if (conteudos[i] != TigelaOferendaBlock.Conteudo.VAZIA && level.getBlockEntity(pos) instanceof TigelaBlockEntity t) {
+					t.guardar(level, new ItemStack(Items.BREAD), tigela);
+					if (conteudos[i] == TigelaOferendaBlock.Conteudo.CINZAS) {
+						t.esvaziar(level, level.getBlockState(pos), TigelaOferendaBlock.Conteudo.CINZAS);
+					}
+				}
+			}
+			p.getInventory().clearContent();
+			for (ItemStack item : new ItemStack[] {new ItemStack(ModItems.CINZA_PALIDA, 8), new ItemStack(ModItems.LAMPIAO_PALIDO),
+					new ItemStack(ModItems.TIGELA_OFERENDA), new ItemStack(ModItems.CAIXA_DE_MUSICA), new ItemStack(ModItems.OSSOS_DE_AGOURO, 4),
+					new ItemStack(ModItems.VELA_PALIDA)}) {
+				p.getInventory().add(item);
+			}
+		});
+		context.waitTicks(30);
+		context.takeScreenshot("03-itens-bancada");
+		camera(mundo, partida, 0, -1, 62);
+		context.waitTicks(10);
+		context.takeScreenshot("04-itens-de-cima");
+		camera(mundo, partida, 0, -1, 12);
+		context.waitTicks(10);
+		context.takeScreenshot("05-itens-lampioes");
+		// De noite, para ver a luz de cada chama.
+		mundo.getServer().runCommand("time set midnight");
+		context.waitTicks(30);
+		context.takeScreenshot("06-itens-lampioes-de-noite");
+		mundo.getServer().runCommand("time set noon");
+
+		// Os ossos: quatro desfechos, vistos de cima. Cada jogada cai 1,6 bloco à frente.
+		camera(mundo, partida, 0, 5, 60);
+		context.waitTicks(10);
+		String[] desfechos = {"silencio", "tregua", "conta", "presenca"};
+		for (int i = 0; i < desfechos.length; i++) {
+			mundo.getServer().runCommand("execute as @p run sussurros teste ossos " + desfechos[i]);
+			context.waitTicks(12);
+			context.takeScreenshot("07-ossos-" + (i + 1) + "-" + desfechos[i]);
+			mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
+			context.waitTicks(4);
+		}
+		// O último desfecho o chama em até seis segundos. Com ele ali, os ossos que "apontam" têm para onde:
+		// o jogador se vira para ele antes de jogar, então na foto a fila tem de aparecer de pé na tela.
+		context.waitTicks(140);
+		mundo.getServer().runCommand("execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] feet run tp @s ~ ~ ~ ~ ~");
+		context.waitTicks(4);
+		mundo.getServer().runCommand("execute as @p run sussurros teste ossos apontam");
+		mundo.getServer().runCommand("execute as @p at @s run tp @s ~ ~ ~ ~ 60");
+		context.waitTicks(12);
+		context.takeScreenshot("07-ossos-5-apontam");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		camera(mundo, partida, 0, 5, 60);
+		context.waitTicks(4);
+
+		// A vela aos pés, e os ícones no inventário.
+		mundo.getServer().runOnServer(server -> Diretor.acenderVela(server.getPlayerList().getPlayers().get(0)));
+		camera(mundo, partida, 0, 7, 50);
+		context.waitTicks(10);
+		context.takeScreenshot("08-vela-acesa");
+		context.setScreen(() -> new InventoryScreen(Minecraft.getInstance().player));
+		context.waitTicks(10);
+		context.takeScreenshot("09-inventario");
+		context.setScreen(() -> null);
+		// Desmonta a bancada (fica só o piso de pedra) e devolve o jogador ao ponto de partida, de costas para ela.
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = p.level();
+			for (BlockPos pos : BlockPos.betweenClosed(partida.offset(-5, 0, -9), partida.offset(5, 4, 9))) {
+				level.setBlockAndUpdate(pos.immutable(), Blocks.AIR.defaultBlockState());
+			}
+			p.getInventory().clearContent();
+			p.setHealth(p.getMaxHealth());
+			Diretor.esquecer(p);
+		});
+		mundo.getServer().runCommand("kill @e[tag=sussurros_ossos]");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_oferenda]");
+		mundo.getServer().runCommand("kill @e[type=item]");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/** Põe o jogador no chão, a "dx" e "dz" blocos do ponto de partida, olhando para o norte com a inclinação dada. */
+	private static void camera(TestSingleplayerContext mundo, BlockPos partida, int dx, int dz, int inclinacao) {
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 %d",
+				partida.getX() + dx + 0.5, partida.getY(), partida.getZ() + dz + 0.5, inclinacao));
 	}
 
 	/** A caçada vista pelo jogador: o aviso, ele parado ao longe, e o que sobra na tela quando ele chega. */

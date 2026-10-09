@@ -13,6 +13,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 
+import com.sussurros.bloco.CinzaEspalhadaBlock;
+
 /**
  * Sistema reutilizável de escolha de pontos para aparições.
  *
@@ -86,6 +88,10 @@ final class Aparicao {
 			Vec3 alvo = pontoRelativo(p, angulo, distancia);
 			BlockPos chao = acharChao(level, alvo.x, p.getY(), alvo.z);
 			if (chao == null || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+				continue;
+			}
+			// Ele não aparece colado numa Linha de Cinza que ainda segura.
+			if (CinzaEspalhadaBlock.linhaPerto(level, chao, 2) != null) {
 				continue;
 			}
 

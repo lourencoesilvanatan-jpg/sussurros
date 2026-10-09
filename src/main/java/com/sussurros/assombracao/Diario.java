@@ -11,7 +11,7 @@ import net.minecraft.sounds.SoundSource;
  * O texto de cada página está nos arquivos de tradução (lang/pt_br.json).
  */
 public final class Diario {
-	public static final int TOTAL_PAGINAS = 25;
+	public static final int TOTAL_PAGINAS = 28;
 
 	private Diario() {
 	}

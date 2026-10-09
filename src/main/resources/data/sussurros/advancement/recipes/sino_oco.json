@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_cinza_palida": {
+      "conditions": {
+        "items": [
+          {
+            "items": "sussurros:cinza_palida"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "sussurros:sino_oco"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_cinza_palida"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "sussurros:sino_oco"
+    ]
+  }
+}

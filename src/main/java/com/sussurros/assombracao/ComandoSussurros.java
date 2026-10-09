@@ -279,6 +279,32 @@ public final class ComandoSussurros {
 																ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 																return 1;
 															})))))));
+			// Itens (0.9)
+			LiteralArgumentBuilder<CommandSourceStack> testeOssos = Commands.literal("ossos");
+			for (String d : new String[] {"nada", "silencio", "tregua", "apontam", "presenca", "amigo", "conta"}) {
+				testeOssos.then(Commands.literal(d).executes(ctx -> {
+					String msg = Diretor.testarOssos(ctx.getSource().getPlayerOrException(), d);
+					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+					return 1;
+				}));
+			}
+			teste.then(testeOssos);
+			teste.then(Commands.literal("oferenda")
+					.then(Commands.literal("aceitar").executes(ctx -> {
+						String msg = Diretor.testarOferenda(ctx.getSource().getPlayerOrException(), true);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("recusar").executes(ctx -> {
+						String msg = Diretor.testarOferenda(ctx.getSource().getPlayerOrException(), false);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					})));
+			teste.then(Commands.literal("conta").executes(ctx -> {
+				String msg = Diretor.resumoDaConta(ctx.getSource().getPlayerOrException());
+				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+				return 1;
+			}));
 			LiteralArgumentBuilder<CommandSourceStack> testeEfeito = Commands.literal("efeito");
 			for (PacoteEfeito.Tipo tipo : PacoteEfeito.Tipo.values()) {
 				testeEfeito.then(Commands.literal(tipo.name().toLowerCase())

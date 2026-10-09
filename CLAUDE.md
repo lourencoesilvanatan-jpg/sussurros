@@ -29,7 +29,9 @@ Cuidados com os testes de servidor (`JogadorDeTeste`):
 - Ele não carrega o mundo em volta de si. `JogadorDeTeste` força os chunks vizinhos; sem isso, o que nasce a vinte blocos fica parado.
 - A estrutura do teste fica acima do chão e tem piso próprio. Use `criarNoChao`, que o põe no chão de verdade, fora dela.
 - O mundo de teste fica em pacífico: de noite os monstros do jogo matam o jogador de mentira.
-- O log de decisões fica ligado nos testes, em `build/run/gameTest/sussurros-debug.log`. Quando um teste falha, a causa está lá.
+- O log de decisões fica ligado nos testes, em `build/run/gameTest/sussurros-debug.log`. Quando um teste falha, a causa está lá. O arquivo acumula as execuções: a última está no fim.
+- Os testes rodam todos ao mesmo tempo, lado a lado. Os dos itens põem o jogador a cem blocos uns dos outros (`dz` de -100 a -1000), porque a criatura de um teste esbarra no que o outro pôs no chão (uma Linha de Cinza alheia já derrubou um teste da caçada).
+- `./gradlew build` já roda o `runGameTest` junto.
 
 ## Fluxo de trabalho
 
@@ -64,6 +66,9 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Som só para o alvo.** Tudo o que é da assombração de um jogador usa `ModSons.tocarPara`, `tocarNaCabeca` ou `tocarEventoPara`. `ModSons.tocar` é para o que aconteceu de verdade no mundo.
 - **Apresentação não usa o sorteio do mundo.** `Sentidos`, `Cacada` e `Captura` têm gerador próprio ou decidem pelo ID da manifestação: usar `level.getRandom()` ali mudaria os sorteios do Diretor.
 - **Categoria de som.** O silêncio do mod corta "Música" e "Ambiente" do jogador. Som próprio que precisa continuar tocando vai em "Criaturas hostis".
+- **A Conta.** Todo item ligado à criatura soma na dívida escondida (`Conta`). De dentro do tick use `Conta.somar(p, m, item, vezes)` com a Memoria do tick; o `Conta.somar(p, item)` abre e salva a sua própria e é só para uso de item e clique em bloco. Item novo entra no enum `Conta.Item` e ganha a sua cobrança em `Conta.cobrar`.
+- **Item mostrado no mundo.** O que aparece deitado (a oferenda na tigela, os ossos caídos) é um `item_display` criado por `Mostruario`, com etiqueta. Quem cria limpa: ao esvaziar, ao quebrar o bloco e por tempo.
+- **Receita nova.** Além do arquivo em `data/sussurros/recipe`, precisa do desbloqueio em `data/sussurros/advancement/recipes`, senão não aparece no livro de receitas e o dono (que não lê spoiler) não tem como descobrir. `ferramentas/texturas/conferir_recursos.py` confere texturas, modelos e estados de bloco.
 
 ## Onde olhar primeiro
 
@@ -73,3 +78,4 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - `entidade/HospedeEntity`, `entidade/HospedeBusca` e `entidade/Cacada`: a criatura, a busca e a caçada.
 - `assombracao/Sentidos` e `rede/`: o que o servidor manda o cliente mostrar e tocar. `client/`: como ele mostra.
 - `assombracao/Captura` e `assombracao/ApoioCaca`: o que a caçada faz ao jogador.
+- `assombracao/Conta`, `Cantiga`, `Oferenda`, `Ossos`, `ChamasPalidas` e `bloco/`: os itens da 0.9 e a dívida que os une.

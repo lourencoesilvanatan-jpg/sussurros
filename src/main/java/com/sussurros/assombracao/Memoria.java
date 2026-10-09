@@ -86,6 +86,7 @@ public final class Memoria {
 
 	// 0.9: os itens
 	public static final String CAIXA_USOS = "caixa_usos"; // vezes que a Caixa de Música tocou: é assim que ele aprende a cantiga
+	public static final String RECEBEU_CAIXA = "recebeu_caixa"; // a caixa é deixada para o jogador na passagem para a fase 2
 
 	public static final int MAX_INQUIETACAO = 200;
 

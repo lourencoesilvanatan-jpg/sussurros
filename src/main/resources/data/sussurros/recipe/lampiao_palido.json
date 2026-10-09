@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:lantern",
+    "sussurros:cinza_palida",
+    "minecraft:resin_clump"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sussurros:lampiao_palido"
+  }
+}

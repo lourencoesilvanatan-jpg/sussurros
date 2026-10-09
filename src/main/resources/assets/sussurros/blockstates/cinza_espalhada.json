@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "estado=intacta,facing=north": {
+      "model": "sussurros:block/cinza_espalhada_intacta"
+    },
+    "estado=riscada,facing=north": {
+      "model": "sussurros:block/cinza_espalhada_riscada"
+    },
+    "estado=gasta,facing=north": {
+      "model": "sussurros:block/cinza_espalhada_gasta"
+    },
+    "estado=rompida,facing=north": {
+      "model": "sussurros:block/cinza_espalhada_rompida"
+    },
+    "estado=pegada,facing=north": {
+      "model": "sussurros:block/cinza_espalhada_pegada"
+    },
+    "estado=intacta,facing=east": {
+      "model": "sussurros:block/cinza_espalhada_intacta",
+      "y": 90
+    },
+    "estado=riscada,facing=east": {
+      "model": "sussurros:block/cinza_espalhada_riscada",
+      "y": 90
+    },
+    "estado=gasta,facing=east": {
+      "model": "sussurros:block/cinza_espalhada_gasta",
+      "y": 90
+    },
+    "estado=rompida,facing=east": {
+      "model": "sussurros:block/cinza_espalhada_rompida",
+      "y": 90
+    },
+    "estado=pegada,facing=east": {
+      "model": "sussurros:block/cinza_espalhada_pegada",
+      "y": 90
+    },
+    "estado=intacta,facing=south": {
+      "model": "sussurros:block/cinza_espalhada_intacta",
+      "y": 180
+    },
+    "estado=riscada,facing=south": {
+      "model": "sussurros:block/cinza_espalhada_riscada",
+      "y": 180
+    },
+    "estado=gasta,facing=south": {
+      "model": "sussurros:block/cinza_espalhada_gasta",
+      "y": 180
+    },
+    "estado=rompida,facing=south": {
+      "model": "sussurros:block/cinza_espalhada_rompida",
+      "y": 180
+    },
+    "estado=pegada,facing=south": {
+      "model": "sussurros:block/cinza_espalhada_pegada",
+      "y": 180
+    },
+    "estado=intacta,facing=west": {
+      "model": "sussurros:block/cinza_espalhada_intacta",
+      "y": 270
+    },
+    "estado=riscada,facing=west": {
+      "model": "sussurros:block/cinza_espalhada_riscada",
+      "y": 270
+    },
+    "estado=gasta,facing=west": {
+      "model": "sussurros:block/cinza_espalhada_gasta",
+      "y": 270
+    },
+    "estado=rompida,facing=west": {
+      "model": "sussurros:block/cinza_espalhada_rompida",
+      "y": 270
+    },
+    "estado=pegada,facing=west": {
+      "model": "sussurros:block/cinza_espalhada_pegada",
+      "y": 270
+    }
+  }
+}

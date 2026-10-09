@@ -1,0 +1,92 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "sussurros:block/tigela_oferenda",
+    "barro": "sussurros:block/tigela_oferenda",
+    "cinzas": "sussurros:block/tigela_cinzas"
+  },
+  "elements": [
+    {
+      "name": "pe",
+      "from": [5, 0, 5],
+      "to": [11, 1, 11],
+      "faces": {
+        "north": {"uv": [5, 13, 11, 14], "texture": "#barro"},
+        "south": {"uv": [5, 13, 11, 14], "texture": "#barro"},
+        "west": {"uv": [5, 13, 11, 14], "texture": "#barro"},
+        "east": {"uv": [5, 13, 11, 14], "texture": "#barro"},
+        "down": {"uv": [5, 5, 11, 11], "texture": "#barro", "cullface": "down"}
+      }
+    },
+    {
+      "name": "fundo",
+      "from": [4, 1, 4],
+      "to": [12, 2, 12],
+      "faces": {
+        "north": {"uv": [4, 2, 12, 3], "texture": "#barro"},
+        "south": {"uv": [4, 2, 12, 3], "texture": "#barro"},
+        "west": {"uv": [4, 2, 12, 3], "texture": "#barro"},
+        "east": {"uv": [4, 2, 12, 3], "texture": "#barro"},
+        "up": {"uv": [4, 4, 12, 12], "texture": "#barro"},
+        "down": {"uv": [4, 4, 12, 12], "texture": "#barro"}
+      }
+    },
+    {
+      "name": "borda_norte",
+      "from": [3, 2, 3],
+      "to": [13, 4, 4],
+      "faces": {
+        "north": {"uv": [3, 0, 13, 2], "texture": "#barro"},
+        "south": {"uv": [3, 14, 13, 16], "texture": "#barro"},
+        "west": {"uv": [3, 0, 4, 2], "texture": "#barro"},
+        "east": {"uv": [12, 0, 13, 2], "texture": "#barro"},
+        "up": {"uv": [3, 3, 13, 4], "texture": "#barro"},
+        "down": {"uv": [3, 12, 13, 13], "texture": "#barro"}
+      }
+    },
+    {
+      "name": "borda_sul",
+      "from": [3, 2, 12],
+      "to": [13, 4, 13],
+      "faces": {
+        "north": {"uv": [3, 14, 13, 16], "texture": "#barro"},
+        "south": {"uv": [3, 0, 13, 2], "texture": "#barro"},
+        "west": {"uv": [12, 0, 13, 2], "texture": "#barro"},
+        "east": {"uv": [3, 0, 4, 2], "texture": "#barro"},
+        "up": {"uv": [3, 12, 13, 13], "texture": "#barro"},
+        "down": {"uv": [3, 3, 13, 4], "texture": "#barro"}
+      }
+    },
+    {
+      "name": "borda_oeste",
+      "from": [3, 2, 4],
+      "to": [4, 4, 12],
+      "faces": {
+        "west": {"uv": [4, 0, 12, 2], "texture": "#barro"},
+        "east": {"uv": [4, 14, 12, 16], "texture": "#barro"},
+        "up": {"uv": [3, 4, 4, 12], "texture": "#barro"},
+        "down": {"uv": [3, 4, 4, 12], "texture": "#barro"}
+      }
+    },
+    {
+      "name": "borda_leste",
+      "from": [12, 2, 4],
+      "to": [13, 4, 12],
+      "faces": {
+        "west": {"uv": [4, 14, 12, 16], "texture": "#barro"},
+        "east": {"uv": [4, 0, 12, 2], "texture": "#barro"},
+        "up": {"uv": [12, 4, 13, 12], "texture": "#barro"},
+        "down": {"uv": [12, 4, 13, 12], "texture": "#barro"}
+      }
+    },
+    {
+      "name": "cinzas",
+      "from": [4, 2, 4],
+      "to": [12, 3, 12],
+      "faces": {
+        "up": {"uv": [4, 4, 12, 12], "texture": "#cinzas"}
+      }
+    }
+  ]
+}

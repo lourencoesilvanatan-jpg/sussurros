@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_caixa_de_musica": {
+      "conditions": {
+        "items": [
+          {
+            "items": "sussurros:caixa_de_musica"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "sussurros:caixa_de_musica"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_caixa_de_musica"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "sussurros:caixa_de_musica"
+    ]
+  }
+}

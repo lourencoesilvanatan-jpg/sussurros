@@ -504,3 +504,70 @@ MARCA curada (dormiu com a vela acesa)
 - `/sussurros teste sentidos <peso> <vigia> <caca> <neblina> [flags]`: impõe os quatro valores por dois minutos.
 - `/sussurros teste efeito piscar|apagao|acordar [ticks]`.
 - `/sussurros evento eco_passos|vigia|neblina|cantiga|prenuncio|caca`.
+
+## 0.9.0-alpha2 — itens e a Conta
+
+### A Conta
+
+```
+CONTA +2 item=CAIXA total=5 limite=8
+CONTA esfriou total=4 limite=8
+CONTA aviso=1/3 como=CHAMAS lampioes=2 tochas=1 total=5 limite=8
+CONTA aviso=2/3 como=CANTIGA_FALHADA total=6 limite=8
+CONTA aviso=3/3 como=ZUMBIDO total=7 limite=8
+CONTA estourou total=8 limite=8 cobraEm=74s
+CONTA cobranca item=VELA como=NO_PROXIMO_USO total=8
+CONTA cobrada na VELA: dura 45s
+CONTA cobrada no OLHO
+```
+
+- `como` do aviso 2 é `SINO` para quem nunca deu corda na caixa.
+- `como` da cobrança: `NO_PROXIMO_USO` (Vela, Olho, Isca, Ossos), `O_SINO_TOCA_SOZINHO`, `DEDILHA_O_FIO`, `A_CAIXA_TOCA_SOZINHA`, `ROMPEU_UMA_LINHA pos=...`, `SEM_LINHA_PERTO->VELA`, `LAMPIOES_FRIOS n=...`.
+- `/sussurros teste conta` mostra o total, o limite e os usos por item de quem rodou o comando.
+
+### Caixa de Música
+
+```
+CAIXA tocou usos=3 som=CAIXA_MUSICA pos=(x,y,z)
+CAIXA ele cantarolou manifestacao=M012 distDaCaixa=14
+CAIXA quebrou
+```
+
+`som` passa a `CAIXA_GASTA` no 4º uso e a `CAIXA_ARRUINADA` no 7º. Na caçada, a isca aparece na busca como `OUVIU_CAIXA`.
+
+### Linha de Cinza
+
+```
+LINHA segurou manifestacao=M031 pos=x, y, z ficou=RISCADA
+LINHA testada na porta pos=x, y, z ficou=GASTA
+LINHA testada de noite pos=x, y, z ficou=RISCADA pegada=sim
+```
+
+### Oferenda
+
+```
+OFERENDA posta item=minecraft:bread pos=x, y, z
+OFERENDA recusada item=minecraft:bread valor=1.0 repetidas=0 chance=0.60
+OFERENDA aceita item=minecraft:bread valor=1.0 repetidas=1 chance=0.36 aceitas=2 seguidas=2 tregua=274s pegadas=3 presente=-
+OFERENDA afronta item=sussurros:vela_palida
+OFERENDA faltou seguidas=1
+OFERENDA faltou: desfeita por 240s
+```
+
+`presente` é o que ele deixou na tigela (`-` quando nada). `/sussurros teste oferenda aceitar|recusar` força a decisão sobre a tigela de quem rodou o comando.
+
+### Ossos de Agouro
+
+```
+OSSOS desfecho=TREGUA jogadaDoDia=2 pos=(x,y,z)
+```
+
+`/sussurros teste ossos <nada|silencio|tregua|apontam|presenca|amigo|conta>` joga com o desfecho escolhido.
+
+### Vela e Chamas Pálidas
+
+```
+VELA apagada antes da hora (o bloco saiu do lugar)
+CHAMA_PALIDA pos=(x,y,z) duracao=214s ativas=1 cota=2
+MIRAGEM fim motivo=CHAMA_PALIDA por=TEMPO pos=(x,y,z)
+```

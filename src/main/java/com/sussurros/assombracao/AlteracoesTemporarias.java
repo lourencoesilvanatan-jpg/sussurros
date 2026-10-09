@@ -46,6 +46,23 @@ final class AlteracoesTemporarias {
 		return true;
 	}
 
+	/**
+	 * Desfaz agora, sem esperar o tempo, a alteração feita nesta posição (a vela soprada antes da hora).
+	 * Como sempre, só desfaz se o bloco ainda for o que o mod colocou.
+	 */
+	static void restaurarAgora(ServerLevel level, BlockPos pos) {
+		Iterator<Alteracao> it = ATIVAS.iterator();
+		while (it.hasNext()) {
+			Alteracao a = it.next();
+			if (a.dimensao().equals(level.dimension()) && a.pos().equals(pos)) {
+				it.remove();
+				if (level.getBlockState(a.pos()).equals(a.colocado())) {
+					level.setBlock(a.pos(), a.original(), 3);
+				}
+			}
+		}
+	}
+
 	static void tick(ServerLevel level, long tick) {
 		if (ATIVAS.isEmpty()) {
 			return;
