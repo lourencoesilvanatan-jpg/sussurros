@@ -26,6 +26,8 @@ public record PacoteSentidos(float peso, float vigia, float caca, float neblina,
 	public static final int FLAG_ECO_PASSO = 2;
 	/** Corta a música do jogo enquanto valer. */
 	public static final int FLAG_SEM_MUSICA = 4;
+	/** O Véu: bichos, amigos e tudo o que é entidade deixam de aparecer. Só o Hóspede aparece. */
+	public static final int FLAG_VEU = 8;
 
 	public static final PacoteSentidos NEUTRO = new PacoteSentidos(0, 0, 0, 0, 0);
 

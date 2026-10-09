@@ -49,6 +49,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			context.waitTicks(60);
 
 			itens(context, mundo);
+			veu(context, mundo);
 			sentidos(context, mundo);
 			cacada(context, mundo);
 		}
@@ -189,6 +190,47 @@ public class TestesDeCliente implements FabricClientGameTest {
 		mundo.getServer().runCommand("kill @e[tag=sussurros_oferenda]");
 		mundo.getServer().runCommand("kill @e[type=item]");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/**
+	 * O Véu, de dia, sobre o piso de pedra que sobrou das fotos dos itens: antes (uma vaca, um suporte com
+	 * armadura e uma tocha na frente), aberto (as entidades somem, a cor e a neblina mudam, a tocha apaga) e
+	 * rasgado pela vela (tudo de volta). É também a única foto que prova que o mixin do cliente carregou.
+	 */
+	private static void veu(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		int x = partida.getX();
+		int y = partida.getY();
+		int z = partida.getZ();
+		camera(mundo, partida, 0, 0, 8);
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros fase 3");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "summon minecraft:cow %d %d %d {NoAI:1b,Tags:[\"sussurros_teste\"]}", x - 2, y, z - 5));
+		mundo.getServer().runCommand(String.format(Locale.ROOT,
+				"summon minecraft:armor_stand %d %d %d {Tags:[\"sussurros_teste\"],equipment:{head:{id:\"minecraft:iron_helmet\"},chest:{id:\"minecraft:iron_chestplate\"}}}",
+				x + 2, y, z - 5));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "setblock %d %d %d minecraft:torch", x, y, z - 4));
+		context.waitTicks(20);
+		context.takeScreenshot("09v1-veu-antes");
+		mundo.getServer().runCommand("execute as @p run sussurros evento veu");
+		context.waitTicks(40);
+		context.takeScreenshot("09v2-veu-aberto");
+		context.waitTicks(120);
+		context.takeScreenshot("09v3-veu-oito-segundos");
+		mundo.getServer().runOnServer(server -> Diretor.acenderVela(server.getPlayerList().getPlayers().get(0)));
+		context.waitTicks(40);
+		context.takeScreenshot("09v4-veu-rasgado-pela-vela");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_teste]");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			Diretor.esquecer(p);
+			p.level().setBlockAndUpdate(partida, Blocks.AIR.defaultBlockState());
+			p.level().setBlockAndUpdate(partida.offset(0, 0, -4), Blocks.AIR.defaultBlockState());
+		});
+		mundo.getServer().runCommand("execute as @p run sussurros fase 0");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", x + 0.5, y, z + 0.5));
 		context.waitTicks(20);
 	}
 

@@ -571,3 +571,18 @@ VELA apagada antes da hora (o bloco saiu do lugar)
 CHAMA_PALIDA pos=(x,y,z) duracao=214s ativas=1 cota=2
 MIRAGEM fim motivo=CHAMA_PALIDA por=TEMPO pos=(x,y,z)
 ```
+
+## 0.9.0-alpha3 — o Véu
+
+```
+SILENCIO_REAL motivo=VEU duracao=35s mobs=0
+VEU abriu duracao=33s luzes=1 porta=sim vidro=sim vulto=sim teste=nao
+VEU vulto=sim
+VEU vulto=nao_coube
+VEU fechou motivo=TEMPO
+VEU fechou motivo=VELA
+```
+
+- `luzes`, `porta` e `vidro` dizem o que foi trocado por miragem. As miragens aparecem depois como `MIRAGEM fim motivo=VEU` e `motivo=LUZ_APAGADA` só se vencerem pelo tempo; fechadas pelo Véu, não deixam linha.
+- `vulto=sim` na abertura quer dizer "vai tentar no meio"; a linha `VEU vulto=` diz se coube.
+- `/sussurros evento veu` abre um Véu de teste, sem respeitar o intervalo.

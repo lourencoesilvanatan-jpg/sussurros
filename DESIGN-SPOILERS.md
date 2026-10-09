@@ -761,3 +761,36 @@ Aparecem sozinhas no livro de receitas do jogo: todas as que levam Cinza Pálida
 ## Diário
 
 Três páginas novas (26 a 28 de 28) ensinam a linha na soleira, a oferenda e o que acontece ao esquecê-la, e a caixa que ele aprende.
+
+---
+# Versão 0.9.0-alpha3 — "O Véu"
+
+Terceira entrega da expansão. É o "eu vi isso mesmo?" do mod, e o ensaio, no mundo normal, das camadas que a dimensão vai usar.
+
+## O Véu
+
+Evento `VEU` (fase 3, categoria MENTE, intensidade 20). Dura de 30 a 60 s. O jogador não sai do lugar.
+
+1. A tela pisca (12 ticks). O mundo troca com a tela fechada: quando abre, já está tudo diferente.
+2. **O que ele sente:** a cor é a do Avesso, a neblina fecha (0,85), a música e o som ambiente somem, a camada sonora do Avesso sobe.
+3. **O que deixa de aparecer:** tudo o que é entidade, menos o Hóspede. Bichos, monstros, itens caídos, quadros, suportes de armadura e os outros jogadores. Eles continuam lá de verdade (dá para esbarrar, ser atacado, falar no chat); só não são desenhados para ele.
+4. **O que está errado em volta**, tudo por miragem: até 16 luzes a 14 blocos aparecem apagadas; uma porta fechada, fora da tela, aparece aberta; um vidro de janela, fora da tela, falta.
+5. **Em metade das vezes**, a partir do meio, ele está parado de lado, a 12–17 blocos, dentro do que a neblina deixa ver. Fica até o fim e some com o Véu.
+6. Outra piscada, e tudo voltou.
+
+Regras:
+
+- Só existe com o mod no cliente. Nunca abre com criatura presente, dentro da vela ou com o jogador em perigo de verdade (pouca vida, dano recente, caindo, na água, dormindo).
+- Enquanto dura, nada novo começa: nem evento, nem cena, nem caçada.
+- **Acender uma Vela Pálida o rasga na hora** (a cor, o som e as luzes voltam).
+- De 30 a 50 minutos entre um e outro. Raro de propósito: repetido, vira efeito especial.
+- Não lê reação, não conta para o aprendizado; conta para o ritmo como qualquer evento.
+- Nada muda no mundo de verdade e quem está ao lado não vê nada.
+
+## O primeiro mixin
+
+`EsconderNoVeuMixin` (cliente) entra em `EntityRenderDispatcher.shouldRender` e responde "não" para as entidades escondidas. Não há evento da Fabric para isso, e esconder pelo servidor exigiria mexer no rastreamento de entidades. É o único mixin do mod; se uma versão nova do jogo mudar esse método, o jogo não abre e o job de fotos acusa.
+
+## De olhos fechados
+
+Mudança geral no cliente: quando a tela está fechada (piscada ou apagão), a cor, a neblina e a borda pulam direto para o valor novo em vez de deslizar. Vale também para o apagão da captura: ao abrir os olhos, o mundo já está como vai ficar.

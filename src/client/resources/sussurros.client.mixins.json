@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "com.sussurros.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"EsconderNoVeuMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

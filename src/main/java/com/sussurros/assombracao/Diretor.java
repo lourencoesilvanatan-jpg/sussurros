@@ -268,6 +268,16 @@ public final class Diretor {
 	}
 
 
+	/** Abre o Véu agora, como o comando de teste (não conta para nada). Devolve null se abriu, ou o motivo. */
+	public static String abrirVeuParaTeste(ServerPlayer p) {
+		return forcarEvento(p, Evento.VEU);
+	}
+
+	/** O Véu está aberto para este jogador? (para os testes) */
+	public static boolean veuAberto(ServerPlayer p) {
+		return Veu.ativo(estado(p), p.level().getGameTime());
+	}
+
 	/** Quantas miragens deste motivo este jogador tem agora (para os testes). */
 	public static int miragensParaTeste(ServerPlayer p, String motivo) {
 		return Miragem.ativas(p, motivo);
@@ -591,6 +601,7 @@ public final class Diretor {
 		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
 		Conta.segundo(level, p, m, e, seg, tick);
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
+		Veu.segundo(level, p, e, tick);
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
@@ -635,7 +646,7 @@ public final class Diretor {
 		// --- Eventos ---
 		// 0.9: trégua comprada (os ossos, ou a oferenda aceita enquanto ele está em casa). O que já começou
 		// termina; nada novo começa.
-		boolean tregua = tick < e.treguaAte || Oferenda.emTregua(e, tick);
+		boolean tregua = tick < e.treguaAte || Oferenda.emTregua(e, tick) || tick < e.veuAte;
 		if (!tregua) {
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
@@ -1023,6 +1034,7 @@ public final class Diretor {
 			case ECO_PASSOS -> Rede.temCliente(p) && p.onGround() && e.velocidade > 1.0;
 			case VIGIA -> Rede.temCliente(p) && level.getGameTime() >= e.vigiaFalsaAte;
 			case NEBLINA -> Rede.temCliente(p) && level.getGameTime() >= e.neblinaAte && level.canSeeSky(p.blockPosition().above());
+			case VEU -> Rede.temCliente(p) && Veu.pode(level, p, e, level.getGameTime(), true);
 			// Ele só assobia a cantiga depois de aprendê-la, e aprende ouvindo a caixa do jogador.
 			case CANTIGA -> m.get(Memoria.CAIXA_USOS) >= CANTIGA_APRENDIDA;
 			case ECO -> !e.acoes.isEmpty();
@@ -1330,6 +1342,10 @@ public final class Diretor {
 				// Sem fonte e sem leitura: não há para onde virar. Conta para o ritmo, não para o aprendizado.
 				Depuracao.log(p, seg, String.format(Locale.ROOT, "NEBLINA forca=%.2f duracao=%ds",
 						e.neblinaForca, (e.neblinaAte - tick) / 20));
+			}
+			case VEU -> {
+				// Sem fonte e sem leitura, como a neblina: não há para onde virar.
+				Veu.abrir(level, p, m, e, tick, e.forcando);
 			}
 			case CANTIGA -> {
 				fonte = assobiar(level, p, rnd);
@@ -3638,6 +3654,11 @@ public final class Diretor {
 		}
 		Conta.somar(p, m, Conta.Item.VELA, 1);
 
+		// A vela rasga o Véu: a cor, o som e as luzes voltam na hora.
+		if (Veu.ativo(e, level.getGameTime())) {
+			Veu.fechar(level, p, e, level.getGameTime(), "VELA");
+		}
+
 		e.zonaX = p.getX();
 		e.zonaY = p.getY();
 		e.zonaZ = p.getZ();
@@ -3796,6 +3817,8 @@ public final class Diretor {
 			case ESPERA -> !temZonaCalma(p) ? "precisa de uma Vela Pálida acesa." : null;
 			case NEBLINA -> !level.canSeeSky(p.blockPosition().above()) ? "precisa estar a céu aberto." : null;
 			case CANTIGA -> null; // por comando ele assobia mesmo sem ter aprendido
+			case VEU -> Veu.pode(level, p, e, level.getGameTime(), false) ? null
+					: "não abre agora (já está aberto, há criatura presente, vela acesa ou você em perigo).";
 			default -> null;
 		};
 	}

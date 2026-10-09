@@ -68,6 +68,8 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Categoria de som.** O silêncio do mod corta "Música" e "Ambiente" do jogador. Som próprio que precisa continuar tocando vai em "Criaturas hostis".
 - **A Conta.** Todo item ligado à criatura soma na dívida escondida (`Conta`). De dentro do tick use `Conta.somar(p, m, item, vezes)` com a Memoria do tick; o `Conta.somar(p, item)` abre e salva a sua própria e é só para uso de item e clique em bloco. Item novo entra no enum `Conta.Item` e ganha a sua cobrança em `Conta.cobrar`.
 - **Item mostrado no mundo.** O que aparece deitado (a oferenda na tigela, os ossos caídos) é um `item_display` criado por `Mostruario`, com etiqueta. Quem cria limpa: ao esvaziar, ao quebrar o bloco e por tempo.
+- **Mixin.** Há um só, no cliente (`EsconderNoVeuMixin`). Nenhum teste local o carrega: só o job de fotos prova que ele ainda encaixa no jogo. Antes de criar outro, veja se um evento da Fabric ou uma miragem resolve.
+- **De olhos fechados.** O que precisa mudar de uma vez na tela muda durante uma piscada (`Rede.efeito(p, PISCAR, ...)` e, no meio dela, o pacote novo): o cliente pula direto para o valor novo enquanto a tela está preta.
 - **Receita nova.** Além do arquivo em `data/sussurros/recipe`, precisa do desbloqueio em `data/sussurros/advancement/recipes`, senão não aparece no livro de receitas e o dono (que não lê spoiler) não tem como descobrir. `ferramentas/texturas/conferir_recursos.py` confere texturas, modelos e estados de bloco.
 
 ## Onde olhar primeiro
@@ -79,3 +81,4 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - `assombracao/Sentidos` e `rede/`: o que o servidor manda o cliente mostrar e tocar. `client/`: como ele mostra.
 - `assombracao/Captura` e `assombracao/ApoioCaca`: o que a caçada faz ao jogador.
 - `assombracao/Conta`, `Cantiga`, `Oferenda`, `Ossos`, `ChamasPalidas` e `bloco/`: os itens da 0.9 e a dívida que os une.
+- `assombracao/Veu` e `client/mixin/`: o Véu e o único mixin do mod.
