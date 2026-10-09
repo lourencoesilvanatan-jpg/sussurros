@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:note_block",
+    "minecraft:iron_nugget",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sussurros:caixa_de_musica"
+  }
+}

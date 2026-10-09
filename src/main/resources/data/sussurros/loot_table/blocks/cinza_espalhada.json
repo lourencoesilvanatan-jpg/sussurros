@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "conditions": [
+        {
+          "block": "sussurros:cinza_espalhada",
+          "condition": "minecraft:block_state_property",
+          "properties": {
+            "estado": "intacta"
+          }
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "sussurros:cinza_palida"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ]
+}

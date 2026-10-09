@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "estado=intacta": {
+      "model": "sussurros:block/cinza_espalhada_intacta"
+    },
+    "estado=riscada": {
+      "model": "sussurros:block/cinza_espalhada_riscada"
+    },
+    "estado=gasta": {
+      "model": "sussurros:block/cinza_espalhada_gasta"
+    },
+    "estado=rompida": {
+      "model": "sussurros:block/cinza_espalhada_rompida"
+    },
+    "estado=pegada": {
+      "model": "sussurros:block/cinza_espalhada_pegada"
+    }
+  }
+}

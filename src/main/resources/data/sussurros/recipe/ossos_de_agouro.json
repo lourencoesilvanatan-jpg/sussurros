@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:bone",
+    "minecraft:bone",
+    "minecraft:string",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 2,
+    "id": "sussurros:ossos_de_agouro"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "conteudo=vazia": {
+      "model": "sussurros:block/tigela_oferenda_vazia"
+    },
+    "conteudo=cheia": {
+      "model": "sussurros:block/tigela_oferenda_cheia"
+    },
+    "conteudo=cinzas": {
+      "model": "sussurros:block/tigela_oferenda_cinzas"
+    }
+  }
+}

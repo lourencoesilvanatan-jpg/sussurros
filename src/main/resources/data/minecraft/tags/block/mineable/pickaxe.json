@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "sussurros:lampiao_palido",
+      "required": false
+    },
+    {
+      "id": "sussurros:tigela_oferenda",
+      "required": false
+    }
+  ]
+}

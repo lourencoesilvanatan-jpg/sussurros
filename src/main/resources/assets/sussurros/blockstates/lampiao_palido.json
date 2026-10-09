@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "chama=apagada,hanging=false": {
+      "model": "sussurros:block/lampiao_palido_apagada"
+    },
+    "chama=apagada,hanging=true": {
+      "model": "sussurros:block/lampiao_palido_apagada_pendurado"
+    },
+    "chama=calma,hanging=false": {
+      "model": "sussurros:block/lampiao_palido_calma"
+    },
+    "chama=calma,hanging=true": {
+      "model": "sussurros:block/lampiao_palido_calma_pendurado"
+    },
+    "chama=inquieta,hanging=false": {
+      "model": "sussurros:block/lampiao_palido_inquieta"
+    },
+    "chama=inquieta,hanging=true": {
+      "model": "sussurros:block/lampiao_palido_inquieta_pendurado"
+    },
+    "chama=fria,hanging=false": {
+      "model": "sussurros:block/lampiao_palido_fria"
+    },
+    "chama=fria,hanging=true": {
+      "model": "sussurros:block/lampiao_palido_fria_pendurado"
+    }
+  }
+}

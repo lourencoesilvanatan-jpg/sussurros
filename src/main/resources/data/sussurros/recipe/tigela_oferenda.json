@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:bowl",
+    "minecraft:clay_ball",
+    "sussurros:cinza_palida"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sussurros:tigela_oferenda"
+  }
+}

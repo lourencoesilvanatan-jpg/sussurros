@@ -1,0 +1,6 @@
+{
+  "parent": "sussurros:block/molde_cinza_espalhada",
+  "textures": {
+    "cinza": "sussurros:block/cinza_espalhada_gasta"
+  }
+}
