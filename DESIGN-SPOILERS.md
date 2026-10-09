@@ -822,3 +822,56 @@ Uma estaca de cerca, um fardo de feno e uma abóbora esculpida, com o rosto vira
 - **O que faz:** nada, até chegar. Nas noites em que está a 9 blocos, a obsessão sobe 2 por noite.
 
 É o único elemento do mod que o jogador acompanha de um dia para o outro sem nenhum evento.
+
+---
+# Versão 0.9.0-alpha5 — "O Avesso"
+
+Quinta entrega da expansão: a dimensão. O jogador nunca escolhe ir; é levado, fica pouco e volta ao ponto de onde saiu.
+
+## O lugar
+
+Dimensão `sussurros:avesso`. Usa o ruído de terreno do mundo normal com a mesma semente, então os morros, os rios e as cavernas são os mesmos, nas mesmas coordenadas. O bioma é um só (`sussurros:avesso`), morto: sem árvore, sem planta, sem bicho, sem minério, sem estrutura; grama e água cinzentas; céu parado, sem sol nem lua; pouca luz. Na superfície tudo é grama e terra, mesmo onde no mundo normal é deserto ou neve.
+
+No cliente valem as camadas que o Véu já usava: a cor do Avesso, a neblina perto, a camada sonora própria e nenhuma música.
+
+## A cópia
+
+Na chegada, a região em volta do jogador (29 x 16 x 29 blocos) é copiada do mundo normal para as mesmas coordenadas. É a casa dele, vazia e apagada:
+
+- tudo o que dá luz some (tochas, lanternas, fogo) ou vira pedra (blocos de luz inteiros); fornalha e fogueira ficam apagadas; lava parada vira obsidiana;
+- portas de madeira ficam abertas;
+- baús e outros recipientes vêm vazios; geradores de monstros não vêm; nenhuma entidade é copiada (quadros, suportes, bichos);
+- a cópia sobrescreve o que houver lá, inclusive o que sobrou da visita anterior.
+
+**A cada visita a cópia erra mais:** da segunda em diante faltam blocos de parede à altura do jogador, dois a mais por visita (até seis).
+
+O mundo de verdade não é tocado.
+
+## Lá dentro
+
+- Não se quebra bloco, não se põe bloco e não se abre recipiente (senão a cópia viraria fábrica de itens). Portas, alçapões e porteiras funcionam.
+- **Primeira visita:** só o lugar. Nada acontece. De 45 a 75 s.
+- **Da segunda em diante:** depois de vinte segundos ele está lá, de lado, parado, a 10–16 blocos, até o fim. De 60 a 150 s. Ele não caça lá (por enquanto).
+
+## Sair
+
+Sempre é "acordar": apagão, e ele está de volta no ponto de onde saiu, com tudo o que tinha.
+
+- o tempo da visita acaba;
+- ele se afasta mais de 40 blocos do ponto de chegada;
+- ele clica na cópia de uma cama;
+- ele leva um dano que mataria (a vida fica em dois corações).
+
+Depois de voltar: por 2 a 5 minutos, uma ou duas luzes da casa de verdade aparecem apagadas (miragem), e o Diretor o deixa em paz por dois minutos.
+
+## Entrar
+
+Nesta versão, só dormindo: da fase 3 em diante, ao deitar, 15% de chance na primeira vez e 8% nas seguintes, com pelo menos três dias de jogo entre uma visita e outra. Dois segundos depois de deitar, em vez de dormir, ele é levado. A noite não passa. Só com o mod no cliente.
+
+Ficou para depois: ser levado numa parte das capturas, e a caçada lá dentro.
+
+## Segurança
+
+- Enquanto ele está lá, a Memoria guarda `avesso_dentro` e o ponto de volta. Se o jogo fechar com ele dentro, ao entrar de novo ele é devolvido no primeiro segundo.
+- Num mundo em que a dimensão não exista, ninguém é levado.
+- Em criativo e espectador as travas de lá não valem (para quem quiser olhar o lugar por comando).

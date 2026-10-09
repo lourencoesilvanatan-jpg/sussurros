@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha5
+
+Quinta parte da expansão, e a maior até aqui. O que é, só jogando.
+
 ## 0.9.0-alpha4
 
 Quarta parte da expansão. Entram coisas novas para encontrar no mundo, fora de casa.

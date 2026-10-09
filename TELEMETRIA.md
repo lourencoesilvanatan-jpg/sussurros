@@ -604,3 +604,17 @@ BONECO SUMIU
 - `eixo=0`: atravessa-se de norte a sul. `n` é a contagem depois desta travessia (volta a 0 quando o Véu abre).
 - Noite sem linha `BONECO`: ou já andou, ou alguém olhava, ou não achou lugar válido.
 - `/sussurros teste lugar soleira` ergue uma cinco blocos à frente; `/sussurros teste lugar boneco` faz uma noite passar para ele.
+
+## 0.9.0-alpha5 — o Avesso
+
+```
+AVESSO levado origem=SONO visita=1 teste=nao
+AVESSO chegou visita=1 ancora=x, y, z duracao=58s erros=0
+AVESSO vulto=sim
+AVESSO saindo motivo=TEMPO
+AVESSO voltou motivo=TEMPO ficou=58s visitas=1 residuo=2 pos=x, y, z
+```
+
+- `origem`: `SONO` ou `COMANDO`. `motivo` da saída: `TEMPO`, `LONGE`, `CAMA`, `MORTE`, `COMANDO`, `SEM_VISITA` (estava lá sem visita em curso: o jogo fechou com ele dentro).
+- `erros` é quantos blocos de parede faltam na cópia. `residuo` é quantas luzes da casa de verdade ficaram apagadas por miragem na volta.
+- `/sussurros teste avesso` leva agora, sem contar como visita; `/sussurros teste avesso voltar` traz de volta.

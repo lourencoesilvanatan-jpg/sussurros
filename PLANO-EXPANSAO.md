@@ -212,9 +212,9 @@ Filtro de tela como sinal principal é lido como truque barato. A cor drenada fi
 | O Véu | Feito (0.9.0-alpha3), com dois testes de servidor e quatro fotos. Entrou o primeiro mixin do mod (cliente), para esconder entidades |
 | A Soleira e o Boneco | Feito (0.9.0-alpha4), com dois testes de servidor e três fotos (`Erguidos`) |
 | A Casa do Vigia | A fazer |
-| O Avesso | A fazer |
+| O Avesso | Feito em parte (0.9.0-alpha5): a dimensão, a cópia apagada da casa, a entrada pelo sono, as quatro saídas, a primeira visita vazia e ele presente da segunda em diante. Conferido no teste de cliente (o servidor de teste não carrega dimensões). Falta: ser levado em parte das capturas, a caçada lá dentro, a "medida errada" da terceira visita |
 | O baralho | A fazer |
 | Som da assombração só para o alvo (as chamadas antigas de `ModSons.tocar`) | A fazer |
 | Caçada: lembrar "deslogou no meio" e "fugiu voando" | A fazer |
 
-**Não verificado por ninguém:** como os sons soam; se a caçada assusta ou irrita; se a velocidade está boa contra um jogador de verdade correndo; a pose abaixada em jogo real; se os avisos da Conta são percebidos ou passam batido; se o limite de 6 a 10 é curto ou folgado numa sessão de verdade; se a Linha de Cinza deixa a caçada fácil demais; se o Véu é percebido como parte do mod ou como defeito; se meio minuto é muito ou pouco; se o jogador entende que a Soleira responde a ser atravessada; se o Boneco é notado antes de chegar perto.
+**Não verificado por ninguém:** como os sons soam; se a caçada assusta ou irrita; se a velocidade está boa contra um jogador de verdade correndo; a pose abaixada em jogo real; se os avisos da Conta são percebidos ou passam batido; se o limite de 6 a 10 é curto ou folgado numa sessão de verdade; se a Linha de Cinza deixa a caçada fácil demais; se o Véu é percebido como parte do mod ou como defeito; se meio minuto é muito ou pouco; se o jogador entende que a Soleira responde a ser atravessada; se o Boneco é notado antes de chegar perto; se a primeira visita ao Avesso, em que nada acontece, é tensa ou só vazia; quanto demora o apagão da chegada numa máquina de verdade (a cópia gera chunks na hora).

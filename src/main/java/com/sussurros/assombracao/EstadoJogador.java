@@ -277,6 +277,15 @@ final class EstadoJogador {
 	long veuProximoEm;
 	long veuVultoEm = -1;
 	boolean veuFechou;
+	// --- O Avesso (0.9): a visita em curso. Não é salvo: o que sobrevive a fechar o jogo está na Memoria ---
+	@Nullable
+	BlockPos avessoAncora;
+	long avessoDesde;
+	long avessoAte;
+	int avessoVisita;
+	boolean avessoVulto;
+	boolean avessoTeste;
+	boolean avessoSaindo;
 	// --- A Soleira (0.9): de que lado da porta ele estava na última olhada ---
 	double soleiraFrente = Double.NaN;
 	double soleiraLado;

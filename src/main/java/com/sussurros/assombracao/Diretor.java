@@ -200,6 +200,7 @@ public final class Diretor {
 		EntitySleepEvents.START_SLEEPING.register((entity, sleepingPos) -> {
 			if (entity instanceof ServerPlayer jogador) {
 				aoDormir(jogador, sleepingPos);
+				Avesso.aoDeitar(jogador);
 			}
 		});
 
@@ -267,6 +268,11 @@ public final class Diretor {
 		return estado(p);
 	}
 
+
+	/** Comando de teste: leva ao Avesso agora (sem contar como visita) ou traz de volta. */
+	public static String testarAvesso(ServerPlayer p, boolean ir) {
+		return Avesso.testar(p, ir);
+	}
 
 	/** Comando de teste: ergue a soleira à frente do jogador, ou faz o boneco andar uma noite agora. */
 	public static String testarLugar(ServerPlayer p, String qual) {
@@ -3177,6 +3183,9 @@ public final class Diretor {
 			return;
 		}
 		Memoria m = Memoria.de(p);
+		if (m.get(Avesso.DENTRO) == 1) {
+			return; // não acordou: foi levado da cama
+		}
 		int fase = m.get(Memoria.FASE);
 		RandomSource rnd = level.getRandom();
 

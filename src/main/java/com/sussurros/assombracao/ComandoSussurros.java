@@ -309,6 +309,17 @@ public final class ComandoSussurros {
 				}));
 			}
 			teste.then(testeLugar);
+			teste.then(Commands.literal("avesso")
+					.executes(ctx -> {
+						String msg = Diretor.testarAvesso(ctx.getSource().getPlayerOrException(), true);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					})
+					.then(Commands.literal("voltar").executes(ctx -> {
+						String msg = Diretor.testarAvesso(ctx.getSource().getPlayerOrException(), false);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					})));
 			teste.then(Commands.literal("conta").executes(ctx -> {
 				String msg = Diretor.resumoDaConta(ctx.getSource().getPlayerOrException());
 				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
