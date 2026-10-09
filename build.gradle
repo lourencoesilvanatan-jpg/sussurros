@@ -31,6 +31,18 @@ loom {
 	}
 }
 
+// Testes dentro do jogo. "runGameTest" sobe um servidor sem janela, roda src/gametest e fecha.
+// "runClientGameTest" abre o jogo de verdade e tira fotos; só roda no GitHub (abriria uma janela aqui).
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "sussurros-testes"
+		enableGameTests = true
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	testImplementation 'org.junit.jupiter:junit-jupiter:5.14.3'
