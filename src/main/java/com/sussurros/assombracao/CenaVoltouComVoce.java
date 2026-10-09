@@ -228,7 +228,7 @@ final class CenaVoltouComVoce {
 		int n = 2 + rnd.nextInt(2);
 		for (int i = 0; i < n; i++) {
 			Diretor.agendar(level, i * (9 + rnd.nextInt(4)), () ->
-					level.playSound(null, lugar.x, lugar.y, lugar.z, passo, SoundSource.HOSTILE, volume, 0.75F));
+					ModSons.tocarEventoPara(p, passo, SoundSource.HOSTILE, lugar.x, lugar.y, lugar.z, volume, 0.75F));
 		}
 		boolean comEstalo = rnd.nextFloat() < 0.3F; // mesma chamada de antes, só guardada para o log
 		if (comEstalo) {

@@ -65,7 +65,7 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **RNG.** A telemetria (`Depuracao.log`) nunca pode consumir números aleatórios: isso mudaria as decisões do Diretor.
 - **Textos do jogo.** Só existe `lang/en_us.json`, e ele está em português do Brasil de propósito: é o arquivo que o jogo usa como base em qualquer idioma, então o mod aparece em português mesmo com o jogo em inglês (o dono pediu isso em 09/10/2026). Não crie `pt_br.json` nem traduza para inglês sem ele pedir. Texto novo entra só nesse arquivo.
 - **Spoilers.** `README.md`, `VERSAO-ATUAL.md`, `LEIA-ME.md` e `ROTEIRO-DE-TESTE.md` não detalham eventos. Os detalhes ficam em `DESIGN-SPOILERS.md` e `TELEMETRIA.md`.
-- **Som só para o alvo.** Tudo o que é da assombração de um jogador usa `ModSons.tocarPara`, `tocarNaCabeca` ou `tocarEventoPara`. `ModSons.tocar` é para o que aconteceu de verdade no mundo.
+- **Som só para o alvo.** Tudo o que é da assombração de um jogador usa `ModSons.tocarPara`, `tocarNaCabeca` ou `tocarEventoPara` (este para os sons do próprio jogo: passo, porta, batida). `ModSons.tocar` e `level.playSound(null, ...)` são para o que aconteceu de verdade no mundo. O teste `oSomDaAssombracaoESoDoAlvo` confere com dois jogadores lado a lado; `JogadorDeTeste.sonsRecebidos` conta os sons que chegaram a cada um.
 - **Apresentação não usa o sorteio do mundo.** `Sentidos`, `Cacada` e `Captura` têm gerador próprio ou decidem pelo ID da manifestação: usar `level.getRandom()` ali mudaria os sorteios do Diretor.
 - **Categoria de som.** O silêncio do mod corta "Música" e "Ambiente" do jogador. Som próprio que precisa continuar tocando vai em "Criaturas hostis".
 - **A Conta.** Todo item ligado à criatura soma na dívida escondida (`Conta`). De dentro do tick use `Conta.somar(p, m, item, vezes)` com a Memoria do tick; o `Conta.somar(p, item)` abre e salva a sua própria e é só para uso de item e clique em bloco. Item novo entra no enum `Conta.Item` e ganha a sua cobrança em `Conta.cobrar`.
@@ -76,6 +76,10 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Blocos por cor.** Na 26.2 não existe `Blocks.GRAY_BED`: camas (e outros blocos coloridos) são uma coleção, `Blocks.BED.pick(DyeColor.GRAY)`.
 - **Tags do jogo.** Na 26.2 a tag `dirt` só tem terra; a grama está em `grass_blocks`. Antes de usar uma tag, abra o JSON dela no jar do jogo.
 - **Receita nova.** Além do arquivo em `data/sussurros/recipe`, precisa do desbloqueio em `data/sussurros/advancement/recipes`, senão não aparece no livro de receitas e o dono (que não lê spoiler) não tem como descobrir. `ferramentas/texturas/conferir_recursos.py` confere texturas, modelos e estados de bloco.
+
+## Ler uma sessão do dono
+
+`python ferramentas/log/analisar.py <pasta principal>/run/sussurros-debug.log` monta o relatório da sessão (tem spoilers; é para você, não para ele). Comece por ele antes de abrir o log. Mudança de número vem depois de uma linha desse relatório, não antes. A revisão externa que orienta a fase de ajuste está em `pesquisa/2026-10-09-revisao-externa-0.9.md`, com uma tabela no fim do que já foi conferido e feito.
 
 ## Onde olhar primeiro
 

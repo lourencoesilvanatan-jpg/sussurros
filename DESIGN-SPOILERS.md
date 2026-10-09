@@ -965,3 +965,14 @@ Cada jogador tem um baralho de doze cartas, embaralhado com a semente do mundo, 
 - Esgotado o baralho, ele é embaralhado de novo, em outra ordem.
 
 Quem lê o código sabe quais são as cartas, mas não a ordem delas num mundo: ela só existe depois que o mundo existe.
+
+---
+# Versão 0.9.0-alpha11 — depois da revisão externa
+
+Uma revisão de fora (`pesquisa/2026-10-09-revisao-externa-0.9.md`) propôs que a próxima fase seja de medir e cortar, não de acrescentar. Esta versão faz o que dela era conferência e ferramenta.
+
+- **Sons do jogo usados pela assombração passam a ser só do alvo.** A alpha7 tinha convertido os sons próprios do mod e deixado passar doze sons do próprio jogo: os passos fantasmas, o passo único, o eco de ação, a porta e as batidas do sinal falso, a batida na porta, o som atrás, a porta do presságio e o passo da cena da casa. Um teste novo põe dois jogadores lado a lado e confere que o segundo não recebe nada disso, e que recebe a caixa de música (que é do mundo).
+- **O fundo cai quando o Diretor recua.** No estado `RECUANDO` o "peso" vale a metade: a cor volta um pouco e o fundo grave quase some. Antes o fundo só sabia da fase e da obsessão, e seguia tocando no silêncio depois do pico.
+- **Analisador de log** (`ferramentas/log/analisar.py`): transforma o `sussurros-debug.log` num relatório com fases, ritmo (saídas perceptíveis por hora e intervalo entre elas), criatura, tema, reações, itens e Conta, caçadas e o que não coube.
+
+O primeiro número que o analisador deu, no log de 08/10 (antes da expansão): 45 saídas perceptíveis por hora, mediana de 56 s entre uma e outra, 34 manifestações da criatura por hora. É denso. O passo seguinte é o orçamento de atenção por jogador.

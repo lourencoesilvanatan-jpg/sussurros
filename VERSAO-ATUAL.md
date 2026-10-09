@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha11
+
+Correções por baixo do pano e uma ferramenta de análise das sessões de jogo.
+
 ## 0.9.0-alpha10
 
 Os textos do mod passam a aparecer em português do Brasil em qualquer idioma do jogo.

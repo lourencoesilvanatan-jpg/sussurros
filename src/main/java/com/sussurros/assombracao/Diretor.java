@@ -1861,7 +1861,7 @@ public final class Diretor {
 					estado = level.getBlockState(p.blockPosition().below());
 				}
 				SoundEvent som = estado.getSoundType().getStepSound();
-				level.playSound(null, atras.x, p.getY(), atras.z, som, SoundSource.HOSTILE, 0.5F, 0.85F);
+				ModSons.tocarEventoPara(p, som, SoundSource.HOSTILE, atras.x, p.getY(), atras.z, 0.5F, 0.85F);
 			});
 		}
 	}
@@ -1904,8 +1904,7 @@ public final class Diretor {
 					estado = level.getBlockState(chao.below());
 				}
 				float volume = volumePara(p, pt.x(), pt.y(), pt.z(), 0.34F + n * 0.03F);
-				level.playSound(null, pt.x(), pt.y(), pt.z(), estado.getSoundType().getStepSound(),
-						SoundSource.HOSTILE, volume, 0.76F + n * 0.025F);
+				ModSons.tocarEventoPara(p, estado.getSoundType().getStepSound(), SoundSource.HOSTILE, pt.x(), pt.y(), pt.z(), volume, 0.76F + n * 0.025F);
 			});
 		}
 
@@ -1958,8 +1957,7 @@ public final class Diretor {
 					if (st.isAir()) {
 						st = level.getBlockState(chao.below());
 					}
-					level.playSound(null, pt.x(), pt.y(), pt.z(), st.getSoundType().getStepSound(),
-							SoundSource.HOSTILE, volumePara(p, pt.x(), pt.y(), pt.z(), 0.18F), 0.67F + n * 0.025F);
+					ModSons.tocarEventoPara(p, st.getSoundType().getStepSound(), SoundSource.HOSTILE, pt.x(), pt.y(), pt.z(), volumePara(p, pt.x(), pt.y(), pt.z(), 0.18F), 0.67F + n * 0.025F);
 				}
 			});
 		}
@@ -2001,14 +1999,14 @@ public final class Diretor {
 		// Volume acima de 1 aumenta o ALCANCE (16 blocos x volume), não a altura do som.
 		float volume = volumePara(p, lugar.x, lugar.y, lugar.z, 0.9F);
 		if (porta) {
-			level.playSound(null, lugar.x, y, lugar.z, SoundEvents.WOODEN_DOOR_OPEN, SoundSource.BLOCKS, volume, 0.95F);
+			ModSons.tocarEventoPara(p, SoundEvents.WOODEN_DOOR_OPEN, SoundSource.BLOCKS, lugar.x, y, lugar.z, volume, 0.95F);
 			agendar(level, 18 + rnd.nextInt(14), () ->
-					level.playSound(null, lugar.x, y, lugar.z, SoundEvents.WOODEN_DOOR_CLOSE, SoundSource.BLOCKS, volume, 0.95F));
+					ModSons.tocarEventoPara(p, SoundEvents.WOODEN_DOOR_CLOSE, SoundSource.BLOCKS, lugar.x, y, lugar.z, volume, 0.95F));
 		} else {
 			int golpes = 2 + rnd.nextInt(3);
 			for (int i = 0; i < golpes; i++) {
 				agendar(level, i * (6 + rnd.nextInt(5)), () ->
-						level.playSound(null, lugar.x, y, lugar.z, som, SoundSource.HOSTILE, volume, 0.9F));
+						ModSons.tocarEventoPara(p, som, SoundSource.HOSTILE, lugar.x, y, lugar.z, volume, 0.9F));
 			}
 		}
 		return new Vec3(lugar.x, y, lugar.z);
@@ -2073,7 +2071,7 @@ public final class Diretor {
 	private static void passoUnico(ServerLevel level, ServerPlayer p) {
 		Vec3 atras = pontoRelativo(p, 180, 2.5);
 		BlockState estado = level.getBlockState(p.blockPosition().below());
-		level.playSound(null, atras.x, p.getY(), atras.z, estado.getSoundType().getStepSound(), SoundSource.HOSTILE, 0.35F, 0.8F);
+		ModSons.tocarEventoPara(p, estado.getSoundType().getStepSound(), SoundSource.HOSTILE, atras.x, p.getY(), atras.z, 0.35F, 0.8F);
 	}
 
 	/** Alguém bate na porta. Três vezes. */
@@ -2089,8 +2087,7 @@ public final class Diretor {
 		}
 		float volume = volumePara(p, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5, 0.35F);
 		for (int i = 0; i < 3; i++) {
-			agendar(level, i * 9, () -> level.playSound(null, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5,
-					SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, volume, 1.4F));
+			agendar(level, i * 9, () -> ModSons.tocarEventoPara(p, SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, porta.getX() + 0.5, porta.getY() + 0.5, porta.getZ() + 0.5, volume, 1.4F));
 		}
 		return porta;
 	}
@@ -2210,7 +2207,7 @@ public final class Diretor {
 					lugar = ecoCurto;
 					tipo = "ECO_CURTO_DA_ACAO";
 					float vol = volumePara(p, lugar.x, lugar.y, lugar.z, 0.55F);
-					level.playSound(null, lugar.x, lugar.y, lugar.z, acao.som(), SoundSource.HOSTILE, vol, 0.82F);
+					ModSons.tocarEventoPara(p, acao.som(), SoundSource.HOSTILE, lugar.x, lugar.y, lugar.z, vol, 0.82F);
 				} else {
 					lugar = pontoRelativo(p, 130 + rnd.nextDouble() * 100, 12 + rnd.nextInt(12));
 					tipo = "COISA_NO_TUNEL";
