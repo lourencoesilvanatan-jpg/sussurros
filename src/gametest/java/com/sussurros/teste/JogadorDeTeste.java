@@ -1,5 +1,7 @@
 package com.sussurros.teste;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
@@ -10,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
+import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.CommonListenerCookie;
@@ -53,6 +57,26 @@ public final class JogadorDeTeste {
 		return new BlockPos(coluna.getX(), y, coluna.getZ());
 	}
 
+	/** O canal de mentira de cada jogador: tudo o que o servidor manda para ele fica guardado ali. */
+	private static final Map<UUID, EmbeddedChannel> CANAIS = new HashMap<>();
+
+	/**
+	 * Quantos sons o servidor mandou este jogador ouvir desde a última vez que isto foi chamado.
+	 * É o único jeito de um teste saber quem "ouviu" o quê: o jogador de mentira não tem alto-falante, mas
+	 * os pacotes que chegariam ao jogo dele ficam na fila.
+	 */
+	public static int sonsRecebidos(ServerPlayer jogador) {
+		EmbeddedChannel canal = CANAIS.get(jogador.getUUID());
+		int sons = 0;
+		Object pacote;
+		while (canal != null && (pacote = canal.readOutbound()) != null) {
+			if (pacote instanceof ClientboundSoundPacket || pacote instanceof ClientboundSoundEntityPacket) {
+				sons++;
+			}
+		}
+		return sons;
+	}
+
 	public static ServerPlayer criar(GameTestHelper helper, GameType modo, double x, double y, double z) {
 		ServerLevel level = helper.getLevel();
 		// O log de decisões fica ligado nos testes: quando um falha, é nele que está o porquê
@@ -72,7 +96,7 @@ public final class JogadorDeTeste {
 			}
 		};
 		Connection conexao = new Connection(PacketFlow.SERVERBOUND);
-		new EmbeddedChannel(conexao);
+		CANAIS.put(cookie.gameProfile().id(), new EmbeddedChannel(conexao));
 		level.getServer().getPlayerList().placeNewPlayer(conexao, jogador, cookie);
 		// O modo de jogo de verdade, não só o que a criatura consulta: em criativo os itens não são gastos.
 		jogador.setGameMode(modo);

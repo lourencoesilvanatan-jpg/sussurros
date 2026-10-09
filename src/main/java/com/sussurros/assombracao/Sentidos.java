@@ -39,6 +39,11 @@ final class Sentidos {
 		} else if (e.contexto == ContextoMundo.Tipo.CASA && !noite) {
 			peso *= 0.8F;
 		}
+		// Quando o Diretor recua (depois de um pico, de uma captura), o peso cai à metade: a cor volta um pouco e o
+		// fundo grave quase some. O silêncio depois do susto só é silêncio se o fundo também calar.
+		if (e.estado == EstadoDiretor.RECUANDO) {
+			peso *= 0.5F;
+		}
 
 		float vigia = 0;
 		float caca = 0;

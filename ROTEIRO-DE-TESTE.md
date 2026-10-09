@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha11: correções por baixo do pano (uma delas só aparece jogando com amigos) e uma ferramenta para eu ler as suas sessões mais depressa. Não muda nada no que você precisa fazer.
+
 Versão 0.9.0-alpha10: os textos do mod (nomes de itens, mensagens, legendas de som, páginas) agora aparecem em português do Brasil, mesmo com o jogo em inglês. O resto do jogo continua no idioma que você escolheu em Options > Language.
 
 Versão 0.9.0-alpha9: fecha o plano da expansão. A partir desta versão, a ordem em que as coisas acontecem muda de um mundo para outro. Não muda nada no que você precisa fazer.

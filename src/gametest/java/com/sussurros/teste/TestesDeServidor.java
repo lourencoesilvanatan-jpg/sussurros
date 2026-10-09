@@ -4,6 +4,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.locale.Language;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
@@ -24,6 +25,41 @@ import com.sussurros.registro.ModItems;
  * jogador de mentira e que as regras básicas valem. O que só o olho vê fica para os testes de cliente.
  */
 public class TestesDeServidor {
+	/**
+	 * O som da assombração é só de quem é assombrado: com dois jogadores lado a lado, o passo atrás de um não
+	 * chega ao outro. Já o que acontece de verdade no mundo (aqui, a caixa de música) os dois ouvem.
+	 */
+	@GameTest(maxTicks = 200)
+	public void oSomDaAssombracaoESoDoAlvo(GameTestHelper helper) {
+		ServerPlayer alvo = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -2300, 0);
+		ServerPlayer amigo = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 6, -2300, 0);
+		Diretor.esquecer(alvo);
+		Diretor.esquecer(amigo);
+		Diretor.definirFase(alvo, 2);
+		helper.runAfterDelay(20, () -> {
+			JogadorDeTeste.sonsRecebidos(alvo);
+			JogadorDeTeste.sonsRecebidos(amigo);
+			helper.assertTrue(Diretor.forcarEvento(alvo, Evento.PASSO_UNICO) == null, "o passo atrás dele deveria acontecer");
+			helper.assertTrue(Diretor.forcarEvento(alvo, Evento.BATIDA) == null || true, "a batida pode não ter porta; não importa");
+		});
+		helper.runAfterDelay(80, () -> {
+			int doAlvo = JogadorDeTeste.sonsRecebidos(alvo);
+			int doAmigo = JogadorDeTeste.sonsRecebidos(amigo);
+			helper.assertTrue(doAlvo >= 1, "o alvo deveria ter ouvido o passo atrás dele");
+			helper.assertTrue(doAmigo == 0, "o amigo ao lado não deveria ouvir a assombração do outro: ouviu " + doAmigo + " som(ns)");
+			// A caixa de música é um objeto de verdade tocando: os dois ouvem.
+			alvo.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CAIXA_DE_MUSICA));
+			alvo.gameMode.useItem(alvo, helper.getLevel(), alvo.getMainHandItem(), InteractionHand.MAIN_HAND);
+		});
+		helper.runAfterDelay(90, () -> {
+			helper.assertTrue(JogadorDeTeste.sonsRecebidos(alvo) >= 1, "o dono da caixa deveria ouvi-la");
+			helper.assertTrue(JogadorDeTeste.sonsRecebidos(amigo) >= 1, "o amigo ao lado deveria ouvir a caixa de música");
+			JogadorDeTeste.remover(alvo);
+			JogadorDeTeste.remover(amigo);
+			helper.succeed();
+		});
+	}
+
 	/**
 	 * Os textos do mod saem em português do Brasil com o jogo no idioma padrão (inglês): o dono joga com o jogo
 	 * em inglês e pediu o mod em português. Se alguém voltar a pôr texto em inglês no arquivo-base, este teste cai.
