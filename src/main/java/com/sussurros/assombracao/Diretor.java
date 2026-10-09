@@ -268,6 +268,15 @@ public final class Diretor {
 	}
 
 
+	/** Comando de teste: ergue a soleira à frente do jogador, ou faz o boneco andar uma noite agora. */
+	public static String testarLugar(ServerPlayer p, String qual) {
+		ServerLevel level = p.level();
+		Memoria m = Memoria.de(p);
+		String msg = "soleira".equals(qual) ? Erguidos.testarSoleira(level, p, m) : Erguidos.testarBoneco(level, p, m, estado(p));
+		m.salvar();
+		return msg;
+	}
+
 	/** Abre o Véu agora, como o comando de teste (não conta para nada). Devolve null se abriu, ou o motivo. */
 	public static String abrirVeuParaTeste(ServerPlayer p) {
 		return forcarEvento(p, Evento.VEU);
@@ -602,6 +611,7 @@ public final class Diretor {
 		Conta.segundo(level, p, m, e, seg, tick);
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
 		Veu.segundo(level, p, e, tick);
+		Erguidos.segundo(level, p, m, e, fase, noite, seg, tick);
 
 		// --- Pressão (cai mais rápido quando ele está recuando) ---
 		boolean criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
@@ -3197,6 +3207,7 @@ public final class Diretor {
 		// 0.9: quem dormiu a noite inteira pulou a hora da oferenda; ele passou pela tigela enquanto isso.
 		if (p.isSleepingLongEnough()) {
 			Oferenda.aoAcordar(level, p, m, estado(p), fase, level.getGameTime());
+			Erguidos.aoAcordar(level, p, m, estado(p), fase);
 		}
 
 		// Ele deixou algo ao lado da cama enquanto você dormia.

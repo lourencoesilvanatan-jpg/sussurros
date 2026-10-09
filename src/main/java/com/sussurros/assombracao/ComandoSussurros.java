@@ -300,6 +300,15 @@ public final class ComandoSussurros {
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
 					})));
+			LiteralArgumentBuilder<CommandSourceStack> testeLugar = Commands.literal("lugar");
+			for (String qual : new String[] {"soleira", "boneco"}) {
+				testeLugar.then(Commands.literal(qual).executes(ctx -> {
+					String msg = Diretor.testarLugar(ctx.getSource().getPlayerOrException(), qual);
+					ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+					return 1;
+				}));
+			}
+			teste.then(testeLugar);
 			teste.then(Commands.literal("conta").executes(ctx -> {
 				String msg = Diretor.resumoDaConta(ctx.getSource().getPlayerOrException());
 				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);

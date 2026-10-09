@@ -794,3 +794,31 @@ Regras:
 ## De olhos fechados
 
 Mudança geral no cliente: quando a tela está fechada (piscada ou apagão), a cor, a neblina e a borda pulam direto para o valor novo em vez de deslizar. Vale também para o apagão da captura: ao abrir os olhos, o mundo já está como vai ficar.
+
+---
+# Versão 0.9.0-alpha4 — "Lugares"
+
+Quarta entrega da expansão: duas coisas que o mod ergue no mundo (`Erguidos`). Só blocos do próprio jogo, só em lugar vazio, e só com ninguém olhando.
+
+## A Soleira
+
+Uma porta de abeto sozinha na paisagem, entre dois batentes de tijolo de pedra (liso, musgoso e rachado misturados), com uma verga em cima. Uma por jogador.
+
+- **Quando aparece:** fase 2 ou mais, com 12 chunks visitados; a cada 20 s, 20% de chance. De 60 a 100 blocos do jogador, na superfície, fora da tela, a mais de 60 blocos da cama e da porta de casa.
+- **Atravessar** (passar pelo vão, de um lado para o outro): a primeira vez responde com um grave baixo, só para ele; a segunda, com cinco segundos de silêncio; **a terceira abre o Véu**, a porta bate atrás dele e a soleira descansa até o dia seguinte. A contagem não vence com o tempo.
+- Se o Véu não pode abrir naquela hora (criatura presente, vela acesa), a contagem fica em dois e a próxima travessia tenta de novo.
+- É o único jeito de o jogador **escolher** ver o Véu. O intervalo de 30 a 50 minutos do Véu sorteado não vale para ela.
+- Desmontada pelo jogador, ela é esquecida e outra pode nascer em outro lugar.
+
+## O Boneco
+
+Uma estaca de cerca, um fardo de feno e uma abóbora esculpida, com o rosto virado para a cama do jogador.
+
+- **Quando existe:** fase 2 ou mais e uma cama conhecida.
+- **A cada noite está mais perto**, sempre vindo da mesma direção (sorteada no começo do ciclo): a 48, 38, 29, 21, 14 e 9 blocos da cama. Fica duas noites nos 9 blocos e some. Volta de 5 a 8 dias depois, de outro lado.
+- **Derrubar não resolve:** na noite seguinte está de pé, um passo adiante. O que o jogador tirou fica com ele.
+- **Onde pisa:** só chão natural (terra, grama, areia, pedra, cascalho, neve, terracota), a céu aberto, com três blocos livres. Nunca em piso construído nem em telhado. Sem lugar válido naquela noite, fica onde está.
+- **Quando anda:** depois das 20h do jogo, com o lugar velho e o novo fora da tela; ou ao acordar, para quem dormiu a noite inteira.
+- **O que faz:** nada, até chegar. Nas noites em que está a 9 blocos, a obsessão sobe 2 por noite.
+
+É o único elemento do mod que o jogador acompanha de um dia para o outro sem nenhum evento.

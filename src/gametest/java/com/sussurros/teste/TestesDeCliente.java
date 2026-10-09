@@ -19,6 +19,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 
 import com.sussurros.assombracao.Diretor;
+import com.sussurros.assombracao.Memoria;
 import com.sussurros.bloco.CinzaEspalhadaBlock;
 import com.sussurros.bloco.LampiaoPalidoBlock;
 import com.sussurros.bloco.TigelaBlockEntity;
@@ -50,6 +51,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 
 			itens(context, mundo);
 			veu(context, mundo);
+			lugares(context, mundo);
 			sentidos(context, mundo);
 			cacada(context, mundo);
 		}
@@ -231,6 +233,62 @@ public class TestesDeCliente implements FabricClientGameTest {
 		});
 		mundo.getServer().runCommand("execute as @p run sussurros fase 0");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", x + 0.5, y, z + 0.5));
+		context.waitTicks(20);
+	}
+
+	/** O que o mod ergue no mundo: a porta sozinha, vista de frente, e a figura de palha, de longe e de perto. */
+	private static void lugares(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		mundo.getServer().runCommand("time set noon");
+		camera(mundo, partida, 0, 8, 0);
+		context.waitTicks(5);
+		mundo.getServer().runCommand("execute as @p run sussurros teste lugar soleira");
+		context.waitTicks(20);
+		context.takeScreenshot("09w1-soleira");
+
+		// A figura de palha: a cama passa a ser o ponto de partida, e cinco noites passam de uma vez.
+		BlockPos boneco = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			Memoria m = Memoria.de(p);
+			m.set(Memoria.TEM_CAMA, 1);
+			m.set(Memoria.CAMA_X, partida.getX());
+			m.set(Memoria.CAMA_Y, partida.getY());
+			m.set(Memoria.CAMA_Z, partida.getZ());
+			m.salvar();
+			for (int noite = 0; noite < 5; noite++) {
+				Diretor.testarLugar(p, "boneco");
+			}
+			m = Memoria.de(p);
+			return new BlockPos(m.get("boneco_x"), m.get("boneco_y"), m.get("boneco_z"));
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f facing %.2f %.2f %.2f",
+				partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5, boneco.getX() + 0.5, boneco.getY() + 1.6, boneco.getZ() + 0.5));
+		context.waitTicks(20);
+		context.takeScreenshot("09w2-boneco-da-cama");
+		double dx = partida.getX() - boneco.getX();
+		double dz = partida.getZ() - boneco.getZ();
+		double comprimento = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f facing %.2f %.2f %.2f",
+				boneco.getX() + 0.5 + dx / comprimento * 4.0, boneco.getY(), boneco.getZ() + 0.5 + dz / comprimento * 4.0,
+				boneco.getX() + 0.5, boneco.getY() + 1.6, boneco.getZ() + 0.5));
+		context.waitTicks(20);
+		context.takeScreenshot("09w3-boneco-de-perto");
+
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			ServerLevel level = p.level();
+			Memoria m = Memoria.de(p);
+			BlockPos porta = new BlockPos(m.get("soleira_x"), m.get("soleira_y"), m.get("soleira_z"));
+			for (BlockPos pos : BlockPos.betweenClosed(porta.offset(-1, 0, -1), porta.offset(1, 2, 1))) {
+				level.setBlockAndUpdate(pos.immutable(), Blocks.AIR.defaultBlockState());
+			}
+			for (int y = 2; y >= 0; y--) {
+				level.setBlockAndUpdate(boneco.above(y), Blocks.AIR.defaultBlockState());
+			}
+			Diretor.esquecer(p);
+		});
+		mundo.getServer().runCommand("kill @e[type=item]");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}
 

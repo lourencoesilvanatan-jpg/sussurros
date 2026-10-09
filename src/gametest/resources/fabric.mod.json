@@ -10,7 +10,8 @@
 			"com.sussurros.teste.TestesDeServidor",
 			"com.sussurros.teste.TestesDaCacada",
 			"com.sussurros.teste.TestesDosItens",
-			"com.sussurros.teste.TestesDoVeu"
+			"com.sussurros.teste.TestesDoVeu",
+			"com.sussurros.teste.TestesDosLugares"
 		],
 		"fabric-client-gametest": [
 			"com.sussurros.teste.TestesDeCliente"

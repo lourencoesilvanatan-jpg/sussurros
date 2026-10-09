@@ -277,6 +277,9 @@ final class EstadoJogador {
 	long veuProximoEm;
 	long veuVultoEm = -1;
 	boolean veuFechou;
+	// --- A Soleira (0.9): de que lado da porta ele estava na última olhada ---
+	double soleiraFrente = Double.NaN;
+	double soleiraLado;
 	/** O aviso de uma caçada: a trilha sobe um pouco antes de ele aparecer (ou de não aparecer). */
 	long cacaAvisoAte = -1;
 

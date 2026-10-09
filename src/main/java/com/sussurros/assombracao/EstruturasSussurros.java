@@ -151,7 +151,7 @@ final class EstruturasSussurros {
 	}
 
 	@Nullable
-	private static BlockPos procurarSuperficie(ServerLevel level, ServerPlayer p, RandomSource rnd, int minDist, int maxDist, int raioLivre) {
+	static BlockPos procurarSuperficie(ServerLevel level, ServerPlayer p, RandomSource rnd, int minDist, int maxDist, int raioLivre) {
 		for (int tentativa = 0; tentativa < 20; tentativa++) {
 			double ang = Math.toRadians(p.getYRot() + 95 + rnd.nextDouble() * 170);
 			double dist = minDist + rnd.nextInt(Math.max(1, maxDist - minDist + 1));
@@ -230,7 +230,7 @@ final class EstruturasSussurros {
 		}
 	}
 
-	private static boolean longeDaCasa(Memoria m, BlockPos pos, double raio) {
+	static boolean longeDaCasa(Memoria m, BlockPos pos, double raio) {
 		double r2 = raio * raio;
 		if (m.get(Memoria.TEM_CAMA) == 1) {
 			double dx = pos.getX() - m.get(Memoria.CAMA_X);
@@ -245,14 +245,14 @@ final class EstruturasSussurros {
 		return true;
 	}
 
-	private static boolean naTela(ServerPlayer p, Vec3 pos) {
+	static boolean naTela(ServerPlayer p, Vec3 pos) {
 		Vec3 olho = p.getEyePosition();
 		Vec3 dir = pos.subtract(olho);
 		if (dir.lengthSqr() < 0.001) return true;
 		return p.getLookAngle().dot(dir.normalize()) > Percepcao.coneSeguro(p);
 	}
 
-	private static boolean temCenaAtiva(EstadoJogador e) {
+	static boolean temCenaAtiva(EstadoJogador e) {
 		return e.cena != EstadoJogador.Cena.NENHUMA
 				|| e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA
 				|| e.cenaTunel != EstadoJogador.CenaTunel.NENHUMA
