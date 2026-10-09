@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha10
+
+Os textos do mod passam a aparecer em português do Brasil em qualquer idioma do jogo.
+
 ## 0.9.0-alpha9
 
 Fecha o plano da expansão. A ordem em que as coisas acontecem passa a mudar de um mundo para outro.

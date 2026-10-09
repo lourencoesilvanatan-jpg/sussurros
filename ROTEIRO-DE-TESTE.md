@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha10: os textos do mod (nomes de itens, mensagens, legendas de som, páginas) agora aparecem em português do Brasil, mesmo com o jogo em inglês. O resto do jogo continua no idioma que você escolheu em Options > Language.
+
 Versão 0.9.0-alpha9: fecha o plano da expansão. A partir desta versão, a ordem em que as coisas acontecem muda de um mundo para outro. Não muda nada no que você precisa fazer.
 
 Versão 0.9.0-alpha8: mais uma coisa para encontrar no mundo, longe de casa. Vale olhar o horizonte de vez em quando.

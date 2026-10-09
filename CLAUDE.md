@@ -63,6 +63,7 @@ O `Diretor` está sendo dividido em passos. Em cada passo:
 - **Alterações no mundo.** O que é temporário passa por `AlteracoesTemporarias`, que restaura no tempo certo e ao fechar o mundo. Não remova nem coloque blocos de forma permanente sem uma decisão de design (princípio 5 do `ROADMAP.md`).
 - **Testes por comando.** O que é forçado por `/sussurros` (`e.forcando`, `PedidoManifestacao.deComando`) não pode contar para aprendizado, pressão, agenda nem memória.
 - **RNG.** A telemetria (`Depuracao.log`) nunca pode consumir números aleatórios: isso mudaria as decisões do Diretor.
+- **Textos do jogo.** Só existe `lang/en_us.json`, e ele está em português do Brasil de propósito: é o arquivo que o jogo usa como base em qualquer idioma, então o mod aparece em português mesmo com o jogo em inglês (o dono pediu isso em 09/10/2026). Não crie `pt_br.json` nem traduza para inglês sem ele pedir. Texto novo entra só nesse arquivo.
 - **Spoilers.** `README.md`, `VERSAO-ATUAL.md`, `LEIA-ME.md` e `ROTEIRO-DE-TESTE.md` não detalham eventos. Os detalhes ficam em `DESIGN-SPOILERS.md` e `TELEMETRIA.md`.
 - **Som só para o alvo.** Tudo o que é da assombração de um jogador usa `ModSons.tocarPara`, `tocarNaCabeca` ou `tocarEventoPara`. `ModSons.tocar` é para o que aconteceu de verdade no mundo.
 - **Apresentação não usa o sorteio do mundo.** `Sentidos`, `Cacada` e `Captura` têm gerador próprio ou decidem pelo ID da manifestação: usar `level.getRandom()` ali mudaria os sorteios do Diretor.
