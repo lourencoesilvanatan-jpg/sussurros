@@ -3,6 +3,7 @@ package com.sussurros.assombracao;
 import java.util.Map;
 import java.util.TreeMap;
 
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -15,6 +16,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.Permissions;
 
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+
+import com.sussurros.rede.PacoteEfeito;
 
 /**
  * Comando de TESTE (precisa de cheats ligados):
@@ -254,6 +257,45 @@ public final class ComandoSussurros {
 						return 1;
 					})
 					.then(testeSosia));
+			// Sentidos (0.9): impõe o que o cliente mostra e toca, para conferir cada efeito isolado.
+			teste.then(Commands.literal("sentidos")
+					.then(Commands.argument("peso", FloatArgumentType.floatArg(0, 1))
+							.then(Commands.argument("vigia", FloatArgumentType.floatArg(0, 1))
+									.then(Commands.argument("caca", FloatArgumentType.floatArg(0, 1))
+											.then(Commands.argument("neblina", FloatArgumentType.floatArg(0, 1))
+													.executes(ctx -> {
+														String msg = Diretor.testarSentidos(ctx.getSource().getPlayerOrException(),
+																FloatArgumentType.getFloat(ctx, "peso"), FloatArgumentType.getFloat(ctx, "vigia"),
+																FloatArgumentType.getFloat(ctx, "caca"), FloatArgumentType.getFloat(ctx, "neblina"), 0);
+														ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+														return 1;
+													})
+													.then(Commands.argument("flags", IntegerArgumentType.integer(0, 7))
+															.executes(ctx -> {
+																String msg = Diretor.testarSentidos(ctx.getSource().getPlayerOrException(),
+																		FloatArgumentType.getFloat(ctx, "peso"), FloatArgumentType.getFloat(ctx, "vigia"),
+																		FloatArgumentType.getFloat(ctx, "caca"), FloatArgumentType.getFloat(ctx, "neblina"),
+																		IntegerArgumentType.getInteger(ctx, "flags"));
+																ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+																return 1;
+															})))))));
+			LiteralArgumentBuilder<CommandSourceStack> testeEfeito = Commands.literal("efeito");
+			for (PacoteEfeito.Tipo tipo : PacoteEfeito.Tipo.values()) {
+				testeEfeito.then(Commands.literal(tipo.name().toLowerCase())
+						.executes(ctx -> {
+							String msg = Diretor.testarEfeito(ctx.getSource().getPlayerOrException(), tipo, 40);
+							ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+							return 1;
+						})
+						.then(Commands.argument("ticks", IntegerArgumentType.integer(1, 2400))
+								.executes(ctx -> {
+									String msg = Diretor.testarEfeito(ctx.getSource().getPlayerOrException(), tipo,
+											IntegerArgumentType.getInteger(ctx, "ticks"));
+									ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+									return 1;
+								})));
+			}
+			teste.then(testeEfeito);
 			raiz.then(teste);
 
 			raiz.then(Commands.literal("esquecer").executes(ctx -> {

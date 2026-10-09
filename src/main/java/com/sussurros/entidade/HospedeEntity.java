@@ -2,28 +2,25 @@ package com.sussurros.entidade;
 
 import org.jspecify.annotations.Nullable;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
+import com.sussurros.assombracao.Percepcao;
 import com.sussurros.registro.ModSons;
 
 /**
@@ -48,6 +45,11 @@ public class HospedeEntity extends PathfinderMob {
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.INT);
 	private static final EntityDataAccessor<Boolean> OLHOS_VISUAIS =
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Boolean> SUMINDO =
+			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+
+	/** Quando ele some na frente do jogador, dissolve por este tempo em vez de piscar para fora (ticks). */
+	public static final int TICKS_FADE = 4;
 
 	public enum Modo {
 		OBSERVAR,  // fica parado, olhando. Some quando é visto por tempo demais.
@@ -73,6 +75,15 @@ public class HospedeEntity extends PathfinderMob {
 	/** Vulto distante: cone em que o jogador está "mirando" nele (~30° do centro) e a distância em que deixa de ser um vulto. */
 	public static final double CONE_MIROU = 0.866;
 	public static final double DIST_SUMIR_VULTO = 36.0;
+
+	/** O atributo de velocidade dele. A caçada converte blocos por segundo a partir daqui (ver Cacada). */
+	public static final double VELOCIDADE_BASE = 0.3;
+
+	/**
+	 * Na caça ele se abaixa: a caixa de colisão cai de 3,0 para 1,9 blocos de altura. Com 3,0 ele não passava
+	 * por nenhuma porta nem entrava em nenhum túnel de dois blocos, ou seja, não entrava em casa nenhuma.
+	 */
+	private static final EntityDimensions CORPO_NA_CACA = EntityDimensions.scalable(0.7F, 1.9F);
 
 	/** Até esta ousadia ele ainda é tímido: basta olhar direto e desviar para ele não estar mais lá. */
 	public static final int OUSADIA_FICA = 4;
@@ -105,6 +116,9 @@ public class HospedeEntity extends PathfinderMob {
 	private int naTelaTicks = 0;         // vulto: quantos ticks já passou na tela
 	private int limiteNaTela = -1;       // vulto: quanto aguenta na borda da tela (sorteado na primeira vez)
 	private int atrasoMirado = -1;       // vulto: ticks entre ser mirado e sumir (sorteado na hora)
+	private int fadeRestante = 0;        // servidor: ticks até ser descartado, depois de começar a dissolver
+	private int fadeInicioCliente = -1;  // cliente: idade (ticks) em que começou a dissolver
+	private boolean avisaVigia = true;   // se esta manifestação é "sentida" quando olha de fora da tela
 
 	// Espreita
 	private int reposicoes = 0;
@@ -113,6 +127,9 @@ public class HospedeEntity extends PathfinderMob {
 	private int proximaEspera = 50;
 	// Busca (0.8): memória transitória de investigação quando perde a visão.
 	private final HospedeBusca busca = new HospedeBusca();
+	/** A caçada em curso, do aviso ao desfecho. Só existe no modo CACAR. */
+	@Nullable
+	private Cacada cacada;
 
 	public HospedeEntity(EntityType<? extends HospedeEntity> type, Level level) {
 		super(type, level);
@@ -121,7 +138,7 @@ public class HospedeEntity extends PathfinderMob {
 	public static AttributeSupplier.Builder criarAtributos() {
 		return PathfinderMob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 200)
-				.add(Attributes.MOVEMENT_SPEED, 0.3)
+				.add(Attributes.MOVEMENT_SPEED, VELOCIDADE_BASE)
 				.add(Attributes.FOLLOW_RANGE, 64);
 	}
 
@@ -134,6 +151,49 @@ public class HospedeEntity extends PathfinderMob {
 		this.velocidade = velocidade;
 		this.olharPara(alvo);
 		this.busca.inicializar(alvo, this.level().getGameTime());
+		if (modo == Modo.CACAR) {
+			this.cacada = new Cacada(this, this.busca, alvo, velocidade, true);
+		}
+	}
+
+	/** Uma ação barulhenta do alvo (quebrar bloco, porta, baú) a até 16 blocos: na caça, entrega a posição. */
+	public void ouvirAcao(Vec3 onde, String oQue) {
+		if (this.modo == Modo.CACAR && this.cacada != null && this.level() instanceof ServerLevel level
+				&& this.distanceToSqr(onde) <= 16 * 16) {
+			this.busca.ouvirAcao(level, this, onde, 0.8, oQue);
+		}
+	}
+
+	/** O quanto o alvo deve "sentir" esta criatura como perseguição, de 0 a 1 (ver Sentidos). */
+	public float intensidadeDaCaca(ServerPlayer p, double dist) {
+		if (this.modo == Modo.ESPERAR) {
+			return 0.2F;
+		}
+		return this.modo == Modo.CACAR && this.cacada != null ? this.cacada.sentir(p, dist) : 0.0F;
+	}
+
+	/** Só para o log e para os testes: em que estágio a caçada está. */
+	public String getEstagioDaCaca() {
+		return this.cacada == null ? "-" : this.cacada.estagio().name();
+	}
+
+	/** Parado, virado para o alvo. A caçada usa quando ele está na tela, no aviso e atrás de uma porta. */
+	void pararEOlhar() {
+		this.ficarParadoOlhando();
+	}
+
+	void soltarOlhar() {
+		this.setObservando(false);
+	}
+
+	@Override
+	protected EntityDimensions getDefaultDimensions(Pose pose) {
+		// No cliente o modo vem pelo dado sincronizado; no servidor, pelo campo. Durante a construção
+		// nenhum dos dois existe ainda, e vale o corpo normal.
+		boolean cacando = this.level().isClientSide()
+				? this.entityData != null && this.entityData.get(MODO_VISUAL) == Modo.CACAR.ordinal()
+				: this.modo == Modo.CACAR;
+		return cacando ? CORPO_NA_CACA : super.getDefaultDimensions(pose);
 	}
 
 	public void definirOrigem(Origem origem, @Nullable Evento evento) {
@@ -151,6 +211,39 @@ public class HospedeEntity extends PathfinderMob {
 		boolean eventoVisual = this.eventoOrigem == Evento.PRESENCA || this.eventoOrigem == Evento.ESPREITA
 				|| this.eventoOrigem == Evento.CACA || this.eventoOrigem == Evento.ATRAS;
 		this.entityData.set(OLHOS_VISUAIS, eventoVisual && h % 4 == 0);
+		// Sete em cada dez manifestações são sentidas quando olham de fora da tela. As outras chegam sem
+		// aviso nenhum: sensação que nunca falha vira radar. Também sai do ID, para não gastar sorteio.
+		this.avisaVigia = (h / 7) % 10 < 7;
+	}
+
+	/** Esta manifestação dá ao jogador a sensação de estar sendo olhado? (ver Sentidos) */
+	public boolean avisaVigia() {
+		return this.avisaVigia;
+	}
+
+	/** Já começou a dissolver: para todos os efeitos, não está mais lá. */
+	public boolean isSumindo() {
+		return this.entityData.get(SUMINDO);
+	}
+
+	/** Só no cliente: de 1 (inteiro) a 0 (sumiu), para o desenho. */
+	public float alfaVisual(float parcial) {
+		if (this.fadeInicioCliente < 0) {
+			return 1.0F;
+		}
+		float passado = (this.tickCount - this.fadeInicioCliente) + parcial;
+		return Math.max(0.0F, 1.0F - passado / TICKS_FADE);
+	}
+
+	@Override
+	public void onSyncedDataUpdated(EntityDataAccessor<?> dado) {
+		super.onSyncedDataUpdated(dado);
+		if (SUMINDO.equals(dado) && this.level().isClientSide() && this.isSumindo() && this.fadeInicioCliente < 0) {
+			this.fadeInicioCliente = this.tickCount;
+		}
+		if (MODO_VISUAL.equals(dado)) {
+			this.refreshDimensions();
+		}
 	}
 
 	public String getIdManifestacao() {
@@ -238,6 +331,7 @@ public class HospedeEntity extends PathfinderMob {
 		builder.define(AVISTADO_VISUAL, false);
 		builder.define(VARIANTE_VISUAL, 0);
 		builder.define(OLHOS_VISUAIS, false);
+		builder.define(SUMINDO, false);
 	}
 
 	public boolean isObservando() {
@@ -273,6 +367,7 @@ public class HospedeEntity extends PathfinderMob {
 	private void setModo(Modo novo) {
 		this.modo = novo;
 		this.entityData.set(MODO_VISUAL, novo.ordinal());
+		this.refreshDimensions();
 	}
 
 	// ===== Comportamento =====
@@ -285,12 +380,21 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
+		// Dissolvendo: o Diretor já foi avisado do sumiço; falta só o corpo desaparecer para o jogador.
+		if (this.fadeRestante > 0) {
+			if (--this.fadeRestante == 0) {
+				this.discard();
+			}
+			return;
+		}
+
 		// Sem alvo válido (por exemplo, depois de recarregar o mundo): some.
 		if (this.alvo == null || this.alvo.isRemoved() || !this.alvo.isAlive()
 				|| this.alvo.level() != level || this.distanceToSqr(this.alvo) > 110 * 110) {
 			if (++this.semAlvo > 40) {
 				if (this.alvo != null) {
 					Diretor.registrarFimSemAlvo(this.alvo, this); // só log
+					this.avisarFimDaCacada("SEM_ALVO");
 				}
 				this.discard();
 			}
@@ -309,7 +413,7 @@ public class HospedeEntity extends PathfinderMob {
 			return;
 		}
 
-		boolean percebido = Diretor.estaVendo(this.alvo, this, CONE_PERCEBEU);
+		boolean percebido = Diretor.estaVendo(this.alvo, this, Percepcao.conePercebeu(this.alvo));
 		boolean encarado = percebido && Diretor.estaVendo(this.alvo, this, CONE_ENCAROU);
 		this.foraDaTelaTicks = percebido ? 0 : this.foraDaTelaTicks + 1;
 		if (encarado) {
@@ -342,7 +446,7 @@ public class HospedeEntity extends PathfinderMob {
 			case OBSERVAR -> this.tickObservar(level, percebido, encarado, distSqr);
 			case ESPREITAR -> this.tickEspreitar(level, percebido, encarado, distSqr);
 			case ESPERAR -> this.tickEsperar(level, encarado, distSqr);
-			case CACAR -> this.tickCacar(level, percebido, encarado, distSqr);
+			case CACAR -> this.tickCacar(level, percebido, distSqr);
 			case VULTO -> this.tickVulto(level, percebido, distSqr);
 		}
 	}
@@ -481,8 +585,9 @@ public class HospedeEntity extends PathfinderMob {
 		// A vela apagou: agora ele vem.
 		if (!Diretor.temZonaCalma(this.alvo)) {
 			this.setModo(Modo.CACAR);
-			this.vida = Math.max(this.vida, 900);
+			this.vida = Math.max(this.vida, 20 * 130);
 			this.vistoTicks = 0;
+			this.cacada = new Cacada(this, this.busca, this.alvo, this.velocidade, false);
 			return;
 		}
 
@@ -492,69 +597,22 @@ public class HospedeEntity extends PathfinderMob {
 		}
 	}
 
-	private void tickCacar(ServerLevel level, boolean percebido, boolean encarado, double distSqr) {
-		if (percebido) {
-			// Congela enquanto está na sua tela e atualiza a última posição conhecida.
-			this.ficarParadoOlhando();
-			this.busca.ouvirMovimento(level, this, this.alvo, true);
-			// Encarar por tempo suficiente faz ele desistir... desta vez.
-			if (encarado && ++this.vistoTicks > 40 + this.ousadia * 6) {
-				Diretor.criaturaFoiVista(this.alvo, this);
-				this.sumir(level, true, "ENCARADO_DEMAIS");
-			}
-			return;
+	/**
+	 * A caça inteira mora em {@link Cacada}: aviso, perseguição, busca, atalho, atravessar e desfecho.
+	 * Aqui só se garante que ela existe (uma criatura criada pelo ovo, por exemplo, não passa por configurar).
+	 */
+	private void tickCacar(ServerLevel level, boolean percebido, double distSqr) {
+		if (this.cacada == null) {
+			this.cacada = new Cacada(this, this.busca, this.alvo, this.velocidade, false);
 		}
-
-		this.setObservando(false);
-		this.vistoTicks = Math.max(0, this.vistoTicks - 2);
-		// A partir daqui ele não recebe mais a posição atual gratuitamente. Primeiro tenta
-		// ouvir movimento e, se não ouvir, procura em torno da última posição conhecida.
-		this.busca.ouvirMovimento(level, this, this.alvo, false);
-		if (this.tickCount % 5 == 0) {
-			boolean desistiu = this.busca.tick(level, this, this.alvo);
-			if (desistiu) {
-				this.sumir(level, false, "PERDEU_RASTRO");
-				return;
-			}
-		}
-
-		// Apaga a luz por onde passa.
-		if (this.tickCount % 30 == 0) {
-			this.apagarTochaProxima(level);
-		}
-
-		if (distSqr < 2.4 * 2.4) {
-			this.tocar(level);
-		}
+		this.cacada.tick(level, this.alvo, percebido, distSqr);
 	}
 
-	private void tocar(ServerLevel level) {
-		ServerPlayer p = this.alvo;
-		p.hurtServer(level, level.damageSources().mobAttack(this), 5.0F);
-		p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 160));
-		p.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 80, 1));
-		// Nada de assinatura do shrieker/warden: o pico sonoro agora pertence ao proprio mod.
-		ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.95F, 0.72F);
-		ModSons.tocar(level, this.getX(), this.getY() + 1.8, this.getZ(), ModSons.Som.RESPIRACAO, 0.75F, 0.82F);
-		Diretor.criaturaTocou(p, this);
-		this.sumir(level, false, "TOCOU");
-	}
-
-	private void apagarTochaProxima(ServerLevel level) {
-		BlockPos centro = this.blockPosition();
-		for (int dx = -4; dx <= 4; dx++) {
-			for (int dy = -2; dy <= 3; dy++) {
-				for (int dz = -4; dz <= 4; dz++) {
-					BlockPos pos = centro.offset(dx, dy, dz);
-					BlockState estado = level.getBlockState(pos);
-					if (estado.is(Blocks.TORCH) || estado.is(Blocks.WALL_TORCH)) {
-						level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-						level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-								SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.4F, 0.6F);
-						return;
-					}
-				}
-			}
+	/** A caçada acabou (ele sumiu, por qualquer motivo): o Diretor é avisado uma vez só. */
+	private void avisarFimDaCacada(String motivo) {
+		if (this.cacada != null && !this.cacada.encerrada() && this.alvo != null) {
+			this.cacada.marcarEncerrada();
+			Diretor.cacadaTerminou(this.alvo, this, motivo);
 		}
 	}
 
@@ -576,7 +634,7 @@ public class HospedeEntity extends PathfinderMob {
 
 	/** Igual, com o motivo para o log (0.4.2a-test). O motivo não muda nada do comportamento. */
 	public void sumir(ServerLevel level, boolean comSom, String motivo) {
-		if (this.isRemoved()) {
+		if (this.isRemoved() || this.fadeRestante > 0) {
 			return;
 		}
 		if (comSom) {
@@ -593,7 +651,17 @@ public class HospedeEntity extends PathfinderMob {
 			}
 		}
 		if (this.alvo != null) {
+			this.avisarFimDaCacada(motivo);
 			Diretor.criaturaSumiu(this.alvo, this, motivo);
+		}
+		// Na frente do jogador ele dissolve em quatro ticks; "piscar para fora" parecia um mob sendo apagado.
+		// O vulto distante continua sumindo de um quadro para o outro: é o que deixa a dúvida.
+		if (this.modo != Modo.VULTO && this.foraDaTelaTicks == 0 && this.jaAvistada) {
+			this.fadeRestante = TICKS_FADE;
+			this.entityData.set(SUMINDO, true);
+			this.getNavigation().stop();
+			this.setDeltaMovement(0, 0, 0);
+			return;
 		}
 		this.discard();
 	}
@@ -605,6 +673,13 @@ public class HospedeEntity extends PathfinderMob {
 		// (bater num Hóspede do ovo gerador ou de comando não deixa a criatura de verdade mais rápida).
 		if (source.getEntity() instanceof ServerPlayer jogador && jogador == this.alvo && !this.ehTeste()) {
 			Diretor.criaturaFerida(jogador);
+		}
+		// Na caça, bater não o manda embora: nas duas primeiras vezes ele recua, depois nem isso.
+		if (this.modo == Modo.CACAR && this.cacada != null && this.alvo != null && this.fadeRestante == 0) {
+			if (source.getEntity() == this.alvo) {
+				this.cacada.aoSerFerido(level, this.alvo);
+			}
+			return false;
 		}
 		this.sumir(level, true, "FERIDO");
 		return false;

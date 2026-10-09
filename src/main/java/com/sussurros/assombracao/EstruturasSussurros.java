@@ -249,7 +249,7 @@ final class EstruturasSussurros {
 		Vec3 olho = p.getEyePosition();
 		Vec3 dir = pos.subtract(olho);
 		if (dir.lengthSqr() < 0.001) return true;
-		return p.getLookAngle().dot(dir.normalize()) > 0.58;
+		return p.getLookAngle().dot(dir.normalize()) > Percepcao.coneSeguro(p);
 	}
 
 	private static boolean temCenaAtiva(EstadoJogador e) {

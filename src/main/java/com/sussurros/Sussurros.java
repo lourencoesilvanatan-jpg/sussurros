@@ -16,6 +16,7 @@ import com.sussurros.assombracao.Vestigios;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
+import com.sussurros.rede.Rede;
 
 /**
  * Classe principal do mod. O Fabric chama onInitialize() quando o jogo carrega.
@@ -30,6 +31,7 @@ public class Sussurros implements ModInitializer {
 		ModEntidades.inicializar();
 		ModItems.inicializar();
 		ModSons.inicializar();
+		Rede.inicializar();
 		Memoria.inicializar();
 		Vestigios.inicializar();
 		Lugares.inicializar();

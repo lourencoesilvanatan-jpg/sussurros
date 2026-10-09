@@ -13,10 +13,11 @@ Este arquivo registra comportamentos ou decisões de arquitetura que foram delib
 - A nota/variável `ESTRATEGIA` atualmente não chega ao log.
 - Decidir posteriormente se ela deve ser registrada, removida ou usada em outro ponto.
 
-## Remoção de tochas
+## Remoção de tochas (resolvida na 0.9)
 
-- `roubarTocha` e `apagarTochaProxima` permanecem como comportamento existente.
-- Decidir posteriormente se as duas responsabilidades devem ser unificadas ou se a distinção atual é necessária.
+- Nenhuma tocha sai mais do mundo: a que pisca, a "levada", as apagadas ao acordar, as das cenas de luz e as que ele apaga na caça são miragens (só o jogador vê sumir, a luz some junto e ela volta sozinha).
+- `apagarTochaProxima` deixou de existir; quem apaga luz é `ApoioCaca.apagarLuzPerto`.
+- Continua mexendo no mundo de verdade, por pouco tempo e com restauração: `O_CAMINHO_MUDOU` e `MARCA_IMPOSSIVEL` (`AlteracoesTemporarias`).
 
 ## `forcando` e `pedido.ehTeste()`
 

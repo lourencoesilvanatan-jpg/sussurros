@@ -21,6 +21,7 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -40,6 +41,7 @@ import net.minecraft.world.phys.Vec3;
 
 import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -51,6 +53,9 @@ import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.assombracao.manifestacao.PedidoManifestacao;
 import com.sussurros.assombracao.diretor.Agenda;
 import com.sussurros.assombracao.selecao.Seletor;
+import com.sussurros.rede.PacoteEfeito;
+import com.sussurros.rede.PacoteSentidos;
+import com.sussurros.rede.Rede;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
 import com.sussurros.registro.ModSons;
@@ -120,6 +125,9 @@ public final class Diretor {
 	/** Só conta como "ele ignorou" um evento com pelo menos esta chance de ter sido percebido. */
 	private static final double OBS_INDIFERENCA = 0.7;
 
+	/** Quantas vezes a Caixa de Música precisa tocar para ele aprender a cantiga e passar a assobiá-la. */
+	static final int CANTIGA_APRENDIDA = 3;
+
 	/** Obsessão necessária (0-100) para ele montar a sequência de ameaça (v0.4.2). */
 	private static final double OBSESSAO_AMEACA = 60;
 
@@ -160,6 +168,7 @@ public final class Diretor {
 				while (e.quebrasRecentes.size() > 16) {
 					e.quebrasRecentes.removeFirst();
 				}
+				avisarCacador(e, Vec3.atCenterOf(pos), "QUEBRA");
 			}
 		});
 
@@ -174,6 +183,9 @@ public final class Diretor {
 					registrarCasa(jogador, clicado);
 				} else if (bloco.getBlock() instanceof DoorBlock && !bloco.is(Blocks.IRON_DOOR)) {
 					registrarPorta(jogador, nivel, clicado); // v0.4.2: a porta mais usada vira âncora
+					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "PORTA");
+				} else if (nivel.getBlockEntity(clicado) instanceof Container) {
+					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "BAU");
 				}
 			}
 			return InteractionResult.PASS;
@@ -203,6 +215,9 @@ public final class Diretor {
 			}
 		});
 
+		// Renascer devolve os atributos ao padrão; a marca da captura tem de ser reposta.
+		ServerPlayerEvents.AFTER_RESPAWN.register((antigo, novo, vivo) -> Captura.repor(novo));
+
 		// Machucado recentemente? Não é hora (anti-frustração).
 		ServerLivingEntityEvents.AFTER_DAMAGE.register((entity, source, baseDamageTaken, damageTaken, blocked) -> {
 			if (entity instanceof ServerPlayer jogador) {
@@ -228,6 +243,7 @@ public final class Diretor {
 
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
+			Percepcao.limpar();
 			Agenda.limpar();
 			Atmosfera.limpar();
 			contadorManifestacao = 0;
@@ -244,6 +260,47 @@ public final class Diretor {
 		return estado(p);
 	}
 
+
+	/** O que o cliente deste jogador foi mandado sentir por último (para os testes e para o comando memoria). */
+	public static PacoteSentidos sentidos(ServerPlayer p) {
+		return estado(p).sentidos;
+	}
+
+	/** A criatura que assombra este jogador agora, se houver (para os testes). */
+	@Nullable
+	public static HospedeEntity criatura(ServerPlayer p) {
+		HospedeEntity h = estado(p).criatura;
+		return h == null || h.isRemoved() ? null : h;
+	}
+
+	/**
+	 * Começa uma caçada agora, com o aviso e tudo. contaNaMemoria=false é o teste comum (nada fica gravado);
+	 * true existe para os testes automáticos conferirem o que só acontece numa caçada de verdade (a marca).
+	 */
+	public static boolean cacadaParaTeste(ServerPlayer p, boolean contaNaMemoria) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		if (e.criatura != null && !e.criatura.isRemoved()) {
+			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
+		}
+		PedidoManifestacao pedido = contaNaMemoria
+				? PedidoManifestacao.doDiretor(Evento.CACA)
+				: PedidoManifestacao.deComando(Evento.CACA);
+		boolean ok = invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26, 20 * 130, 1.0, true, pedido);
+		if (ok) {
+			prenunciar(level, p, e, level.getGameTime(), level.getRandom(), true);
+		}
+		return ok;
+	}
+
+	public static String testarSentidos(ServerPlayer p, float peso, float vigia, float caca, float neblina, int flags) {
+		return Sentidos.forcar(p, peso, vigia, caca, neblina, flags, 120);
+	}
+
+	public static String testarEfeito(ServerPlayer p, PacoteEfeito.Tipo tipo, int ticks) {
+		Rede.efeito(p, tipo, ticks, 1.0F);
+		return "Efeito " + tipo + " por " + ticks + " ticks.";
+	}
 
 	// Compatibilidade interna: mantém as chamadas curtas durante a refatoração.
 	static void agendar(ServerLevel level, int atrasoTicks, Runnable acao) {
@@ -545,6 +602,9 @@ public final class Diretor {
 		} else if (fase >= 1 && !criaturaPresente) {
 			decidir(level, p, m, e, fase, escuro, inq, calma, v, seg, tick, rnd);
 		}
+
+		// O que o cliente dele deve mostrar e tocar (cor, borda, neblina, trilha). Só apresentação.
+		Sentidos.atualizar(p, e, fase, calma, noite, tick);
 
 		m.salvar();
 	}
@@ -889,6 +949,12 @@ public final class Diretor {
 			case SEGUIDOR -> e.rastro.tamanho() >= 8;
 			case PEGADAS -> e.rastro.tamanho() >= 6;
 			case VULTO -> podeVulto(level, p);
+			// Os três abaixo só existem no cliente: sem o mod do outro lado, não acontece nada.
+			case ECO_PASSOS -> Rede.temCliente(p) && p.onGround() && e.velocidade > 1.0;
+			case VIGIA -> Rede.temCliente(p) && level.getGameTime() >= e.vigiaFalsaAte;
+			case NEBLINA -> Rede.temCliente(p) && level.getGameTime() >= e.neblinaAte && level.canSeeSky(p.blockPosition().above());
+			// Ele só assobia a cantiga depois de aprendê-la, e aprende ouvindo a caixa do jogador.
+			case CANTIGA -> m.get(Memoria.CAIXA_USOS) >= CANTIGA_APRENDIDA;
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
@@ -902,7 +968,9 @@ public final class Diretor {
 				double d = distanciaSqr(p, m.get(Memoria.MORTE_X), m.get(Memoria.MORTE_Z));
 				yield d > 16 * 16 && d < 72 * 72;
 			}
-			case CACA -> escuro && inq >= 60;
+			case CACA -> escuro && inq >= 60 && podeComecarCacada(level, p, m, e);
+			// O falso aviso tem de caber nos mesmos lugares da caçada, senão o lugar denuncia qual dos dois é.
+			case PRENUNCIO -> escuro && podeComecarCacada(level, p, m, e);
 			case ESPERA, ESPREITA -> false;
 		};
 	}
@@ -1165,6 +1233,35 @@ public final class Diretor {
 			}
 			// A reação ao vulto só é lida quando (e se) ele for avistado: ver criaturaAvistada.
 			case VULTO -> ok = invocarVulto(level, p, e, pedido);
+			case ECO_PASSOS -> {
+				// Por meio minuto, parte dos passos dele toca de novo logo depois, um pouco atrás (ver EcoDePasso).
+				e.ecoPassoAte = tick + 20L * (25 + rnd.nextInt(16));
+				fonte = pontoRelativo(p, 180, 2.0);
+				obs = 0.55 * barulho;
+				Depuracao.log(p, seg, "ECO_PASSOS janela=" + (e.ecoPassoAte - tick) / 20 + "s");
+			}
+			case VIGIA -> {
+				// A mesma sensação de quando ele olha de fora da tela, sem ele. Aviso que nunca falha vira radar.
+				e.vigiaFalsaAte = tick + 20L * (15 + rnd.nextInt(16));
+				e.vigiaFalsaForca = 0.45F + rnd.nextFloat() * 0.35F;
+				fonte = pontoRelativo(p, 180, 12.0);
+				obs = 0.5;
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "VIGIA falsa forca=%.2f duracao=%ds",
+						e.vigiaFalsaForca, (e.vigiaFalsaAte - tick) / 20));
+			}
+			case NEBLINA -> {
+				e.neblinaAte = tick + 20L * (60 + rnd.nextInt(61));
+				e.neblinaForca = 0.45F + rnd.nextFloat() * 0.25F;
+				// Sem fonte e sem leitura: não há para onde virar. Conta para o ritmo, não para o aprendizado.
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "NEBLINA forca=%.2f duracao=%ds",
+						e.neblinaForca, (e.neblinaAte - tick) / 20));
+			}
+			case CANTIGA -> {
+				fonte = assobiar(level, p, rnd);
+				obs = limitar(1 - distancia(p, fonte) / 60.0, 0.3, 1) * barulho;
+				Depuracao.log(p, seg, String.format(Locale.ROOT, "CANTIGA pos=%s dist=%.0f",
+						pos(fonte.x, fonte.y, fonte.z), distancia(p, fonte)));
+			}
 			case PORTA -> {
 				BlockPos porta = mexerNaPorta(level, p);
 				ok = porta != null;
@@ -1270,16 +1367,17 @@ public final class Diretor {
 			case VISTO -> p.sendOverlayMessage(Component.translatable("message.sussurros.visto", p.getName())
 					.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
 			case CACA -> {
+				// 0.9: a caçada inteira mora em entidade.Cacada. O teto de 130 s é só uma trava: quem encerra é ela.
+				// O último número é quanto mais rápido que o normal ele vem (cresce cada vez que o jogador o fere).
 				ok = invocar(level, p, e, HospedeEntity.Modo.CACAR, 150, 180, 18, 26,
-						20 * 60, 0.9 + 0.08 * m.get(Memoria.VEZES_FERIDO), true, pedido);
+						20 * 130, 1.0 + 0.03 * Math.min(6, m.get(Memoria.VEZES_FERIDO)), true, pedido);
 				if (ok) {
-					// Evita a assinatura sonora do Warden: a caca deve parecer do Sussurros.
-					ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.75F, 0.82F);
-					if (rnd.nextBoolean()) {
-						agendar(level, 18 + rnd.nextInt(20), () -> ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(),
-							ModSons.Som.RESPIRACAO, 0.55F, 0.92F));
-					}
+					prenunciar(level, p, e, tick, rnd, true);
 				}
+			}
+			case PRENUNCIO -> {
+				// O mesmo aviso, sem ninguém. Aviso que nunca falha vira radar; por isso ele mente mais do que acerta.
+				prenunciar(level, p, e, tick, rnd, false);
 			}
 			case ESPERA -> ok = invocarNaBordaDaZona(level, p, e, ousadia, pedido);
 		}
@@ -1496,14 +1594,19 @@ public final class Diretor {
 			case RUIDO_RETORNO -> new Evento[] {Evento.PASSO_UNICO, Evento.SEGUIDOR};
 			case OBJETO_FORA_LUGAR -> new Evento[] {Evento.SINAL, Evento.PASSO_UNICO};
 			case TRILHA_INTERROMPIDA -> new Evento[] {Evento.VESTIGIO, Evento.SINAL, Evento.PEGADAS};
+			case ECO_PASSOS -> new Evento[] {Evento.PASSO_UNICO, Evento.VIGIA, Evento.SEGUIDOR};
+			case VIGIA -> new Evento[] {Evento.PASSO_UNICO, Evento.SUSSURRO, Evento.PRESENCA};
+			case NEBLINA -> new Evento[] {Evento.VULTO, Evento.SINAL_DISTANTE, Evento.CANTIGA};
+			case CANTIGA -> new Evento[] {Evento.VIGIA, Evento.PASSOS, Evento.SINAL_DISTANTE};
+			case PRENUNCIO -> new Evento[] {Evento.VIGIA, Evento.PASSO_UNICO};
 			case ECO -> new Evento[] {Evento.ECO, Evento.RUIDO_RETORNO, Evento.PASSO_UNICO, Evento.SEGUIDOR};
-			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA};
+			case SEGUIDOR -> new Evento[] {Evento.PASSO_UNICO, Evento.PEGADAS, Evento.PRESENCA, Evento.ECO_PASSOS};
 			case PEGADAS -> new Evento[] {Evento.SINAL, Evento.PRESENCA};
 			case VULTO -> new Evento[] {Evento.SINAL_DISTANTE, Evento.PASSO_UNICO};
 			case PORTA -> new Evento[] {Evento.BATIDA, Evento.SUSSURRO, Evento.TOCHA};
 			case BATIDA -> new Evento[] {Evento.PORTA, Evento.PASSO_UNICO};
 			case TOCHA -> new Evento[] {Evento.ATRAS, Evento.SUSSURRO};
-			case SUSSURRO -> new Evento[] {Evento.PASSO_UNICO, Evento.ECO_CHAT};
+			case SUSSURRO -> new Evento[] {Evento.PASSO_UNICO, Evento.ECO_CHAT, Evento.VIGIA};
 			case ECO_CHAT -> new Evento[] {Evento.SUSSURRO};
 			case PRESENCA -> new Evento[] {Evento.ATRAS, Evento.VISTO};
 			default -> new Evento[0];
@@ -1884,9 +1987,27 @@ public final class Diretor {
 		int n = rnd.nextInt(limite);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.sussurro." + n, p.getName())
 				.withStyle(s -> s.withColor(0x5A5A5A).withItalic(true)));
-		// Enquanto não existem as gravações de voz, o sussurro vem com uma respiração "dentro da cabeça":
-		// sem direção e só para este jogador.
-		ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.5F, 0.82F + rnd.nextFloat() * 0.12F);
+		// O texto vem com uma voz "dentro da cabeça": sem direção e só para este jogador. Na maioria das
+		// vezes é um sussurro que não dá para entender; nas outras, só uma respiração.
+		if (rnd.nextFloat() < 0.7F) {
+			ModSons.tocarNaCabeca(p, ModSons.Som.SUSSURRO_VOZ, 0.55F, 0.9F + rnd.nextFloat() * 0.16F);
+		} else {
+			ModSons.tocarNaCabeca(p, ModSons.Som.RESPIRACAO, 0.5F, 0.82F + rnd.nextFloat() * 0.12F);
+		}
+	}
+
+	/**
+	 * Um pedaço do tema, assobiado de longe, de algum lugar que o jogador não está vendo. Só ele ouve.
+	 * Devolve de onde veio.
+	 */
+	static Vec3 assobiar(ServerLevel level, ServerPlayer p, RandomSource rnd) {
+		double angulo = (rnd.nextBoolean() ? 1 : -1) * (95 + rnd.nextDouble() * 85);
+		Vec3 ponto = pontoRelativo(p, angulo, 24 + rnd.nextDouble() * 18);
+		double y = p.getY() + 1.0;
+		// Volume acima de 1 só dá alcance: de longe e baixo, como alguém que não sabe que está sendo ouvido.
+		ModSons.tocarPara(p, ponto.x, y, ponto.z, ModSons.Som.ASSOBIO, volumePara(p, ponto.x, y, ponto.z, 0.5F),
+				0.95F + rnd.nextFloat() * 0.08F);
+		return new Vec3(ponto.x, y, ponto.z);
 	}
 
 	/**
@@ -2066,9 +2187,13 @@ public final class Diretor {
 		if (pos == null) {
 			return null;
 		}
-		level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
-		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.25F, 0.7F);
+		// 0.9: "levar" a tocha deixou de tirá-la do mundo. Ela some para o jogador por alguns minutos
+		// (miragem), ou até ele clicar no lugar. A construção de ninguém perde um bloco por causa do mod.
+		if (!Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), 20L * (180 + level.getRandom().nextInt(121)), 0, "TOCHA_LEVADA")) {
+			return null;
+		}
+		ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+				pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.25F, 0.7F);
 		estado(p).tochas.remove(pos);
 		return pos;
 	}
@@ -2084,12 +2209,13 @@ public final class Diretor {
 		if (!(original.is(Blocks.TORCH) || original.is(Blocks.WALL_TORCH))) {
 			return null;
 		}
-		// Pelas AlteracoesTemporarias (e não pela Agenda): assim a tocha volta mesmo se o mundo fechar antes.
-		AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, "TOCHA_PISCA",
-				() -> ModSons.tocar(level, pos.getX() + 0.5, pos.getY() + 0.7, pos.getZ() + 0.5,
-						ModSons.Som.ESTALO, 0.25F, 1.05F));
-		level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-				SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.22F, 0.72F);
+		// 0.9: miragem. A tocha some só para este jogador (a luz some junto) e volta sozinha; no mundo ela
+		// nunca saiu do lugar, então não há o que restaurar se o mundo fechar no meio.
+		if (!Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), duracaoTicks, 0, "TOCHA_PISCA")) {
+			return null;
+		}
+		ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+				pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.22F, 0.72F);
 		estado(p).tochas.remove(pos);
 		return pos;
 	}
@@ -2367,7 +2493,7 @@ public final class Diretor {
 			if (d < distMin || d > distMax) {
 				continue;
 			}
-			if (foraDaTela && pontoNaFrente(p, new Vec3(pt.x(), pt.y() + 1.5, pt.z()), HospedeEntity.CONE_PERCEBEU)) {
+			if (foraDaTela && pontoNaFrente(p, new Vec3(pt.x(), pt.y() + 1.5, pt.z()), Percepcao.conePercebeu(p))) {
 				continue;
 			}
 			bons.add(pt);
@@ -2649,7 +2775,7 @@ public final class Diretor {
 	/** O ponto (na altura do corpo dele) está dentro da sua tela agora? */
 	static boolean naTela(ServerPlayer p, BlockPos chao) {
 		// Mais largo que PERCEBEU: evita materialização na borda do FOV real em 16:9/FOV 70.
-		return pontoNaFrente(p, new Vec3(chao.getX() + 0.5, chao.getY() + 1.5, chao.getZ() + 0.5), HospedeEntity.CONE_TELA_SEGURA);
+		return pontoNaFrente(p, new Vec3(chao.getX() + 0.5, chao.getY() + 1.5, chao.getZ() + 0.5), Percepcao.coneSeguro(p));
 	}
 
 	/** Luz que realmente ilumina um lugar (à noite o céu conta bem menos). */
@@ -2783,6 +2909,9 @@ public final class Diretor {
 				if (!escuro || bloqueado(p, e, tick)) {
 					return; // espera o escuro
 				}
+				if (fase >= 4 && !podeComecarCacada(level, p, m, e)) {
+					return; // caçada não começa na base nem colado num amigo: espera ele sair
+				}
 				Evento golpe = fase >= 4 ? Evento.CACA : Evento.ATRAS;
 				if (executar(level, p, m, e, golpe, seg, tick)) {
 					e.golpeDado = true;
@@ -2797,7 +2926,7 @@ public final class Diretor {
 		e.obsessao *= fatorObsessao;
 		e.cena = EstadoJogador.Cena.NENHUMA;
 		e.golpeDado = false;
-		e.ameacaLiberadaEm = seg + 600;
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, seg + 600);
 		mudarEstado(p, e, EstadoDiretor.RECUANDO, seg, rnd);
 		e.duracaoEstado = 180 + rnd.nextInt(121); // silêncio de verdade depois do pico
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s FIM motivo=%s obsessao=%.0f->%.0f",
@@ -2923,6 +3052,9 @@ public final class Diretor {
 		int fase = m.get(Memoria.FASE);
 		RandomSource rnd = level.getRandom();
 
+		// Dormir de verdade com uma vela acesa tira a marca da captura. Sair da cama no meio não conta.
+		Captura.tentarCurar(p, m, p.isSleepingLongEnough());
+
 		// Ele deixou algo ao lado da cama enquanto você dormia.
 		if (fase >= 2 && m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS && rnd.nextFloat() < 0.45F) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
@@ -2935,19 +3067,11 @@ public final class Diretor {
 		}
 
 		if (fase >= 3) {
-			int apagadas = 0;
-			for (int dx = -6; dx <= 6 && apagadas < 3; dx++) {
-				for (int dy = -2; dy <= 3 && apagadas < 3; dy++) {
-					for (int dz = -6; dz <= 6 && apagadas < 3; dz++) {
-						BlockPos t = pos.offset(dx, dy, dz);
-						BlockState s = level.getBlockState(t);
-						if ((s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH)) && rnd.nextBoolean()) {
-							level.setBlock(t, Blocks.AIR.defaultBlockState(), 3);
-							apagadas++;
-						}
-					}
-				}
-			}
+			// 0.9: as luzes perto da cama aparecem apagadas ao acordar, só para ele, por um ou dois minutos
+			// (antes eram tiradas do mundo de verdade, sem devolver nada: item 3.10 da análise).
+			int apagadas = rnd.nextBoolean()
+					? ApoioCaca.apagarLuzPerto(level, p, pos, 6, 20 * (60 + rnd.nextInt(61)), 1 + rnd.nextInt(3))
+					: 0;
 			if (m.get(Memoria.CAMA_VEZES) >= 4) {
 				p.sendOverlayMessage(Component.translatable("message.sussurros.acordar.mesma_cama", p.getName())
 						.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
@@ -2962,6 +3086,93 @@ public final class Diretor {
 	// =====================================================================
 	// Chamadas vindas da criatura e dos itens
 	// =====================================================================
+
+	/** Na caça, quem mexe no mundo se entrega: o som de uma ação a até 16 blocos dá a posição a ele. */
+	private static void avisarCacador(EstadoJogador e, Vec3 onde, String oQue) {
+		HospedeEntity h = e.criatura;
+		if (h != null && !h.isRemoved() && h.getModo() == HospedeEntity.Modo.CACAR) {
+			h.ouvirAcao(onde, oQue);
+		}
+	}
+
+	/**
+	 * A caçada nunca começa na base, nem com o jogador montado ou planando, nem colado num amigo.
+	 * Base invadida é a reclamação que mais mata o medo; e ficar junto dos amigos tem de ser um alívio.
+	 */
+	private static boolean podeComecarCacada(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e) {
+		if (e.contexto == ContextoMundo.Tipo.CASA || ContextoMundo.pertoDaCasa(p, m, 24)) {
+			return false;
+		}
+		if (p.isPassenger() || p.isFallFlying()) {
+			return false;
+		}
+		return level.getPlayers(o -> o != p && !o.isSpectator() && o.distanceToSqr(p) < 7 * 7).isEmpty();
+	}
+
+	/**
+	 * O aviso da caçada: o mundo emudece e uma luz perto do jogador falha. Dura o tempo em que ele, se existir,
+	 * fica parado (8 a 10 s). É o que dá ao jogador a chance de correr para a vela ou sair de um beco.
+	 * O mesmo aviso acontece sem caçada (evento PRENUNCIO), para nunca virar certeza.
+	 */
+	private static void prenunciar(ServerLevel level, ServerPlayer p, EstadoJogador e, long tick, RandomSource rnd, boolean deVerdade) {
+		emudecer(level, p, deVerdade ? 12 : 10 + rnd.nextInt(8), deVerdade ? "CACA" : "PRENUNCIO");
+		e.semMusicaAte = tick + 20L * (deVerdade ? 12 : 10 + rnd.nextInt(8));
+		e.cacaAvisoAte = tick + 20L * 10;
+		int apagadas = ApoioCaca.apagarLuzPerto(level, p, p.blockPosition(), 9, 60 + rnd.nextInt(60), 1);
+		ModSons.tocarPara(p, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.55F, 0.8F);
+		boolean assobio = Memoria.de(p).get(Memoria.CAIXA_USOS) >= CANTIGA_APRENDIDA && rnd.nextFloat() < 0.6F;
+		if (assobio) {
+			agendar(level, 30 + rnd.nextInt(40), () -> {
+				if (!p.isRemoved()) {
+					assobiar(level, p, p.getRandom());
+				}
+			});
+		}
+		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas
+				+ " assobio=" + (assobio ? "sim" : "nao"));
+	}
+
+	/**
+	 * A caçada acabou: ele sumiu, por qualquer motivo. O som do mundo volta alguns segundos depois (é o sinal
+	 * honesto de fim), e a próxima caçada fica longe.
+	 */
+	public static void cacadaTerminou(ServerPlayer p, HospedeEntity h, String motivo) {
+		EstadoJogador e = estado(p);
+		ServerLevel level = p.level();
+		long tick = level.getGameTime();
+		RandomSource sorte = p.getRandom();
+		e.semMusicaAte = tick + 70 + sorte.nextInt(31);
+		e.cacaAvisoAte = -1;
+		if (h.ehTeste()) {
+			return;
+		}
+		Memoria m = Memoria.de(p);
+		m.add(Memoria.CACADAS, 1);
+		m.salvar();
+		// Caçada é rara: a próxima sequência de ameaça só daqui a 25-40 minutos.
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, tick / 20 + 1500 + sorte.nextInt(901));
+		Depuracao.log(p, tick / 20, "CACA terminou motivo=" + motivo + " cacadas=" + m.get(Memoria.CACADAS)
+				+ " proximaAmeacaEm=" + (e.ameacaLiberadaEm - tick / 20) + "s");
+	}
+
+	/** Depois de pegar o jogador, ele some por um bom tempo. O Diretor não pode emendar outra coisa. */
+	static void depoisDaCaptura(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		long seg = p.level().getGameTime() / 20;
+		RandomSource sorte = p.getRandom();
+		e.pressao = 0;
+		e.obsessao *= 0.4;
+		e.cena = EstadoJogador.Cena.NENHUMA;
+		e.golpeDado = false;
+		e.sequencia = null;
+		e.elosCadeia = 0;
+		Depuracao.log(p, seg, "ESTADO " + e.estado + " -> RECUANDO (captura)");
+		e.estado = EstadoDiretor.RECUANDO;
+		e.estadoDesde = seg;
+		e.duracaoEstado = 360 + sorte.nextInt(241);
+		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, seg + 1800 + sorte.nextInt(901));
+		marcarSilencioDoRecuo(p, e, seg, "POS_CAPTURA", e.ameacaId);
+	}
 
 	/**
 	 * Primeira vez que a criatura aparece na tela do jogador. A reação só é medida para aparições
@@ -3422,6 +3633,8 @@ public final class Diretor {
 				yield d > 100 * 100 ? "você está a mais de 100 blocos de onde morreu." : null;
 			}
 			case ESPERA -> !temZonaCalma(p) ? "precisa de uma Vela Pálida acesa." : null;
+			case NEBLINA -> !level.canSeeSky(p.blockPosition().above()) ? "precisa estar a céu aberto." : null;
+			case CANTIGA -> null; // por comando ele assobia mesmo sem ter aprendido
 			default -> null;
 		};
 	}
@@ -3811,7 +4024,7 @@ public final class Diretor {
 		Vec3 corpo = alvo.position().add(0, alvo.getBbHeight() * 0.6, 0);
 		Vec3 direcao = corpo.subtract(olho).normalize();
 		double dot = p.getViewVector(1.0F).dot(direcao);
-		return dot > limiar && p.hasLineOfSight(alvo);
+		return dot > limiar && Percepcao.linhaDeVisao(p, alvo);
 	}
 
 	/**

@@ -120,7 +120,7 @@ final class CenaDoOutroLadoDoVidro {
 					silencioCenaJanela(p, e, seg, rnd);
 					return;
 				}
-				boolean naDirecao = Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), HospedeEntity.CONE_PERCEBEU);
+				boolean naDirecao = Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), Percepcao.conePercebeu(p));
 				if (naDirecao) {
 					if (e.cenaJanelaVistaDesde < 0) {
 						e.cenaJanelaVistaDesde = seg;
@@ -154,7 +154,7 @@ final class CenaDoOutroLadoDoVidro {
 					silencioCenaJanela(p, e, seg, rnd);
 					return;
 				}
-				if (Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), HospedeEntity.CONE_PERCEBEU)) {
+				if (Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), Percepcao.conePercebeu(p))) {
 					if (!e.cenaJanelaTeste) {
 						Vestigios.de(p).registrar(h.blockPosition(), Vestigios.Tipo.DESAPARECIMENTO, seg);
 					}
@@ -188,7 +188,7 @@ final class CenaDoOutroLadoDoVidro {
 		for (BlockPos vidro : e.janelas) {
 			Vec3 centroVidro = Vec3.atCenterOf(vidro);
 			double dv = Diretor.distancia(p, centroVidro);
-			if (dv < 3 || dv > 16 || Diretor.pontoNaFrente(p, centroVidro, HospedeEntity.CONE_TELA_SEGURA)) {
+			if (dv < 3 || dv > 16 || Diretor.pontoNaFrente(p, centroVidro, Percepcao.coneSeguro(p))) {
 				continue;
 			}
 			for (int[] d : dirs) {

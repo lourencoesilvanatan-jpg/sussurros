@@ -353,11 +353,12 @@ final class Atmosfera {
 		boolean ok;
 		if (!tochas.isEmpty() && escolha < 30) {
 			BlockPos pos = tochas.get(rnd.nextInt(tochas.size()));
-			ok = AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), 40 + rnd.nextInt(81), "LUZ_PISCA");
+			// Miragem: a tocha some só para ele, e a luz some junto. O mundo não é tocado.
+			ok = Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), 40 + rnd.nextInt(81), 0, "LUZ_PISCA");
 			fonte = Vec3.atCenterOf(pos);
-			tipo = "PISCA";
-			level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-					SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.55F, 0.9F);
+			tipo = "PISCA miragem=sim";
+			ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+					pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.55F, 0.9F);
 		} else if (!tochas.isEmpty() && escolha < 45) {
 			// Miragem: uma tocha dele passa a ser de redstone, só para ele. Volta ao normal quando ele chega
 			// perto para conferir, quando clica nela ou depois de meio minuto. O mundo não muda.
@@ -375,13 +376,13 @@ final class Atmosfera {
 			BlockPos destino = acharPontoParaTocha(level, p, rnd, 8, 22);
 			if (destino == null) return null;
 			long duracao = 100 + rnd.nextInt(101);
-			// A tocha de origem some de verdade por alguns segundos (e volta); a de destino é miragem.
-			ok = AlteracoesTemporarias.substituir(level, origem, Blocks.AIR.defaultBlockState(), duracao, "LUZ_MIGRA_ORIGEM")
+			// As duas pontas são miragem: a de origem some só para ele, a de destino só ele vê.
+			ok = Miragem.mostrar(level, p, origem, Blocks.AIR.defaultBlockState(), duracao, 0, "LUZ_MIGRA_ORIGEM")
 					&& Miragem.mostrar(level, p, destino, Blocks.TORCH.defaultBlockState(), duracao, 4.0, "LUZ_MIGRA_DESTINO");
 			fonte = Vec3.atCenterOf(destino);
-			tipo = "MIGRA";
-			level.playSound(null, origem.getX() + 0.5, origem.getY() + 0.5, origem.getZ() + 0.5,
-					SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.45F, 0.85F);
+			tipo = "MIGRA miragem=sim";
+			ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+					origem.getX() + 0.5, origem.getY() + 0.5, origem.getZ() + 0.5, 0.45F, 0.85F);
 		} else if (!tochas.isEmpty() && fase >= 3 && escolha < 74) {
 			BlockPos pos = tochas.get(rnd.nextInt(tochas.size()));
 			level.destroyBlock(pos, true);
@@ -406,7 +407,16 @@ final class Atmosfera {
 			RandomSource rnd, boolean sutil) {
 		double custo = sutil ? 1.1 : 2.0;
 		if (!disponivel(e, Familia.LUZ, custo, seg)) return false;
-		BlockPos destino = acharPontoParaTocha(level, p, rnd, sutil ? 12 : 14, sutil ? 28 : 34);
+		int min = sutil ? 12 : 14;
+		int max = sutil ? 28 : 34;
+		// Primeiro um lugar por onde ele passou: num túnel, só o eixo do túnel tem chão, e sortear ângulos
+		// para os lados quase nunca acha (era por isso que a cena não acontecia dentro de caverna).
+		BlockPos destino = acharPontoParaTochaNoRastro(level, p, e, seg, rnd, min, max);
+		String onde = "RASTRO";
+		if (destino == null) {
+			destino = acharPontoParaTocha(level, p, rnd, min, max);
+			onde = "EM_VOLTA";
+		}
 		if (destino == null) return false;
 		// Miragem: só ele vê, e o mundo não muda. O presságio (sutil) é um brilho curto ao longe. A cena
 		// "luz no fim" dura o bastante para ele andar até lá; a seis blocos a luz não está mais lá.
@@ -415,7 +425,7 @@ final class Atmosfera {
 			return false;
 		}
 		if (!gastar(e, Familia.LUZ, custo, seg, rnd, sutil ? 300 : 480, sutil ? 600 : 900)) return false;
-		Depuracao.log(p, seg, "LUZ_ERRADA tipo=FANTASMA miragem=sim pos=" + pos(Vec3.atCenterOf(destino))
+		Depuracao.log(p, seg, "LUZ_ERRADA tipo=FANTASMA miragem=sim lugar=" + onde + " pos=" + pos(Vec3.atCenterOf(destino))
 				+ " duracao=" + (duracao / 20) + "s semCriatura=sim");
 		return true;
 	}
@@ -431,9 +441,12 @@ final class Atmosfera {
 			BlockPos pos = tochas.get(i);
 			int atraso = i * 12;
 			Agenda.agendar(level, atraso, () -> {
-				AlteracoesTemporarias.substituir(level, pos, Blocks.AIR.defaultBlockState(), 90, "LUZ_SEQUENCIA");
-				level.playSound(null, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5,
-						SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.45F, 0.82F);
+				if (p.isRemoved()) {
+					return;
+				}
+				Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), 90, 0, "LUZ_SEQUENCIA");
+				ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
+						pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.45F, 0.82F);
 			});
 		}
 		if (!teste) gastar(e, Familia.LUZ, 3.0, seg, rnd, 600, 960);
@@ -601,6 +614,21 @@ final class Atmosfera {
 	}
 
 	@Nullable
+	/** Um ponto do Rastro onde cabe uma tocha: fora da tela, na faixa de distância, sem estar muito acima ou abaixo. */
+	private static BlockPos acharPontoParaTochaNoRastro(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg,
+			RandomSource rnd, int min, int max) {
+		List<Rastro.Ponto> pontos = rastroAoAlcance(p, e, seg, 15, 400, min, max);
+		for (int i = 0; i < 8 && !pontos.isEmpty(); i++) {
+			Rastro.Ponto pt = pontos.remove(rnd.nextInt(pontos.size()));
+			if (Math.abs(pt.y() - p.getY()) > 10) continue;
+			BlockPos pos = BlockPos.containing(pt.x(), pt.y() + 0.2, pt.z());
+			if (!level.isEmptyBlock(pos) || naTela(p, Vec3.atCenterOf(pos))) continue;
+			if (Blocks.TORCH.defaultBlockState().canSurvive(level, pos)) return pos;
+		}
+		return null;
+	}
+
+	@Nullable
 	private static BlockPos acharPontoParaTocha(ServerLevel level, ServerPlayer p, RandomSource rnd, int min, int max) {
 		for (int i = 0; i < 16; i++) {
 			Vec3 v = pontoRelativo(p, 70 + rnd.nextDouble() * 220, min + rnd.nextInt(Math.max(1, max - min + 1)));
@@ -681,7 +709,7 @@ final class Atmosfera {
 		Vec3 dir = pos.subtract(olho);
 		if (dir.lengthSqr() < 0.001) return true;
 		dir = dir.normalize();
-		return p.getLookAngle().dot(dir) > 0.58; // cone largo (~55°) para não materializar na borda
+		return p.getLookAngle().dot(dir) > Percepcao.coneSeguro(p); // fora da tela de verdade deste jogador
 	}
 
 	private static double distancia(ServerPlayer p, Vec3 v) {

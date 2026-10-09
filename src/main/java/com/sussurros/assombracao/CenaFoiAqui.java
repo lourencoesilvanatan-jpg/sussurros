@@ -100,7 +100,7 @@ final class CenaFoiAqui {
 				if (e.cenaMarcoPos != null) {
 					Vec3 antigo = Vec3.atCenterOf(e.cenaMarcoPos);
 					double dAntigo = Diretor.distancia(p, antigo);
-					if (dAntigo >= 6 && dAntigo <= 28 && !Diretor.pontoNaFrente(p, antigo, HospedeEntity.CONE_TELA_SEGURA)) {
+					if (dAntigo >= 6 && dAntigo <= 28 && !Diretor.pontoNaFrente(p, antigo, Percepcao.coneSeguro(p))) {
 						lugar = antigo;
 						motivoLugar = "MARCO_EXATO";
 					} else if (pt != null) {

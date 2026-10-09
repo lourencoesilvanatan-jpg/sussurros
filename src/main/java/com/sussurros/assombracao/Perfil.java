@@ -38,6 +38,10 @@ final class Perfil {
 		if (alto(m, Traco.CAUTELA) && (ev == Evento.PASSO_UNICO || ev == Evento.ECO || ev == Evento.SEGUIDOR)) {
 			f *= ev == Evento.SEGUIDOR ? 1.4 : 1.3;
 		}
+		// Quem anda atento percebe melhor o que é quase nada: o passo a mais, a sensação nas costas.
+		if (alto(m, Traco.CAUTELA) && (ev == Evento.ECO_PASSOS || ev == Evento.VIGIA)) {
+			f *= 1.3;
+		}
 		if (alto(m, Traco.LUZ) && ev.categoria == Evento.Categoria.AMBIENTE) {
 			f *= 1.4;
 		}
