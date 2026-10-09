@@ -23,3 +23,34 @@ jobs:
 
       - name: Build
         run: ./gradlew build
+
+      # Sobe um servidor sem janela e roda os testes de src/gametest.
+      - name: Testes dentro do jogo (servidor)
+        run: ./gradlew runGameTest
+
+  # Abre o jogo numa tela virtual e tira fotos. Não trava o merge: serve para quem programa olhar.
+  fotos:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Testes dentro do jogo (cliente)
+        run: xvfb-run -a ./gradlew runClientGameTest
+
+      - name: Guardar as fotos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fotos-do-jogo
+          path: |
+            build/run/clientGameTest/screenshots
+            build/run/clientGameTest/logs/latest.log
+          if-no-files-found: warn

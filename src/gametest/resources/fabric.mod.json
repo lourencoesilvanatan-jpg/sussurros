@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "sussurros-testes",
+	"version": "1.0.0",
+	"name": "Sussurros (testes dentro do jogo)",
+	"description": "Só existe no ambiente de desenvolvimento. Não vai para o .jar do mod.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"com.sussurros.teste.TestesDeServidor"
+		],
+		"fabric-client-gametest": [
+			"com.sussurros.teste.TestesDeCliente"
+		]
+	},
+	"depends": {
+		"sussurros": "*"
+	}
+}
