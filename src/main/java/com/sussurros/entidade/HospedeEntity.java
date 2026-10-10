@@ -90,6 +90,12 @@ public class HospedeEntity extends PathfinderMob {
 	/** Até esta ousadia ele ainda é tímido: basta olhar direto e desviar para ele não estar mais lá. */
 	public static final int OUSADIA_FICA = 4;
 
+	/**
+	 * O primeiro contato aguenta ser olhado por mais tempo que um relance: cerca de um segundo de olhar direto,
+	 * ou dois de canto. É a única aparição que precisa ser vista com certeza (ver PrimeiroContato).
+	 */
+	private static final int LIMITE_VISTO_NO_CONTATO = 36;
+
 	@Nullable
 	private ServerPlayer alvo;
 	private Modo modo = Modo.OBSERVAR;
@@ -126,6 +132,7 @@ public class HospedeEntity extends PathfinderMob {
 	private int fadeRestante = 0;        // servidor: ticks até ser descartado, depois de começar a dissolver
 	private int fadeInicioCliente = -1;  // cliente: idade (ticks) em que começou a dissolver
 	private boolean avisaVigia = true;   // se esta manifestação é "sentida" quando olha de fora da tela
+	private boolean contato = false;     // é a aparição do primeiro contato (ver PrimeiroContato)
 
 	// Espreita
 	private int reposicoes = 0;
@@ -228,6 +235,20 @@ public class HospedeEntity extends PathfinderMob {
 		// Sete em cada dez manifestações são sentidas quando olham de fora da tela. As outras chegam sem
 		// aviso nenhum: sensação que nunca falha vira radar. Também sai do ID, para não gastar sorteio.
 		this.avisaVigia = (h / 7) % 10 < 7;
+	}
+
+	/** Esta é a aparição do primeiro contato: aguenta mais o olhar e sempre deixa cinza quando é vista. */
+	public void marcarContato() {
+		this.contato = true;
+	}
+
+	public boolean ehContato() {
+		return this.contato;
+	}
+
+	/** Já foi olhada direto alguma vez. */
+	public boolean jaFoiEncarado() {
+		return this.foiEncarado;
 	}
 
 	/** Esta manifestação dá ao jogador a sensação de estar sendo olhado? (ver Sentidos) */
@@ -606,7 +627,7 @@ public class HospedeEntity extends PathfinderMob {
 
 		// Quanto mais ousado, mais tempo ele aguenta ser visto. No começo é um relance: 0,3 s olhando direto
 		// ou 0,6 s de canto (era 0,75 s e 1,5 s, e dava para focar nele). Com ousadia 10 chega a 1,8 s.
-		if (this.contarVisto(percebido, encarado, 12 + this.ousadia * 6)) {
+		if (this.contarVisto(percebido, encarado, this.contato ? LIMITE_VISTO_NO_CONTATO : 12 + this.ousadia * 6)) {
 			Diretor.criaturaFoiVista(this.alvo, this);
 			this.sumir(level, true, "VISTO_DEMAIS");
 		}

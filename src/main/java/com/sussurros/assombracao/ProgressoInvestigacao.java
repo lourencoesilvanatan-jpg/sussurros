@@ -20,6 +20,20 @@ public final class ProgressoInvestigacao {
 		p.sendSystemMessage(Component.translatable("message.sussurros.caderno.nivel." + nivel).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
 		p.sendSystemMessage(Component.translatable("message.sussurros.caderno.resumo", vestigios, estruturas)
 				.withStyle(ChatFormatting.DARK_GRAY));
+		// 0.9.0-alpha14: o recibo da Conta. Depois de uma cobrança, o caderno conta o que aconteceu, como
+		// coisa que aconteceu no mundo e sem tom de bronca: é assim que o jogador consegue concluir "usei demais".
+		boolean cabecalho = false;
+		for (Conta.Item item : Conta.Item.values()) {
+			if (Conta.recibos(m, item) <= 0) {
+				continue;
+			}
+			if (!cabecalho) {
+				cabecalho = true;
+				p.sendSystemMessage(Component.translatable("message.sussurros.caderno.voltou").withStyle(ChatFormatting.DARK_GRAY));
+			}
+			p.sendSystemMessage(Component.translatable("message.sussurros.caderno.recibo." + item.name().toLowerCase(java.util.Locale.ROOT))
+					.withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+		}
 		p.sendSystemMessage(Component.literal(""));
 		m.salvar();
 	}

@@ -42,6 +42,7 @@ PERCEPTIVEIS = [
     ('veu', re.compile(r'^VEU abriu .*teste=nao')),
     ('conta', re.compile(r'^CONTA aviso=(\d)/3')),
     ('cacada', re.compile(r'^PRENUNCIO real=sim')),
+    ('contato', re.compile(r'^CONTATO tentativa=(\d+)')),
     ('captura', re.compile(r'^CAPTURA inicio .*teste=nao')),
     ('avesso', re.compile(r'^AVESSO levado origem=(\S+) .*teste=nao')),
 ]
@@ -57,15 +58,15 @@ TEMA = [
 ]
 
 ITENS = [
-    ('Vela', re.compile(r'^CONTA \+\d+ item=VELA')),
+    ('Vela', re.compile(r'^CONTA (?:\+\d+|carencia) item=VELA')),
     ('Olho', re.compile(r'^OLHO usado')),
-    ('Sino', re.compile(r'^CONTA \+\d+ item=SINO')),
-    ('Fio', re.compile(r'^CONTA \+\d+ item=FIO')),
+    ('Sino', re.compile(r'^CONTA (?:\+\d+|carencia) item=SINO')),
+    ('Fio', re.compile(r'^CONTA (?:\+\d+|carencia) item=FIO')),
     ('Isca', re.compile(r'^ISCA armada')),
     ('Caixa de Música', re.compile(r'^CAIXA tocou')),
     ('Ossos', re.compile(r'^OSSOS desfecho=')),
-    ('Linha de Cinza (blocos)', re.compile(r'^CONTA \+\d+ item=LINHA')),
-    ('Lampião (cargas)', re.compile(r'^CONTA \+\d+ item=LAMPIAO')),
+    ('Linha de Cinza (blocos)', re.compile(r'^CONTA (?:\+\d+|carencia) item=LINHA')),
+    ('Lampião (cargas)', re.compile(r'^CONTA (?:\+\d+|carencia) item=LAMPIAO')),
     ('Oferenda posta', re.compile(r'^OFERENDA posta')),
 ]
 
@@ -340,8 +341,15 @@ def analisar(linhas, jogador, caminho):
     picos = [int(m.group(1)) for m in (re.match(r'^CONTA \+\d+ item=\S+ total=(\d+)', texto) for _, texto in linhas) if m]
     avisos = sum(1 for _, texto in linhas if texto.startswith('CONTA aviso='))
     cobrancas = [m.group(1) + ' (' + m.group(2) + ')' for m in (re.match(r'^CONTA cobranca item=(\S+) como=(\S+)', texto) for _, texto in linhas) if m]
-    out.append('Conta: maior valor %d; avisos dados %d; cobranças %d%s.' % (
-        max(picos) if picos else 0, avisos, len(cobrancas), ': ' + ', '.join(cobrancas) if cobrancas else ''))
+    # Da alpha14 em diante: a cobrança fica marcada no estouro e acontece no próprio item, no uso seguinte.
+    cobrancas += [m.group(1) + ' (no uso seguinte)' for m in (re.match(r'^CONTA cobrada no uso item=(\S+)', texto) for _, texto in linhas) if m]
+    estouros = sum(1 for _, texto in linhas if texto.startswith('CONTA estourou'))
+    carencia = sum(1 for _, texto in linhas if texto.startswith('CONTA carencia'))
+    marcados = sum(1 for _, texto in linhas if re.match(r'^CONTA \+\d+ item=', texto))
+    out.append('Conta: maior valor %d; avisos dados %d; estouros %d; cobranças %d%s.' % (
+        max(picos) if picos else 0, avisos, estouros, len(cobrancas), ': ' + ', '.join(cobrancas) if cobrancas else ''))
+    out.append('')
+    out.append('Usos na carência (não somam e não fazem o som do marcador): %d. Usos que somaram (com o marcador): %d.' % (carencia, marcados))
     out.append('')
 
     # ----- caçadas, capturas, o outro lado -----
@@ -393,8 +401,95 @@ def analisar(linhas, jogador, caminho):
         out.append('Nada.')
     out.append('')
 
+    # ----- a primeira hora: os critérios da análise de 09/10 (seção 6.7, corrigida pela seção 10) -----
+    # O que se conta mudou: aparições que estiveram na MIRA do jogador (não as criadas), sinais seguidos de
+    # algo no MESMO LUGAR (não "sem criatura"), e o peso da Conta no que ele percebeu. Os números são ponto de
+    # partida e não foram validados; "de 6 a 12 aparições por hora" está suspenso e por isso não vira alerta.
+    inicio = linhas[0][0]
+    mundo_novo = bool(re.search(r' fase=0 ', next((texto for _, texto in linhas if texto.startswith('estado=')), '')))
+    origem_de = {}
+    forma_de = {}
+    do_mod = 0          # manifestações que não vieram de comando
+    na_mira = []        # (t, forma) das que o jogador encarou
+    for t, texto in linhas:
+        m = re.match(r'^HOSPEDE id=(\S+) criado origem=(\S+) evento=(\S+) modo=(\S+)', texto)
+        if m:
+            origem_de[m.group(1)] = m.group(2)
+            forma_de[m.group(1)] = m.group(3) + '/' + m.group(4)
+            if m.group(2) != 'COMANDO':
+                do_mod += 1
+            continue
+        m = re.match(r'^HOSPEDE id=(\S+) ENCAROU', texto)
+        if m and origem_de.get(m.group(1), 'COMANDO') != 'COMANDO':
+            na_mira.append((t, forma_de.get(m.group(1), '?')))
+    tentativas = sum(1 for _, texto in linhas if texto.startswith('CONTATO tentativa='))
+    contato_visto = next((t for t, texto in linhas if texto.startswith('CONTATO visto=sim')), None)
+
+    posicao = re.compile(r'pos(?:Som)?=\((-?\d+),(-?\d+),(-?\d+)\)')
+    sinais = []         # (t, x, z) de cada som que aponta para um lugar
+    coisas = []         # (t, x, z) do que se pode achar num lugar: a criatura, um vestígio, uma cinza
+    for t, texto in linhas:
+        if 'forçado por comando' in texto:
+            continue
+        m = posicao.search(texto)
+        if not m:
+            continue
+        x, z = int(m.group(1)), int(m.group(3))
+        if re.match(r'^(SINAL|SINAL_DISTANTE|ECO|RUIDO_RETORNO|CANTIGA|SEGUIDOR) ', texto):
+            sinais.append((t, x, z))
+        elif re.match(r'^(HOSPEDE id=\S+ criado|VESTIGIO|PEGADAS)', texto):
+            coisas.append((t, x, z))
+    seguidos = sum(1 for t, x, z in sinais
+                   if any(0 <= t2 - t <= 120 and (x2 - x) ** 2 + (z2 - z) ** 2 <= 12 * 12 for t2, x2, z2 in coisas))
+
+    fortes_t = [t for t, f, d in saidas if (f == 'evento' and intensidade.get((t, d), 0) >= 22) or f in ('cena', 'contato', 'cacada', 'captura', 'veu')]
+    fase1_em = fase_em.get(1, inicio if not mundo_novo else None)
+    horas_sem_forte = []
+    if fase1_em is not None:
+        h = fase1_em
+        fim = linhas[-1][0]
+        while h + 3600 <= fim:
+            if not any(h <= t < h + 3600 for t in fortes_t):
+                horas_sem_forte.append(h - inicio)
+            h += 3600
+        # Sessão de menos de uma hora cheia: quarenta minutos sem nada forte já é o caso que interessa.
+        if not horas_sem_forte and fim - fase1_em >= 40 * 60 and not any(t >= fase1_em for t in fortes_t):
+            horas_sem_forte.append(fase1_em - inicio)
+    parte_conta = fontes.get('conta', 0) / float(len(saidas)) if saidas else 0.0
+
+    out.append('## A primeira hora: os critérios')
+    out.append('')
+    out.append('Trocam o que se conta: o que esteve na mira do jogador, e não o que foi criado; sinais seguidos de algo '
+               'no mesmo lugar; o peso da Conta. Os números são ponto de partida, não regra.')
+    out.append('')
+    criterios = []
+    if tentativas:
+        criterios.append(('Primeiro contato', '%d tentativa(s); visto %s' % (
+            tentativas, 'aos ' + hms(contato_visto - inicio) if contato_visto is not None else '**ainda não**')))
+    criterios.append(('Primeira aparição na mira dele (fora as de comando)',
+                      'aos %s (%s)' % (hms(na_mira[0][0] - inicio), na_mira[0][1]) if na_mira else '**nenhuma**'))
+    criterios.append(('Aparições na mira / criadas pelo mod', '%d de %d' % (len(na_mira), do_mod)))
+    criterios.append(('Formas diferentes entre as vistas', ', '.join(sorted(set(f for _, f in na_mira))) or '—'))
+    criterios.append(('Sinais com lugar seguidos de algo ali em até 2 min', '%d de %d' % (seguidos, len(sinais))))
+    criterios.append(('Saídas fortes (evento de 22 ou mais, cena, contato, caçada, captura, Véu)', str(len(fortes_t))))
+    criterios.append(('Horas (ou 40 min, numa sessão curta), da fase 1 em diante, sem nenhuma saída forte',
+                      ', '.join('a que começa aos ' + hms(h) for h in horas_sem_forte) or 'nenhuma'))
+    criterios.append(('Parte da Conta no que ele percebeu', '%.0f%% (%d de %d)' % (100 * parte_conta, fontes.get('conta', 0), len(saidas))))
+    out += tabela(['Critério', 'Nesta sessão'], criterios)
+    out.append('')
+    out.append('O que o log não mede: se ele consegue dizer o que cada item faz. Isso se pergunta a ele depois da sessão.')
+    out.append('')
+
     # ----- alertas: o que merece ser olhado primeiro (vão para o começo do relatório) -----
     alertas = []
+    visto_cedo = any(t - inicio <= 25 * 60 for t, _ in na_mira) or (contato_visto is not None and contato_visto - inicio <= 25 * 60)
+    if mundo_novo and jogado >= 25 * 60 and not visto_cedo:
+        alertas.append('**Mundo novo e nenhuma aparição na mira dele até os 25 minutos.** O primeiro contato devia ter acontecido: '
+                       'houve %d tentativa(s).' % tentativas)
+    if horas_sem_forte:
+        alertas.append('**%d trecho(s) de uma hora (ou de 40 minutos, numa sessão curta), da fase 1 em diante, sem nenhuma saída forte.** É o "parado" que ele sentiu em 09/10.' % len(horas_sem_forte))
+    if len(saidas) >= 9 and parte_conta > 1 / 3.0:
+        alertas.append('**A Conta foi %.0f%% do que ele percebeu** (referência: menos de um terço).' % (100 * parte_conta))
     tempo_fase2 = sum(seg for f, seg in tempo_fase.items() if f >= 2)
     tempo_ativo = sum(seg for f, seg in tempo_fase.items() if f >= 1)
     eventos_total = sum(eventos.values())

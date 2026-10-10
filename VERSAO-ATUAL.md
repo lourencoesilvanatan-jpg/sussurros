@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha14
+
+Mexe na primeira hora de um mundo novo: a ordem em que as coisas chegam até o jogador e o que o jogo diz sobre os itens. As dicas dos itens passam a dizer como cada um se usa. Não entra nada novo: é reordenar e garantir.
+
 ## 0.9.0-alpha13
 
 Corrige o limite de ritmo da alpha12, que tinha ficado apertado demais: na primeira sessão de verdade o mod quase não fez a sua parte principal. Corrige também um caso em que ele podia ficar calado por muito tempo, mais provável em servidor.

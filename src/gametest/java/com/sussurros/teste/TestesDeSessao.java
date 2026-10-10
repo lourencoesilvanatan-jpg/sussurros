@@ -13,8 +13,9 @@ import com.sussurros.assombracao.Diretor;
 import com.sussurros.rede.Rede;
 
 /**
- * A sessão sintética: uma hora de jogo com dois jogadores de mentira, um na fase 2 e outro na fase 4, andando
- * em campo aberto com pausas. Não diz se o mod assusta. Diz se o RITMO está dentro do esperado antes de gastar
+ * A sessão sintética: uma hora de jogo com três jogadores de mentira, andando em campo aberto com pausas. Um
+ * começa do zero, como num mundo novo (é nele que se vê a primeira hora: o primeiro contato, o que vem antes
+ * e depois dele); os outros começam na fase 2 e na fase 4. Não diz se o mod assusta. Diz se o RITMO está dentro do esperado antes de gastar
  * o tempo do dono: o log que ela deixa passa por ferramentas/log/analisar.py.
  *
  * Fica desligada no dia a dia. Para rodar (uma hora de jogo leva poucos minutos de relógio):
@@ -23,7 +24,7 @@ import com.sussurros.rede.Rede;
  *     SUSSURROS_SESSAO=1 SUSSURROS_SESSAO_SEM_LIMITE=1 ./gradlew runGameTest     (como era sem o orçamento de atenção)
  *     python ferramentas/log/analisar.py build/run/gameTest/sussurros-debug.log --jogador <nome>
  *
- * Os nomes dos dois jogadores saem no log do servidor, numa linha que começa por "[sessao]".
+ * Os nomes dos três jogadores saem no log do servidor, numa linha que começa por "[sessao]".
  *
  * Limites, para ninguém ler demais no resultado: o jogador de mentira "reage" sempre do mesmo jeito (para e
  * vira o rosto a cada coisa que acontece), não usa itens, não entra em casa nem em caverna, e não visita a
@@ -50,24 +51,30 @@ public class TestesDeSessao {
 		helper.getLevel().getServer().tickRateManager().requestGameToSprint(TICKS + 400);
 		ServerPlayer[] jogadores = {
 				JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -3000, 0),
-				JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -3400, 0)};
-		int[] fases = {2, 4};
-		Vec3[] centros = new Vec3[2];
-		for (int i = 0; i < 2; i++) {
+				JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -3400, 0),
+				JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -3800, 0)};
+		int[] fases = {2, 4, 0};
+		int n = jogadores.length;
+		Vec3[] centros = new Vec3[n];
+		double[] saldoAnterior = new double[n];
+		for (int i = 0; i < n; i++) {
 			Diretor.esquecer(jogadores[i]);
-			Diretor.definirFase(jogadores[i], fases[i]);
+			if (fases[i] > 0) {
+				Diretor.definirFase(jogadores[i], fases[i]);
+			}
 			centros[i] = jogadores[i].position();
+			saldoAnterior[i] = Atencao.saldoParaTeste(jogadores[i]);
 		}
-		Sussurros.LOGGER.info("[sessao] fase 2 = {}, fase 4 = {}", jogadores[0].getName().getString(), jogadores[1].getName().getString());
+		Sussurros.LOGGER.info("[sessao] fase 2 = {}, fase 4 = {}, mundo novo = {}", jogadores[0].getName().getString(),
+				jogadores[1].getName().getString(), jogadores[2].getName().getString());
 		int[] relogio = new int[1];
-		double[] saldoAnterior = {Atencao.saldoParaTeste(jogadores[0]), Atencao.saldoParaTeste(jogadores[1])};
-		int[] reageAte = new int[2];
+		int[] reageAte = new int[n];
 		// Não usa helper.onEachTick nem JogadorDeTeste.acompanhar: os dois agendam de uma vez uma tarefa para cada tick
 		// até o fim do teste, e o servidor de teste percorre a lista inteira a cada tick. Com um teste de horas isso
 		// são centenas de milhares de tarefas, e a sessão andava mais devagar que o jogo de verdade.
 		cadaTick(helper, () -> {
 			int t = relogio[0]++;
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < n; i++) {
 				// Um jogador de verdade avisa o servidor a cada passo, e é isso que mantém o mundo carregado em volta.
 				helper.getLevel().getChunkSource().move(jogadores[i]);
 				// Ele "reage" a cada coisa que o mod faz (o saldo de atenção cai quando algo acontece): para por

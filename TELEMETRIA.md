@@ -688,3 +688,59 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 `saldo` é o do Diretor e `ambiente` é o do ambiente. Os avisos da Conta deixaram de aparecer aqui. O saldo do Diretor perto de zero depois de cada gasto é o normal quando ele está ativo; o que denuncia problema é a mistura (ver os alertas no começo do relatório do analisador).
 
 `PARADA_NO_TEMPO`: a criatura estava num pedaço de mundo carregado que não anda (fora da distância de simulação) e o relógio dela ficou cinco segundos sem mudar. O Diretor a tirou para não ficar esperando por ela. Se aparecer muito num servidor, a distância de simulação está curta para as distâncias em que o mod trabalha.
+
+## 0.9.0-alpha14 — a primeira hora
+
+### O primeiro contato
+
+```
+[905s][Jogador] PRENUNCIO real=contato luz=1 assobio=nao
+[905s][Jogador] CONTATO tentativa=1 relogio=905s prazo=nao luz=4 dia=nao dist=22.6 manifestacao=M001
+[921s][Jogador] CONTATO visto=sim motivo=VISTO_DEMAIS naTela=19t encarado=sim manifestacao=M001
+[921s][Jogador] VESTIGIO CINZA motivo=CONTATO manifestacao=M001 pos=(-120,64,88)
+```
+
+- `relogio` é o tempo de jogo do contato (segundos no mundo normal, contados só enquanto ele não aconteceu), não o relógio da assombração.
+- `prazo=sim`: passou dos 25 minutos e aconteceu sem esperar pouca luz. `dia=sim`: foi a forma diurna, mais longe.
+- `PRENUNCIO real=contato`: o aviso da caçada usado no primeiro contato. Há criatura, não há caçada. (O analisador só conta `real=sim` como caçada.)
+- `CONTATO visto=nao motivo=TEMPO_ESGOTADO ...`: ninguém olhou. Não há cinza e virá outra `tentativa`.
+- `CONTATO dispensado: ele já tinha sido visto`: mundo de antes desta versão.
+
+### O sino
+
+```
+[1310s][Jogador] SINO resposta=VESTIGIO tipo=DESAPARECIMENTO idade=380s pos=(-120,64,88)
+[1310s][Jogador] SINO primeira resposta de verdade: VESTIGIO
+[1410s][Jogador] SINO resposta=SILENCIO verdadeiro=sim
+[2100s][Jogador] SINO resposta=COBRANCA
+```
+
+- `verdadeiro=sim` no silêncio: o sino ainda não tinha dado a primeira resposta de verdade, e não havia nada por perto. Depois dela o silêncio aparece sem esse campo, e as respostas `RASTRO` e `ISCA_RASTRO` voltam a existir.
+- `COBRANCA`: a Conta, cobrada no próprio sino.
+
+### Páginas e receitas
+
+```
+[930s][Jogador] ENSINO primeiro=CINZA pagina=10 nova=sim
+[951s][Jogador] ENSINO pagina entregue proxima=10
+[960s][Jogador] DIARIO pagina=10 lidas=2
+[1310s][Jogador] ENSINO receitas=vela_palida
+```
+
+- `ENSINO primeiro=`: a primeira vez em que ele teve o item na mochila (ou riscou uma linha). `nova=nao`: a página daquele item já tinha sido lida.
+- `ENSINO pagina pedida: ele já tem uma página por ler`: nenhuma página foi deixada, porque ele já carrega uma; a que ele tem mostra a pedida.
+- `DIARIO pagina=N`: o número de verdade da página lida.
+
+### A Conta
+
+```
+[1500s][Jogador] CONTA carencia item=SINO uso=2/3
+[1700s][Jogador] CONTA +1 item=SINO total=1 limite=8
+[2050s][Jogador] CONTA estourou total=8 limite=8 cobraNoProximoUso=SINO
+[2100s][Jogador] CONTA cobrada no uso item=SINO recibos=1
+```
+
+- `carencia`: o uso não somou e não fez o som do marcador.
+- `CONTA +N`: somou, e o marcador (o som de giz) tocou para ele.
+- `estourou ... cobraNoProximoUso=`: a conta zera na hora e o item fica marcado. Deixaram de existir `cobraEm=` e a linha `CONTA cobranca item=... como=...`.
+- `CONTA cobrada no uso`: aconteceu a cobrança, no próprio item. `recibos` é o total de cobranças na vida do personagem (é o que o Caderno mostra).

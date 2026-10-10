@@ -68,7 +68,8 @@ public final class CasaDoVigia {
 			return;
 		}
 		if (m.get(EXISTE) != 1) {
-			if (fase < 2 || seg % 20 != 11 || e.forcando || EstruturasSussurros.temCenaAtiva(e)
+			// 0.9.0-alpha14: a casa é o lugar com mais ferramentas do mod. Espera o primeiro contato.
+			if (fase < 2 || !PrimeiroContato.liberado(m) || seg % 20 != 11 || e.forcando || EstruturasSussurros.temCenaAtiva(e)
 					|| m.get(Memoria.CHUNKS_VISITADOS) < 20 || p.getRandom().nextFloat() >= 0.15F) {
 				return;
 			}

@@ -45,6 +45,6 @@ public class OlhoSussurranteItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent, Consumer<Component> textConsumer, TooltipFlag type) {
-		textConsumer.accept(Component.translatable("itemTooltip.sussurros.olho_sussurrante").withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+		Dicas.acrescentar(textConsumer, "olho_sussurrante", true);
 	}
 }

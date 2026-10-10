@@ -41,7 +41,6 @@ public class OssosDeAgouroItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent,
 			Consumer<Component> textConsumer, TooltipFlag type) {
-		textConsumer.accept(Component.translatable("itemTooltip.sussurros.ossos_de_agouro")
-				.withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+		Dicas.acrescentar(textConsumer, "ossos_de_agouro", true);
 	}
 }

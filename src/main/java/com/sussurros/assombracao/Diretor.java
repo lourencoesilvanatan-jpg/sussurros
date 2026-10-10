@@ -328,6 +328,11 @@ public final class Diretor {
 		return estado(p).sentidos;
 	}
 
+	/** Quantos vestígios este jogador tem guardados (só para os testes). */
+	public static int vestigiosParaTeste(ServerPlayer p) {
+		return Vestigios.de(p).quantidade();
+	}
+
 	/** A criatura que assombra este jogador agora, se houver (para os testes). */
 	@Nullable
 	public static HospedeEntity criatura(ServerPlayer p) {
@@ -642,6 +647,7 @@ public final class Diretor {
 		Cantiga.segundo(level, p, m, e, seg, tick);
 		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
 		Conta.segundo(level, p, m, e, seg, tick);
+		Ensino.segundo(level, p, m, e, seg, tick);
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
 		Veu.segundo(level, p, e, tick);
 		Erguidos.segundo(level, p, m, e, fase, noite, seg, tick);
@@ -696,7 +702,16 @@ public final class Diretor {
 		if (!tregua && cobrarCacadaDevida(level, p, m, e, escuro, calma, seg, tick, rnd)) {
 			tregua = true;
 		}
-		if (!tregua && Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
+		// 0.9.0-alpha14: o primeiro contato. É regra, não sorteio: não passa pelo portão de vulnerabilidade nem
+		// espera saldo de atenção. Se ele acabou de nascer, nada mais começa neste segundo.
+		boolean contatoAgora = false;
+		if (!tregua) {
+			boolean antes = criaturaPresente;
+			PrimeiroContato.segundo(level, p, m, e, luz, noite, calma, seg, tick, rnd);
+			criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
+			contatoAgora = criaturaPresente && !antes;
+		}
+		if (!tregua && !contatoAgora && Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
 			String antes = cenaAtiva(e);
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
@@ -752,18 +767,18 @@ public final class Diretor {
 	private static void transicao(ServerLevel level, ServerPlayer p, Memoria m, int fase) {
 		boolean darPagina = m.get(Memoria.PAGINAS_ENTREGUES) < Diario.TOTAL_PAGINAS;
 		boolean darOlho = fase >= 3 && m.get(Memoria.RECEBEU_OLHO) == 0;
-		// 0.9: a Caixa de Música é deixada para ele na fase 2. É por ela que ele (e o Hóspede) aprende a cantiga.
-		boolean darCaixa = fase >= 2 && m.get(Memoria.RECEBEU_CAIXA) == 0;
-		if (darCaixa) {
-			m.set(Memoria.RECEBEU_CAIXA, 1);
-		}
+		// 0.9.0-alpha14: a Caixa de Música deixou de ser largada aqui, na fase 2. Ela chegava antes de o
+		// jogador ter visto a criatura e sem nada que a explicasse. Agora ela é achada num lugar (a Casa do
+		// Vigia), e a página dela chega junto (ver Ensino).
 		if (darPagina) {
 			m.add(Memoria.PAGINAS_ENTREGUES, 1);
 		}
 		if (darOlho) {
 			m.set(Memoria.RECEBEU_OLHO, 1);
 		}
-		if (!darPagina && !darOlho && !darCaixa) {
+		// As receitas que ainda não chegaram por outro caminho.
+		Ensino.naFase(p, fase);
+		if (!darPagina && !darOlho) {
 			return;
 		}
 		passos(level, p, 4);
@@ -777,8 +792,15 @@ public final class Diretor {
 			if (darOlho) {
 				soltarAtras(level, p, new ItemStack(ModItems.OLHO_SUSSURRANTE), 2.5);
 			}
-			if (darCaixa) {
-				soltarAtras(level, p, new ItemStack(ModItems.CAIXA_DE_MUSICA), 3.0);
+		});
+	}
+
+	/** Deixa uma Página Rasgada para o jogador, do jeito de sempre: quatro passos atrás dele e a página no chão. */
+	static void deixarPagina(ServerLevel level, ServerPlayer p) {
+		passos(level, p, 4);
+		agendar(level, 34, () -> {
+			if (!p.isRemoved()) {
+				soltarAtras(level, p, new ItemStack(ModItems.PAGINA_RASGADA), 2.0);
 			}
 		});
 	}
@@ -1088,7 +1110,8 @@ public final class Diretor {
 					Atmosfera.podeEvento(level, p, e, ev, level.getGameTime() / 20);
 			case SEGUIDOR -> e.rastro.tamanho() >= 8;
 			case PEGADAS -> e.rastro.tamanho() >= 6;
-			case VULTO -> podeVulto(level, p);
+			// O vulto é a única aparição antes da fase 3: espera o primeiro contato, para não ser ele o primeiro.
+			case VULTO -> podeVulto(level, p) && PrimeiroContato.liberado(m);
 			// Os três abaixo só existem no cliente: sem o mod do outro lado, não acontece nada.
 			case ECO_PASSOS -> Rede.temCliente(p) && p.onGround() && e.velocidade > 1.0;
 			case VIGIA -> Rede.temCliente(p) && level.getGameTime() >= e.vigiaFalsaAte;
@@ -1464,9 +1487,6 @@ public final class Diretor {
 				if (e.iscaAtiva && tick < e.iscaAteTick) {
 					int atendidas = m.get(Memoria.ISCAS_ATENDIDAS);
 					double chanceIgnorar = atendidas < 3 ? 0.0 : Math.min(0.45, 0.15 + (atendidas - 3) * 0.07);
-					if (!e.forcando && Conta.cobrarNoUso(m, Conta.Item.ISCA)) {
-						chanceIgnorar = 1.0; // a Conta, cobrada na isca: desta vez ele não vem para onde foi chamado
-					}
 					if (rnd.nextDouble() >= chanceIgnorar) {
 						ok = invocarPertoDaIsca(level, p, m, e, duracao, pedido);
 					} else {
@@ -3343,6 +3363,15 @@ public final class Diretor {
 	 * O mesmo aviso acontece sem caçada (evento PRENUNCIO), para nunca virar certeza.
 	 */
 	private static void prenunciar(ServerLevel level, ServerPlayer p, EstadoJogador e, long tick, RandomSource rnd, boolean deVerdade) {
+		prenunciar(level, p, e, tick, rnd, deVerdade, deVerdade ? "sim" : "nao");
+	}
+
+	/**
+	 * O mesmo aviso, com o rótulo que vai para o log. O primeiro contato usa "contato": há criatura por perto
+	 * (o aviso diz a verdade), mas não é caçada.
+	 */
+	static void prenunciar(ServerLevel level, ServerPlayer p, EstadoJogador e, long tick, RandomSource rnd, boolean deVerdade,
+			String rotulo) {
 		emudecer(level, p, deVerdade ? 12 : 10 + rnd.nextInt(8), deVerdade ? "CACA" : "PRENUNCIO");
 		e.semMusicaAte = tick + 20L * (deVerdade ? 12 : 10 + rnd.nextInt(8));
 		e.cacaAvisoAte = tick + 20L * 10;
@@ -3356,7 +3385,7 @@ public final class Diretor {
 				}
 			});
 		}
-		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas
+		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + rotulo + " luz=" + apagadas
 				+ " assobio=" + (assobio ? "sim" : "nao"));
 	}
 
@@ -3597,6 +3626,11 @@ public final class Diretor {
 		if (criatura.ehTeste() || criatura.getOrigem() != HospedeEntity.Origem.DIRETOR) {
 			return;
 		}
+		if (criatura.ehContato()) {
+			// O primeiro contato tem a sua regra: visto, sempre deixa a cinza; não visto, continua devendo.
+			PrimeiroContato.aoSumir(p, criatura, motivo);
+			return;
+		}
 		boolean confronto = "FERIDO".equals(motivo) || "ENCARADO_DEMAIS".equals(motivo);
 		boolean percebida = criatura.foiAvistadoVisual();
 		if (motivo.startsWith("VULTO_")) {
@@ -3643,15 +3677,26 @@ public final class Diretor {
 		if (e.iscaAtiva && e.iscaAteTick > tick) {
 			return false;
 		}
+		Memoria m = Memoria.de(p);
+		m.add(Memoria.ISCAS_ARMADAS, 1);
+		// 0.9.0-alpha14: a Conta, cobrada na própria isca e na hora de armar: desta vez a cinza não se prende.
+		// (Antes a isca cobrada era só ignorada depois, sem nenhum sinal: lia-se como "o item falhou".)
+		boolean cobrada = Conta.cobrarNoUso(p, m, Conta.Item.ISCA);
+		Conta.somar(p, m, Conta.Item.ISCA, 1);
+		m.salvar();
+		if (cobrada) {
+			ModSons.tocar(p.level(), p.getX(), p.getY() + 0.2, p.getZ(), ModSons.Som.PANO, 0.28F, 0.5F);
+			p.level().sendParticles(ParticleTypes.ASH, p.getX(), p.getY() + 0.6, p.getZ(), 14, 0.5, 0.4, 0.5, 0.02);
+			p.sendOverlayMessage(Component.translatable("message.sussurros.isca.cobrada")
+					.withStyle(s -> s.withColor(0xA3A098).withItalic(true)));
+			Depuracao.log(p, tick / 20, "ISCA cobrada: nao armou");
+			return true;
+		}
 		e.iscaX = p.getX();
 		e.iscaY = p.getY();
 		e.iscaZ = p.getZ();
 		e.iscaAteTick = tick + 20L * 120L;
 		e.iscaAtiva = true;
-		Memoria m = Memoria.de(p);
-		m.add(Memoria.ISCAS_ARMADAS, 1);
-		Conta.somar(p, m, Conta.Item.ISCA, 1);
-		m.salvar();
 		ModSons.tocar(p.level(), e.iscaX, e.iscaY + 0.2, e.iscaZ, ModSons.Som.PANO, 0.28F, 0.66F);
 		p.level().sendParticles(ParticleTypes.ASH, e.iscaX, e.iscaY + 0.08, e.iscaZ, 10, 0.35, 0.03, 0.35, 0.002);
 		p.sendOverlayMessage(Component.translatable("message.sussurros.isca.armada")
@@ -3678,6 +3723,21 @@ public final class Diretor {
 		e.vigiaAtiva = true;
 		Memoria m = Memoria.de(p);
 		m.add(Memoria.FIOS_ARMADOS, 1);
+		// 0.9.0-alpha14: a Conta, cobrada no próprio fio: alguém o dedilha logo depois de armado, três vezes,
+		// sem atravessar. (Antes vinha solto, de meio minuto a dois depois de estourar.)
+		if (Conta.cobrarNoUso(p, m, Conta.Item.FIO)) {
+			double fx = e.vigiaX;
+			double fy = e.vigiaY;
+			double fz = e.vigiaZ;
+			for (int i = 0; i < 3; i++) {
+				agendar(p.level(), 30 + i * 34, () -> {
+					if (!p.isRemoved()) {
+						ModSons.tocarPara(p, fx, fy + 0.3, fz, ModSons.Som.ESTALO, 0.7F, 0.72F);
+					}
+				});
+			}
+			Depuracao.log(p, tick / 20, "CONTA cobrada no FIO: dedilhado");
+		}
 		Conta.somar(p, m, Conta.Item.FIO, 1);
 		m.salvar();
 		ModSons.tocar(p.level(), p.getX(), p.getY() + 0.4, p.getZ(), ModSons.Som.PANO, 0.32F, 1.18F);
@@ -3733,6 +3793,13 @@ public final class Diretor {
 	/**
 	 * Sino Oco: faz uma pergunta ao mundo, não uma varredura. Uma manifestação presente pode responder
 	 * de onde está; sem criatura, um lugar do Rastro pode responder; às vezes só há silêncio.
+	 *
+	 * 0.9.0-alpha14: enquanto o sino não deu a sua primeira resposta de verdade, ele só diz a verdade. Se há
+	 * criatura ou um vestígio dela por perto, é dali que vem a resposta, com uma frase que dá o lado. Se não
+	 * há nada, a resposta é o silêncio, e o silêncio tem frase própria: "ouvi, não há nada" não pode parecer
+	 * "não funcionou". O ponto do Rastro que responde sem ninguém lá (e a mentira) só entram depois dessa
+	 * primeira resposta. Numa sessão de verdade ele tocou 16 vezes: 11 respostas do próprio caminho, 5 silêncios
+	 * mudos, e o jogador não soube dizer o que o item fazia.
 	 */
 	public static void usarSino(ServerPlayer p) {
 		ServerLevel level = p.level();
@@ -3749,12 +3816,30 @@ public final class Diretor {
 		m.limitar(Memoria.INQUIETACAO, 0, Memoria.MAX_INQUIETACAO);
 		somarObsessao(e, 2.0);
 		m.set(Memoria.OBSESSAO, (int) Math.round(e.obsessao * 10));
+		boolean cobrado = Conta.cobrarNoUso(p, m, Conta.Item.SINO);
 		Conta.somar(p, m, Conta.Item.SINO, 1);
+		boolean ensinado = m.get(Memoria.SINO_RESPONDEU) == 1;
 		m.salvar();
 
 		ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.38F, 1.35F);
 		ModSons.tocar(level, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.ESTALO, 0.30F, 0.72F);
 		Depuracao.log(p, seg, "SINO tocado usos=" + usosSino);
+
+		if (cobrado) {
+			// A Conta, cobrada no próprio sino: ele continua tocando sozinho, e desta vez ninguém responde.
+			for (int i = 1; i <= 2; i++) {
+				agendar(level, i * 26, () -> {
+					if (!p.isRemoved()) {
+						ModSons.tocarNaCabeca(p, ModSons.Som.GRAVE, 0.38F, 1.35F);
+						ModSons.tocarNaCabeca(p, ModSons.Som.ESTALO, 0.30F, 0.72F);
+					}
+				});
+			}
+			p.sendOverlayMessage(Component.translatable("message.sussurros.sino.cobrado")
+					.withStyle(st -> st.withColor(0xA3A098).withItalic(true)));
+			Depuracao.log(p, seg, "SINO resposta=COBRANCA");
+			return;
+		}
 
 		int atraso = 28 + level.getRandom().nextInt(35);
 		agendar(level, atraso, () -> {
@@ -3764,36 +3849,72 @@ public final class Diretor {
 			HospedeEntity h = e.criatura;
 			boolean hospedePerto = h != null && !h.isRemoved() && h.distanceToSqr(p) <= 52 * 52;
 			double chanceEnganar = usosSino < 4 ? 0.0 : Math.min(0.45, 0.12 + (usosSino - 4) * 0.05);
-			boolean enganar = hospedePerto && level.getRandom().nextDouble() < chanceEnganar;
+			boolean enganar = ensinado && hospedePerto && level.getRandom().nextDouble() < chanceEnganar;
 			if (hospedePerto && !enganar) {
 				ModSons.Som som = level.getRandom().nextBoolean() ? ModSons.Som.RESPIRACAO : ModSons.Som.PANO;
 				float volume = volumePara(p, h.getX(), h.getY(), h.getZ(), 0.65F);
 				ModSons.tocar(level, h.getX(), h.getY() + 1.2, h.getZ(), som, volume, 0.78F + level.getRandom().nextFloat() * 0.18F);
 				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=HOSPEDE manifestacao=" + h.getIdManifestacao()
 						+ " dist=" + String.format(Locale.ROOT, "%.1f", Math.sqrt(h.distanceToSqr(p))));
+				if (!ensinado) {
+					sinoRespondeuDeVerdade(level, p, h.getX(), h.getY(), h.getZ(), false);
+				}
 				return;
 			}
 			long agora = level.getGameTime() / 20;
 			Vestigios.Marca marca = Vestigios.de(p).maisPerto(p.getX(), p.getY(), p.getZ(), 42, agora);
-			if (!enganar && marca != null && level.getRandom().nextFloat() < 0.38F) {
+			// Antes da primeira resposta de verdade, um vestígio por perto responde sempre. Depois, às vezes.
+			if (!enganar && marca != null && (!ensinado || level.getRandom().nextFloat() < 0.38F)) {
 				BlockPos mp = marca.pos();
 				ModSons.Som som = marca.tipo() == Vestigios.Tipo.VIGILIA ? ModSons.Som.ESTALO : ModSons.Som.PANO;
 				ModSons.tocarPara(p, mp.getX() + 0.5, mp.getY() + 0.7, mp.getZ() + 0.5, som,
 						volumePara(p, mp.getX() + 0.5, mp.getY() + 0.5, mp.getZ() + 0.5, 0.52F), 0.72F);
 				Depuracao.log(p, agora, "SINO resposta=VESTIGIO tipo=" + marca.tipo() + " idade=" + marca.idade(agora)
 						+ "s pos=" + pos(mp.getX(), mp.getY(), mp.getZ()));
+				if (!ensinado) {
+					sinoRespondeuDeVerdade(level, p, mp.getX() + 0.5, mp.getY(), mp.getZ() + 0.5, true);
+				}
 				return;
 			}
-			Rastro.Ponto pt = pontoDoRastro(p, e, level.getGameTime() / 20, 18, 300, 10, 38, true);
+			Rastro.Ponto pt = ensinado ? pontoDoRastro(p, e, level.getGameTime() / 20, 18, 300, 10, 38, true) : null;
 			if (pt != null && (enganar || level.getRandom().nextFloat() < 0.62F)) {
 				ModSons.Som som = level.getRandom().nextBoolean() ? ModSons.Som.ESTALO : ModSons.Som.MADEIRA;
 				ModSons.tocarPara(p, pt.x(), pt.y() + 0.8, pt.z(), som, volumePara(p, pt.x(), pt.y(), pt.z(), 0.55F), 0.82F);
 				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=" + (enganar ? "ISCA_RASTRO" : "RASTRO") + " idade="
 						+ (level.getGameTime() / 20 - pt.seg()) + "s pos=" + pos(pt.x(), pt.y(), pt.z()));
 			} else {
-				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=SILENCIO");
+				// O silêncio é uma resposta, e tem de parecer uma: o sino soou, e nada veio de volta.
+				p.sendOverlayMessage(Component.translatable("message.sussurros.sino.silencio")
+						.withStyle(st -> st.withColor(0x8A8A8A).withItalic(true)));
+				Depuracao.log(p, level.getGameTime() / 20, "SINO resposta=SILENCIO" + (ensinado ? "" : " verdadeiro=sim"));
 			}
 		});
+	}
+
+	/**
+	 * A primeira resposta de verdade do sino: a frase diz o lado, a cinza sobe no lugar (se foi um vestígio) e a
+	 * próxima ferramenta fica disponível. Daí em diante o sino volta a ser ambíguo, como o diário descreve.
+	 */
+	private static void sinoRespondeuDeVerdade(ServerLevel level, ServerPlayer p, double x, double y, double z, boolean vestigio) {
+		p.sendOverlayMessage(Component.translatable("message.sussurros.sino.responde",
+				Component.translatable("message.sussurros.dir." + direcaoPara(p, x, z)))
+				.withStyle(st -> st.withColor(0xDDD6C2).withItalic(true)));
+		if (vestigio) {
+			for (int i = 0; i < 4; i++) {
+				final int n = i;
+				agendar(level, i * 8, () -> {
+					if (!p.isRemoved()) {
+						level.sendParticles(ParticleTypes.ASH, x, y + 0.15 + n * 0.03, z, 7, 0.42, 0.06, 0.42, 0.002);
+					}
+				});
+			}
+		}
+		// Roda da agenda, fora do tick do Diretor: pode abrir e salvar a sua Memoria.
+		Memoria m = Memoria.de(p);
+		m.set(Memoria.SINO_RESPONDEU, 1);
+		m.salvar();
+		Ensino.aoSinoResponder(p);
+		Depuracao.log(p, level.getGameTime() / 20, "SINO primeira resposta de verdade: " + (vestigio ? "VESTIGIO" : "HOSPEDE"));
 	}
 
 	private static void revelarVestigio(ServerLevel level, ServerPlayer p, Vestigios.Marca marca, long agora) {
@@ -3825,7 +3946,8 @@ public final class Diretor {
 		int velas = m.get(Memoria.VELAS);
 		int segundos = Math.max(30, 90 - 12 * (velas / 2));
 		// 0.9: a Conta. Quem se apoiou demais na vela paga nela: esta dura a metade.
-		if (Conta.cobrarNoUso(m, Conta.Item.VELA)) {
+		boolean velaCobrada = Conta.cobrarNoUso(p, m, Conta.Item.VELA);
+		if (velaCobrada) {
 			segundos = Math.max(15, segundos / 2);
 			Depuracao.log(p, level.getGameTime() / 20, "CONTA cobrada na VELA: dura " + segundos + "s");
 		}
@@ -3857,7 +3979,9 @@ public final class Diretor {
 		m.limitar(Memoria.INQUIETACAO, 0, Memoria.MAX_INQUIETACAO);
 		m.salvar();
 
-		p.sendOverlayMessage(Component.translatable("message.sussurros.vela.acendeu").withStyle(s -> s.withColor(0xE8E0C8).withItalic(true)));
+		// A vela cobrada diz na hora que não vai durar: a cobrança tem de ter a cara do item.
+		p.sendOverlayMessage(Component.translatable(velaCobrada ? "message.sussurros.vela.cobrada" : "message.sussurros.vela.acendeu")
+				.withStyle(s -> s.withColor(velaCobrada ? 0xA3A098 : 0xE8E0C8).withItalic(true)));
 	}
 
 	/** Olho Sussurrante: revela onde ele está. Mas olhar chama atenção. */
@@ -3868,7 +3992,7 @@ public final class Diretor {
 		m.add(Memoria.OLHOS, 1);
 		m.add(Memoria.TEMPO, 90);
 		// 0.9: a Conta. Quem se apoiou demais no Olho paga nele: a escuridão dobra e ele vem.
-		boolean olhoCobrado = Conta.cobrarNoUso(m, Conta.Item.OLHO);
+		boolean olhoCobrado = Conta.cobrarNoUso(p, m, Conta.Item.OLHO);
 		if (olhoCobrado) {
 			p.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 20 * 10));
 			Depuracao.log(p, level.getGameTime() / 20, "CONTA cobrada no OLHO");
@@ -4450,6 +4574,9 @@ public final class Diretor {
 		double z = chao != null ? chao.getZ() + 0.5 : p.getZ();
 		ItemEntity item = new ItemEntity(level, x, y, z, stack);
 		item.setDeltaMovement(0, 0, 0);
+		// O que é deixado para ele não some: cai atrás, fora da vista, e a entrega já ficou marcada na memória.
+		// Como item comum, quem não se virasse em cinco minutos perdia a página (ou o Olho) para sempre.
+		item.setUnlimitedLifetime();
 		level.addFreshEntity(item);
 	}
 

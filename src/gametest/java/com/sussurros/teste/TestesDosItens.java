@@ -61,7 +61,7 @@ public class TestesDosItens {
 				d -> d.entityTags().contains(etiqueta)).size();
 	}
 
-	/** Usar Cinza Pálida no chão faz a linha, gasta a cinza e soma na Conta. */
+	/** Usar Cinza Pálida no chão faz a linha, gasta a cinza e conta como um uso (os três primeiros não somam). */
 	@GameTest(maxTicks = 100)
 	public void aCinzaViraLinha(GameTestHelper helper) {
 		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -100, 0);
@@ -74,7 +74,8 @@ public class TestesDosItens {
 			helper.assertTrue(CinzaEspalhadaBlock.estadoEm(level, chao.above()) == CinzaEspalhadaBlock.Estado.INTACTA,
 					"a cinza usada no chão deveria virar uma linha intacta");
 			helper.assertTrue(jogador.getMainHandItem().getCount() == 2, "deveria gastar uma cinza, sobrou " + jogador.getMainHandItem().getCount());
-			helper.assertTrue(Memoria.de(jogador).get("conta") == 1, "a linha deveria somar 1 na Conta");
+			helper.assertTrue(Memoria.de(jogador).get("conta_vida_linha") == 1, "a linha deveria contar como um uso");
+			helper.assertTrue(Memoria.de(jogador).get("conta") == 0, "o primeiro uso está na carência: não soma na Conta");
 			// Três tentativas de passar: riscada, gasta, rompida. A quarta não encontra mais nada segurando.
 			helper.assertTrue(CinzaEspalhadaBlock.desgastar(level, chao.above()), "1a tentativa deveria ser barrada");
 			helper.assertTrue(CinzaEspalhadaBlock.desgastar(level, chao.above()), "2a tentativa deveria ser barrada");
@@ -235,7 +236,7 @@ public class TestesDosItens {
 		});
 	}
 
-	/** A caixa toca, gasta a corda, conta os usos e soma na Conta. Tocando, não dá para dar corda de novo. */
+	/** A caixa toca, gasta a corda e conta os usos (os três primeiros não somam na Conta). Tocando, não dá para dar corda de novo. */
 	@GameTest(maxTicks = 200)
 	public void aCaixaTocaEGasta(GameTestHelper helper) {
 		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -500, 0);
@@ -246,7 +247,7 @@ public class TestesDosItens {
 			jogador.gameMode.useItem(jogador, level, jogador.getMainHandItem(), InteractionHand.MAIN_HAND);
 			Memoria m = Memoria.de(jogador);
 			helper.assertTrue(m.get(Memoria.CAIXA_USOS) == 1, "deveria contar um uso");
-			helper.assertTrue(m.get("conta") == 2, "a caixa soma 2 na Conta, veio " + m.get("conta"));
+			helper.assertTrue(m.get("conta_vida_caixa") == 1 && m.get("conta") == 0, "o primeiro uso conta, mas está na carência; conta=" + m.get("conta"));
 			helper.assertTrue(jogador.getMainHandItem().getDamageValue() == 1, "deveria gastar a corda");
 			jogador.getCooldowns().removeCooldown(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(ModItems.CAIXA_DE_MUSICA));
 			jogador.gameMode.useItem(jogador, level, jogador.getMainHandItem(), InteractionHand.MAIN_HAND);
@@ -256,7 +257,7 @@ public class TestesDosItens {
 		});
 	}
 
-	/** Os ossos caem (três, ou dois quando um se desfaz), somem depois, e cada jogada soma na Conta. */
+	/** Os ossos caem (três, ou dois quando um se desfaz), somem depois, e cada jogada conta como um uso. */
 	@GameTest(maxTicks = 500)
 	public void osOssosCaemESomem(GameTestHelper helper) {
 		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -600, 0);
@@ -267,7 +268,7 @@ public class TestesDosItens {
 		helper.runAfterDelay(5, () -> helper.assertTrue(Diretor.testarOssos(jogador, "silencio").startsWith("Ossos jogados"), "deveria jogar"));
 		helper.runAfterDelay(10, () -> {
 			helper.assertTrue(exibicoes(level, centro, "sussurros_ossos") == 3, "deveriam cair três ossos, caíram " + exibicoes(level, centro, "sussurros_ossos"));
-			helper.assertTrue(Memoria.de(jogador).get("conta") == 1, "uma jogada soma 1 na Conta");
+			helper.assertTrue(Memoria.de(jogador).get("conta_vida_ossos") == 1, "uma jogada conta como um uso");
 		});
 		helper.runAfterDelay(340, () -> {
 			helper.assertTrue(exibicoes(level, centro, "sussurros_ossos") == 0, "os ossos deveriam ter sumido");
@@ -275,34 +276,11 @@ public class TestesDosItens {
 		});
 		helper.runAfterDelay(345, () -> {
 			helper.assertTrue(exibicoes(level, centro, "sussurros_ossos") == 2, "no desfecho 'conta' um osso se desfaz");
-			helper.assertTrue(Memoria.de(jogador).get("conta") == 5, "esse desfecho soma 4, veio " + Memoria.de(jogador).get("conta"));
+			helper.assertTrue(Memoria.de(jogador).get("conta_vida_ossos") == 2 && Memoria.de(jogador).get("conta") == 0,
+					"a segunda jogada ainda está na carência: não soma, veio " + Memoria.de(jogador).get("conta"));
 			level.getEntitiesOfClass(Display.ItemDisplay.class, AABB.ofSize(centro, 8, 8, 8)).forEach(d -> d.discard());
 			JogadorDeTeste.remover(jogador);
 			helper.succeed();
-		});
-	}
-
-	/** A Conta estoura, avisa, cobra no item mais usado e zera. */
-	@GameTest(maxTicks = 3400)
-	public void aContaCobraEZera(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -700, 0);
-		Diretor.esquecer(jogador);
-		Diretor.definirFase(jogador, 2);
-		helper.runAfterDelay(5, () -> {
-			for (int i = 0; i < 11; i++) {
-				Conta.somar(jogador, Conta.Item.VELA);
-			}
-			helper.assertTrue(Memoria.de(jogador).get("conta") == 11, "onze usos de vela deveriam dar 11");
-		});
-		helper.succeedWhen(() -> {
-			Memoria m = Memoria.de(jogador);
-			helper.assertTrue(m.get("conta") == 0, "a Conta ainda não foi cobrada: " + m.get("conta"));
-			helper.assertTrue(m.get("cobrado_vela") == 1, "a cobrança deveria ficar marcada para a próxima vela");
-			helper.assertTrue(m.get("conta_avisos") == 0 && m.get("conta_vela") == 0, "depois de cobrar, tudo zera");
-			// A vela seguinte dura a metade e consome a marca.
-			Diretor.acenderVela(jogador);
-			helper.assertTrue(Memoria.de(jogador).get("cobrado_vela") == 0, "a marca deveria ser consumida");
-			JogadorDeTeste.remover(jogador);
 		});
 	}
 
@@ -329,10 +307,11 @@ public class TestesDosItens {
 	}
 
 	/**
-	 * As receitas carregam, e as que usam Cinza Pálida aparecem no livro de receitas de quem pega a primeira
-	 * cinza: é assim que o jogador descobre o que dá para fazer, sem ler nada fora do jogo.
+	 * As receitas carregam e chegam uma de cada vez ao livro de receitas, que é como o jogador descobre o que
+	 * dá para fazer sem ler nada fora do jogo: a do sino com a primeira cinza; as outras quando ele tem o
+	 * próprio item na mochila (achado num lugar), ou na última fase.
 	 */
-	@GameTest(maxTicks = 200)
+	@GameTest(maxTicks = 400)
 	public void asReceitasAparecem(GameTestHelper helper) {
 		MinecraftServer server = helper.getLevel().getServer();
 		String[] nomes = {"lampiao_palido", "tigela_oferenda", "caixa_de_musica", "ossos_de_agouro", "vela_palida", "sino_oco",
@@ -343,14 +322,33 @@ public class TestesDosItens {
 					"falta o desbloqueio da receita " + nome);
 		}
 		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -900, 0);
-		helper.assertFalse(jogador.getRecipeBook().contains(receita("lampiao_palido")), "não deveria conhecer a receita antes da cinza");
+		Diretor.esquecer(jogador);
+		helper.assertFalse(jogador.getRecipeBook().contains(receita("sino_oco")), "não deveria conhecer a receita antes da cinza");
 		helper.runAfterDelay(5, () -> jogador.getInventory().add(new ItemStack(ModItems.CINZA_PALIDA)));
-		helper.succeedWhen(() -> {
-			for (String nome : new String[] {"lampiao_palido", "tigela_oferenda", "ossos_de_agouro", "vela_palida"}) {
-				helper.assertTrue(jogador.getRecipeBook().contains(receita(nome)), "com a cinza na mochila, deveria conhecer " + nome);
+		helper.runAfterDelay(80, () -> {
+			helper.assertTrue(jogador.getRecipeBook().contains(receita("sino_oco")), "com a cinza na mochila, deveria conhecer a do sino");
+			for (String nome : new String[] {"lampiao_palido", "tigela_oferenda", "ossos_de_agouro", "vela_palida", "fio_vigilia",
+					"isca_palida", "caderno_vestigios", "caixa_de_musica"}) {
+				helper.assertFalse(jogador.getRecipeBook().contains(receita(nome)), "a receita " + nome + " não deveria vir junto com a cinza");
+			}
+			// Achar o item num lugar ensina a receita dele.
+			jogador.getInventory().add(new ItemStack(ModItems.FIO_VIGILIA));
+		});
+		helper.runAfterDelay(160, () -> {
+			helper.assertTrue(jogador.getRecipeBook().contains(receita("fio_vigilia")), "com o fio na mochila, deveria conhecer a receita dele");
+			helper.assertFalse(jogador.getRecipeBook().contains(receita("lampiao_palido")), "o lampião ainda não");
+			// Na última fase, o que ainda não tinha chegado.
+			Diretor.definirFase(jogador, 4);
+		});
+		helper.runAfterDelay(170, () -> {
+			for (String nome : new String[] {"lampiao_palido", "tigela_oferenda", "ossos_de_agouro", "vela_palida", "isca_palida"}) {
+				helper.assertTrue(jogador.getRecipeBook().contains(receita(nome)), "na última fase deveria conhecer " + nome);
 			}
 			helper.assertFalse(jogador.getRecipeBook().contains(receita("caixa_de_musica")), "a receita da caixa só vem com a caixa");
+			helper.getLevel().getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, AABB.ofSize(jogador.position(), 12, 8, 12),
+					i -> i.getItem().is(ModItems.PAGINA_RASGADA) || i.getItem().is(ModItems.OLHO_SUSSURRANTE)).forEach(i -> i.discard());
 			JogadorDeTeste.remover(jogador);
+			helper.succeed();
 		});
 	}
 

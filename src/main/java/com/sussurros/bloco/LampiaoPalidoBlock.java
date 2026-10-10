@@ -124,8 +124,10 @@ public class LampiaoPalidoBlock extends LanternBlock {
 			level.setBlock(pos, estado.setValue(COMBUSTIVEL, carga + 1).setValue(CHAMA, Chama.CALMA), 3);
 			level.scheduleTick(pos, this, 20);
 			level.playSound(null, pos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 0.6F, 0.8F);
-			if (jogador instanceof ServerPlayer servidor) {
-				Conta.somar(servidor, Conta.Item.LAMPIAO);
+			// 0.9.0-alpha14: a Conta, cobrada no próprio lampião: a chama esfria assim que é alimentada.
+			if (jogador instanceof ServerPlayer servidor && Conta.usar(servidor, Conta.Item.LAMPIAO)
+					&& level instanceof ServerLevel mundo) {
+				perturbar(mundo, pos, 1, Chama.FRIA, 20 * 60);
 			}
 		}
 		return InteractionResult.SUCCESS;
