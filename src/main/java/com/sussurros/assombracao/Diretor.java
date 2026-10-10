@@ -30,6 +30,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
@@ -193,6 +194,10 @@ public final class Diretor {
 					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "PORTA");
 				} else if (nivel.getBlockEntity(clicado) instanceof Container) {
 					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado), "BAU");
+				} else if (jogador.getItemInHand(hand).getItem() instanceof BlockItem) {
+					// Colocar bloco faz tanto barulho quanto quebrar. Só quebrar era ouvido: quem se tampava com
+					// três blocos e ficava parado deixava a caçada acabar sozinha.
+					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado.relative(hitResult.getDirection())), "COLOCOU");
 				}
 			}
 			return InteractionResult.PASS;
@@ -464,6 +469,14 @@ public final class Diretor {
 
 		if (e.ultimoEventoSeg < 0) {
 			e.ultimoEventoSeg = seg;
+		}
+		// O descanso entre uma sequência de ameaça e a seguinte (10 minutos; 25 a 40 depois de uma caçada; 30 a
+		// 45 depois de uma captura) só existia em memória: fechar o mundo o apagava, e quem joga em sessões
+		// curtas podia ter uma caçada atrás da outra. O maior dos dois valores vale, e é esse que fica guardado.
+		if (m.get(Memoria.AMEACA_LIBERADA_EM) > e.ameacaLiberadaEm) {
+			e.ameacaLiberadaEm = m.get(Memoria.AMEACA_LIBERADA_EM);
+		} else if (e.ameacaLiberadaEm > m.get(Memoria.AMEACA_LIBERADA_EM)) {
+			m.set(Memoria.AMEACA_LIBERADA_EM, (int) Math.min(Integer.MAX_VALUE, e.ameacaLiberadaEm));
 		}
 		soltarCriaturaParada(p, e, seg);
 		if (e.estadoDesde < 0) {
@@ -2477,7 +2490,8 @@ public final class Diretor {
 				angMin, angMax, distMin, distMax, exigirVisivel ? 20 : 18,
 				exigirVisivel, false, preferirEscuro, true, true, 1,
 				2.2, 0.9, exigirVisivel ? 1.4 : 0.8, (distMin + distMax) / 2.0);
-		Aparicao.Candidato candidato = Aparicao.buscarAoRedor(level, p, e, cfg);
+		// Na caça ele se abaixa e cabe em dois blocos de altura; nos outros modos, de pé, precisa de três.
+		Aparicao.Candidato candidato = Aparicao.buscarAoRedor(level, p, e, cfg, modo == HospedeEntity.Modo.CACAR ? 2 : 3);
 		if (candidato == null) {
 			return false;
 		}

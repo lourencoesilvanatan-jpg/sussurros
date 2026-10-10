@@ -170,7 +170,10 @@ final class HospedeBusca {
             return false;
         }
 
-        Vec3 movimento = alvo.getDeltaMovement();
+        // O movimento de um jogador de verdade não está em getDeltaMovement (no servidor ele fica perto de zero:
+        // quem anda é o cliente): está no que os pacotes dele informam. Com o outro, andar e pular nunca
+        // contavam para o ouvido; só correr e a distância desde a última vez que ele foi ouvido.
+        Vec3 movimento = alvo.getKnownMovement();
         double velocidadeAlvo = Math.sqrt(movimento.x * movimento.x + movimento.z * movimento.z);
         double deslocamento = this.ultimaPosicaoOuvida == null
                 ? 0.0
@@ -354,7 +357,7 @@ final class HospedeBusca {
             double ang = rnd.nextDouble() * Math.PI * 2.0;
             double r = 3.5 + rnd.nextDouble() * 5.5;
             BlockPos chao = acharChao(level, centro.x + Math.cos(ang) * r, centro.y + 3, centro.z + Math.sin(ang) * r);
-            if (valido(level, h, alvo, chao, 3.0, 16.0)) {
+            if (valido(level, h, alvo, chao, 2.0, 16.0)) {
                 return new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
             }
         }
@@ -370,7 +373,9 @@ final class HospedeBusca {
             double ang = rnd.nextDouble() * Math.PI * 2.0;
             double r = raio * (0.6 + rnd.nextDouble() * 0.4);
             BlockPos chao = acharChao(level, centro.x + Math.cos(ang) * r, centro.y + 5, centro.z + Math.sin(ang) * r);
-            if (valido(level, h, alvo, chao, 4.0, 22.0)) {
+            // O mínimo era de 4 blocos do jogador de verdade: a busca nunca passava ao lado de quem estava escondido
+            // e parado, e o próprio buraco no desenho dos pontos dizia onde ele não estava procurando.
+            if (valido(level, h, alvo, chao, 2.0, 22.0)) {
                 return new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
             }
         }

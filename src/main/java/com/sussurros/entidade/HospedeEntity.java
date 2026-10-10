@@ -540,6 +540,23 @@ public class HospedeEntity extends PathfinderMob {
 	}
 
 	/**
+	 * Ele não senta em nada. No jogo, um barco sem jogador no leme recolhe qualquer criatura mais estreita que
+	 * ele, e um carrinho em movimento faz o mesmo; quem senta é devolvido ao assento todo tick, e nenhum estágio
+	 * da caçada o tirava de lá: um barco no caminho dele encerrava a caçada de graça. (O Warden e o Wither
+	 * recusam do mesmo jeito.) A tag cannot_be_pushed_onto_boats, nos dados, faz o barco só empurrá-lo.
+	 */
+	@Override
+	protected boolean canRide(Entity veiculo) {
+		return false;
+	}
+
+	/** Nem é preso por laço. O jogo só recusa o laço para quem é "inimigo" (Enemy), e ele não é. */
+	@Override
+	public boolean canBeLeashed() {
+		return false;
+	}
+
+	/**
 	 * A mais de 128 blocos de qualquer jogador o jogo apagaria a criatura sem avisar ninguém: a caçada de quem
 	 * saiu voando acabava em silêncio, sem registro. Quem decide quando ela some é ela (ver "sem alvo válido").
 	 */

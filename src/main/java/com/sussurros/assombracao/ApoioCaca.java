@@ -137,6 +137,10 @@ public final class ApoioCaca {
 		double z = bloco.getZ() + 0.5;
 		level.sendParticles(p, ParticleTypes.SMOKE, true, false, x, y, z, 10, 0.42, 0.42, 0.42, 0.004);
 		level.sendParticles(p, ParticleTypes.ASH, true, false, x, y, z, 14, 0.5, 0.5, 0.5, 0.0);
+		// Dentro d'água (o aviso no bloco em que o jogador está nadando) fumaça e cinza mal aparecem: bolhas.
+		if (!level.getFluidState(bloco).isEmpty()) {
+			level.sendParticles(p, ParticleTypes.BUBBLE, true, false, x, y, z, 24, 0.45, 0.45, 0.45, 0.02);
+		}
 		if (comSom) {
 			boolean batida = (level.getGameTime() / 10) % 2 == 0;
 			ModSons.tocarPara(p, x, y, z, batida ? ModSons.Som.PANCADA : ModSons.Som.ARRANHAR, 0.85F, 0.8F);

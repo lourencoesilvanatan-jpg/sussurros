@@ -45,7 +45,7 @@ public class TestesDaPrimeiraHora {
 	/** Antes dos quinze minutos de jogo, nada. */
 	@GameTest(maxTicks = 200)
 	public void antesDaJanelaNaoHaContato(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1100, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -4400, 0);
 		Diretor.esquecer(jogador);
 		PrimeiroContato.relogioParaTeste(jogador, 60);
 		helper.runAfterDelay(120, () -> {
@@ -63,7 +63,7 @@ public class TestesDaPrimeiraHora {
 	 */
 	@GameTest(maxTicks = 1600)
 	public void oContatoSoContaQuandoEVisto(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1200, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -4500, 0);
 		JogadorDeTeste.acompanhar(helper, jogador, "contato");
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
@@ -157,7 +157,7 @@ public class TestesDaPrimeiraHora {
 	 */
 	@GameTest(maxTicks = 900)
 	public void oContatoQueNinguemViuContinuaDevendo(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1300, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -4600, 0);
 		JogadorDeTeste.acompanhar(helper, jogador, "contato-nao-visto");
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
@@ -287,7 +287,7 @@ public class TestesDaPrimeiraHora {
 	/** Sem nada por perto e sem nunca ter respondido, o sino diz a verdade: silêncio. Não inventa uma resposta. */
 	@GameTest(maxTicks = 300)
 	public void oSinoNaoInventaResposta(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1400, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -4700, 0);
 		Diretor.esquecer(jogador);
 		helper.runAfterDelay(60, () -> {
 			JogadorDeTeste.sonsRecebidos(jogador);
@@ -307,7 +307,7 @@ public class TestesDaPrimeiraHora {
 	/** Na primeira vez em que ele tem um item, a página daquele item é a próxima que o diário mostra, e uma página é deixada para ele. */
 	@GameTest(maxTicks = 900)
 	public void aPaginaChegaComOItem(GameTestHelper helper) {
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -1500, 0);
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -4800, 0);
 		Diretor.esquecer(jogador);
 		ServerLevel level = helper.getLevel();
 		helper.runAfterDelay(10, () -> jogador.getInventory().add(new ItemStack(ModItems.SINO_OCO)));

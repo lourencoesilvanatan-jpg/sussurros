@@ -1273,3 +1273,59 @@ Sem teste: o breu (o mundo de teste não tem lugar escuro; a regra da luz foi co
 ## Para observar na sessão do dono
 
 Além do que a revisão lista na seção 5: **quantas tentativas até o `visto=sim`** pesa mais agora. A definição ficou mais exigente, e as repetições são discretas (quatro passos, sem aviso). Se o log mostrar três ou mais tentativas com `naTela` maior que zero e `visto=nao`, o limite de seis ticks ou a luz mínima estão altos demais para um jogador de verdade.
+
+---
+# Versão 0.9.0-alpha16 — a caçada, sem as saídas de graça
+
+Parte de `pesquisa/2026-10-10-a-cacada.md` (PR #32), seção 7: oito consertos, sem sistema novo. A regra da rodada: fechar o que **encerra a caçada de graça**, não toda saída. Correr para longe, élitro e pérola continuam valendo (e continuam virando dívida a mais de 110 blocos).
+
+Cada item foi conferido no código do mod e, quando dependia do jogo, no código do Minecraft 26.2, antes de mexer.
+
+## Os oito consertos
+
+| # | Truque | Conferência | O que foi feito |
+|---|---|---|---|
+| 1 | Barco no caminho dele, carrinho em movimento, laço | **Confirmado no jogo.** `AbstractBoat` recolhe todo `LivingEntity` que encosta quando não há jogador no leme, a menos da tag `cannot_be_pushed_onto_boats`; `Mob.canBeLeashed` só recusa quem é `Enemy` | `HospedeEntity.canRide` e `canBeLeashed` devolvem falso (como o Warden e o Wither), e a tag entrou nos dados. Vale em todos os modos, não só na caça |
+| 2 | Andar para longe durante o aviso | **Confirmado.** A busca é inicializada quando ele nasce; depois de 8 a 10 s de aviso ele saía atrás do lugar antigo, e a mais de 42 blocos não ouve | No fim do aviso ele ouve onde o jogador está (certeza 0,9). Fora da primeira caçada, três segundos depois vem o atalho. **E o ouvido passou a ler `getKnownMovement()`**: ver a ressalva abaixo |
+| 3 | Pilar olhando para ele; anel fechado de 9 a 15 blocos | **Confirmado.** O teste de caminho ficava depois do `return` do ramo "na tela"; e entre o alcance do atravessar (8) e o do atalho (16) não valia regra nenhuma | O teste de caminho roda também enquanto ele é encarado. De 8 a 16 blocos, três segundos sem caminho liberam o atalho (`semCaminhoLonge`). A conta de atravessar continua só andando de perto |
+| 4 | Água funda, longe da margem | **Confirmado no mod** (sem bloco firme perto do jogador a conta zerava). A profundidade em que o caminho falha não foi medida | Quando não há bloco firme, o aviso é no próprio bloco de água em que o jogador está, com bolhas. Sair de perto resolve, como nos outros |
+| 5 | Pilar de 40; subir mais durante o aviso | **Confirmado.** Havia um limite de 32 de desnível; e a captura media em três dimensões a partir do bloco escolhido no começo do aviso | O limite saiu. Quando o bloco do aviso é o que está debaixo dos pés (`avisoPorBaixo`), a captura mede só no plano: o que escapa é sair da coluna |
+| 6 | Tampar-se com blocos e ficar parado | **Confirmado em parte.** Colocar bloco não era ouvido; os pontos de busca ficavam a no mínimo 4 blocos do jogador de verdade | Clicar num bloco com um bloco na mão é ouvido a até 16 blocos (`OUVIU_COLOCOU`), como quebrar. O mínimo dos pontos de busca desceu para 2. Quem se tampa **antes** de ele chegar e fica em silêncio continua escondido: isso é esconderijo, não furo |
+| 7 | Onde ele alcançava sem aviso legível | **Confirmados os três** | Depois de atravessar e não achar ninguém ele fica um segundo e meio parado; o avanço do piscar testa o trajeto e para em vidro, grade, cerca, porta e parede (`andarLivre`); o atalho sempre faz som |
+| 8 | O descanso sumia ao fechar o mundo; a caçada não nascia em corredor de dois | **Confirmados** | `ameaca_liberada_em` fica na Memoria (vale o maior entre o guardado e o da sessão). Na caça ele nasce onde há dois blocos de ar (`Aparicao.buscarAoRedor` com `arLivre`), porque é a altura que ele tem abaixado |
+
+## A ressalva do ouvido
+
+O ouvido somava "velocidade do alvo x 3,6" e o salto, lendo `getDeltaMovement()`. Num jogador de verdade esse valor fica perto de zero no servidor (quem anda é o cliente; o próprio jogo usa `getKnownMovement()` para jogadores). Ou seja: andar e pular nunca contaram, só correr e a distância desde a última vez em que ele foi ouvido.
+
+Com a troca, o termo passa a valer. Na conta, a chance por segundo de ele ouvir um jogador **andando** a 20 blocos sobe de uns 36% para uns 55%; **correndo**, de uns 49% para uns 73%. Agachado e quase parado continua sendo silêncio. Isto não fecha um furo: afina um sentido que estava mais surdo do que o código dizia. Ninguém mediu em jogo, e os jogadores de mentira não mandam pacote de movimento, então nenhum teste vê a diferença. É o item desta rodada para vigiar na primeira caçada de verdade (linhas `BUSCA ... conf=`), e o primeiro candidato a voltar atrás.
+
+## O que não foi tocado, de propósito
+
+**As três decisões de desenho da seção 7 são do dono:**
+
+1. A vela acesa com ele a até 8 blocos encerra a caçada na hora (`ZONA_CALMA`). Deve?
+2. Deitar na cama com a caçada em curso. O jogo deixa.
+3. A caçada cabe na primeira sessão? Hoje só existe na fase 4.
+
+**Furos que a análise lista e que são condição de começo, não de fim:** estar montado, com o pé na água, com menos de três corações ou com luz acima de 4 nos pés impede a caçada de começar; clicar numa cama cria "casa". São desenho antigo ("a caçada nunca começa na base...") e ficaram como estão.
+
+**Também ficou:** os avisos do atravessar encurtam para sempre, e a conta sobe até em tentativa falha; o atalho não testa parede (pode cair num cômodo fechado); alçapão aberto sobre poço; Lentidão, teia e mel; toque por cima de cerca; a vela que acaba vira caçada sem aviso.
+
+## Achados de passagem
+
+- **Tão alto, a captura não leva o jogador a lugar nenhum.** `Captura.escolherDestino` só aceita chão a até 10 blocos de desnível. Num pilar mais alto que isso o jogador é pego (vida, item da mão, marca) e fica onde está (`CAPTURA deslocou ... para=-`). Já era assim de 11 a 32 blocos; sem o limite de 32, vale para qualquer altura. Não mexi.
+- **A "primeira caçada" de uma caçada de comando.** `Cacada` é criada dentro de `configurar`, antes de `definirOrigem`: nessa hora `ehTeste()` ainda é falso, e uma caçada de comando num jogador que nunca foi caçado conta como primeira (sem atalho e sem atravessar). Só afeta comando e teste; os testes que precisam do resto põem `CACADAS` em 1.
+- **O atalho depois do aviso depende de duas contas de três segundos.** A notícia do fim do aviso vale por 60 ticks e o atalho pede 60 ticks fora da tela: as duas se encontram num tick só. Funciona (está no teste), mas quem mexer num dos dois números quebra o outro sem perceber.
+
+## Os testes
+
+Oito novos em `TestesDaCacada` (56 no total): `barcoELacoNaoOSeguram`, `encararDeCimaDoPilarNaoVence`, `subirMaisNaoEscapaDoPilar`, `quemSaiDePertoTemUmRespiro`, `andarParaLongeNoAvisoNaoBasta`, `oPiscarNaoAtravessaVidro`, `colocarBlocoEntregaAPosicao` e `aCacadaComecaDebaixoDeTetoBaixo`. O descanso guardado é conferido dentro de `aCapturaDeVerdadeDeixaAMarca`.
+
+Sem teste: a água funda (o mundo de teste é plano e raso; conferido só lendo), o carrinho, a leitura do descanso ao abrir o mundo, o ouvido novo e o som do atalho.
+
+**Os testes mudaram de lugar.** Acrescentar oito testes mudou a grade em que o jogo os distribui, e dois defeitos antigos apareceram: cinco testes da caçada usavam a mesma coluna a 12 blocos da origem (`dz = -12`) e foram parar em cima da estrutura de outro teste, a doze blocos do chão; e cinco testes da primeira hora repetiam colunas de outras classes (um som de um vizinho derrubou `oSinoNaoInventaResposta`). Agora cada teste tem uma coluna só sua.
+
+## Medição
+
+Sessão sintética de uma hora, três jogadores de mentira: duas caçadas, as duas terminadas por toque, sem nada fora do lugar; ritmo na mesma faixa das medições anteriores (30, 39 e 49 saídas por hora). Jogador de mentira não usa truque nenhum: o que esta versão muda só aparece nos testes de servidor e, depois, numa caçada de verdade.

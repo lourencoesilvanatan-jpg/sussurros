@@ -87,13 +87,15 @@ final class Cacada {
 	private int atalhos;
 	private int golpes;
 	private int semCaminho;
+	/** Ticks seguidos sem caminho com o alvo entre 8 e 16 blocos: longe demais para atravessar, perto demais para o atalho. */
+	private int semCaminhoLonge;
 	/** Só para o log: no último teste de caminho, não havia como chegar ao alvo. */
 	private boolean semCaminhoAgora;
 	private boolean fingiu;
 	private int fingeRestante;
 	private double velocidade = VELOCIDADE_INICIAL;
 	private boolean encerrada;
-	/** Uma Linha de Cinza o segurou: ticks parado antes de tentar de novo. */
+	/** Ticks parado antes de tentar de novo: uma Linha de Cinza o segurou, ou ele atravessou e não achou ninguém. */
 	private int barrado;
 	/** Quantas vezes a Caixa de Música o chamou nesta caçada. Cada vez ele acredita menos. */
 	private int iscas;
@@ -102,6 +104,8 @@ final class Cacada {
 	@Nullable
 	private BlockPos avisoBloco;
 	private int avisoAtravessar;
+	/** O bloco do aviso é o que está debaixo dos pés do alvo: ele sobe por dentro, e subir mais não escapa. */
+	private boolean avisoPorBaixo;
 	@Nullable
 	private BlockPos porta;
 	private int portaEspera;
@@ -165,6 +169,10 @@ final class Cacada {
 			case AVISO -> {
 				this.h.pararEOlhar();
 				if (--this.avisoRestante <= 0) {
+					// O aviso é a chance de o jogador se preparar, não de sumir: quando acaba, ele sabe onde o
+					// jogador está. Sem isto ele saía atrás do lugar de oito a dez segundos antes, e bastava andar
+					// para longe durante o aviso (a mais de 42 blocos ele não ouve) para a caçada acabar sozinha.
+					this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "FIM_DO_AVISO");
 					this.mudar(level, alvo, Estagio.PERSEGUE, "FIM_DO_AVISO");
 				}
 			}
@@ -232,6 +240,12 @@ final class Cacada {
 				this.proximoPiscar = this.naTela + 60 + this.sorte.nextInt(41);
 				this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s piscar n=%d dist=%.1f",
 						this.h.getIdManifestacao(), this.piscadas, dist));
+			}
+			// Encarar o segura, mas não esconde que não há caminho. Este teste só existia no ramo de baixo: quem
+			// subia num pilar e ficava olhando para ele o deixava congelado até o teto de tempo, porque o piscar
+			// não sobe e a regra de atravessar nunca era consultada.
+			if (this.h.tickCount % 20 == 0) {
+				this.verificarCaminho(level, alvo, dist, true);
 			}
 			return;
 		}
@@ -352,15 +366,23 @@ final class Cacada {
 		if (direcao.lengthSqr() < 1.0E-4) {
 			return;
 		}
-		// Ele não salta uma Linha de Cinza no piscar: para antes dela.
+		// Ele não salta uma Linha de Cinza no piscar: para antes dela. E não atravessa nada que tenha corpo: o
+		// avanço não testava o trajeto, e quem o olhava por uma janela (vidro, grade, cerca) podia ser tocado com
+		// a tela ainda fechada.
 		Vec3 meioPasso = direcao.normalize().scale(0.5);
 		Vec3 ponto = this.h.position();
 		double livre = 0;
+		int andar = this.h.blockPosition().getY();
 		for (double d = 0.5; d <= avanco + 0.01; d += 0.5) {
 			ponto = ponto.add(meioPasso);
 			if (CinzaEspalhadaBlock.linhaPerto(level, BlockPos.containing(ponto), 0) != null) {
 				break;
 			}
+			int novoAndar = andarLivre(level, ponto.x, ponto.z, andar);
+			if (novoAndar == Integer.MIN_VALUE) {
+				break;
+			}
+			andar = novoAndar;
 			livre = d;
 		}
 		if (livre < 0.5) {
@@ -378,6 +400,28 @@ final class Cacada {
 	}
 
 	/**
+	 * Dá para dar meio passo até esta coluna? Procura dois blocos sem corpo no mesmo andar, um acima (degrau)
+	 * ou até dois abaixo (descida). Devolve o andar em que ele fica, ou Integer.MIN_VALUE se há algo no caminho.
+	 * Um degrau só vale se o bloco em que ele sobe tem até um bloco de altura: cerca e muro não são degrau.
+	 */
+	private static int andarLivre(ServerLevel level, double x, double z, int andar) {
+		for (int dy : new int[] {0, 1, -1, -2}) {
+			BlockPos pes = BlockPos.containing(x, andar + dy, z);
+			if (solido(level, pes) || solido(level, pes.above())) {
+				continue;
+			}
+			if (dy > 0) {
+				BlockPos degrau = pes.below();
+				if (level.getBlockState(degrau).getCollisionShape(level, degrau).max(Direction.Axis.Y) > 1.0) {
+					continue;
+				}
+			}
+			return andar + dy;
+		}
+		return Integer.MIN_VALUE;
+	}
+
+	/**
 	 * Atalho fora de vista: três segundos sem ser visto e longe (ou sem caminho), ele reaparece a 8-12 blocos,
 	 * fora da tela, de preferência à frente de para onde o jogador está indo. Nunca perto, nunca na tela.
 	 */
@@ -385,8 +429,10 @@ final class Cacada {
 		if (this.primeira || this.recargaAtalho > 0 || this.foraDaTela < 60 || !sabe) {
 			return false;
 		}
-		// Só de longe. De perto e sem caminho vale a outra regra: atravessar, com aviso.
-		if (dist <= 16) {
+		// Só de longe. De perto e sem caminho vale a outra regra: atravessar, com aviso. Entre as duas (de 8 a 16
+		// blocos, sem caminho) não valia nenhuma: um anel fechado em volta do jogador o deixava parado do lado
+		// de fora até a caçada acabar. Três segundos assim, e o atalho vale também ali.
+		if (dist <= 16 && this.semCaminhoLonge < 60) {
 			return false;
 		}
 		BlockPos lugar = this.lugarForaDaTela(level, alvo, 8, 12, true);
@@ -399,10 +445,11 @@ final class Cacada {
 		this.h.olharPara(alvo);
 		this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATALHO");
 		this.recargaAtalho = 200;
+		this.semCaminhoLonge = 0;
 		this.atalhos++;
-		if (this.sorte.nextBoolean()) {
-			ApoioCaca.somDePano(alvo, this.h);
-		}
+		// Sempre com som (era em metade das vezes): ele acabou de mudar de lugar sem andar, e o jogador tem de
+		// ter como saber de que lado ele está agora.
+		ApoioCaca.somDePano(alvo, this.h);
 		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s atalho n=%d de=%.0f para=%.0f",
 				this.h.getIdManifestacao(), this.atalhos, dist, Math.sqrt(this.h.distanceToSqr(alvo))));
 		return true;
@@ -515,8 +562,11 @@ final class Cacada {
 		double dx = alvo.getX() - this.h.getX();
 		double dz = alvo.getZ() - this.h.getZ();
 		double noChao = Math.sqrt(dx * dx + dz * dz);
-		if (noChao > 10 || Math.abs(alvo.getY() - this.h.getY()) > 32) {
+		// (Havia aqui também um limite de 32 blocos de desnível, que contradizia a frase de cima: um pilar de
+		// quarenta blocos zerava a conta para sempre.)
+		if (noChao > 16) {
 			this.semCaminho = 0;
+			this.semCaminhoLonge = 0;
 			return;
 		}
 		if (!sabe) {
@@ -524,6 +574,7 @@ final class Cacada {
 			// pilar por uns segundos não zera a conta. Muito tempo sem notícia, aí sim, ele perdeu o alvo.
 			if (this.busca.idadeDoConhecimento(level.getGameTime()) > 200) {
 				this.semCaminho = 0;
+				this.semCaminhoLonge = 0;
 			}
 			return;
 		}
@@ -532,9 +583,17 @@ final class Cacada {
 				|| (caminho.getEndNode() != null && caminho.getEndNode().asBlockPos().distSqr(alvo.blockPosition()) <= 2.25));
 		if (chega) {
 			this.semCaminho = 0;
+			this.semCaminhoLonge = 0;
 			return;
 		}
 		this.semCaminhoAgora = true;
+		// De 8 a 16 blocos quem responde é o atalho (ver tentarAtalho). A conta de atravessar só anda de perto,
+		// como antes, para ele não chegar já com o tempo de espera vencido.
+		this.semCaminhoLonge = noChao > 8 ? this.semCaminhoLonge + 20 : 0;
+		if (noChao > 10) {
+			this.semCaminho = 0;
+			return;
+		}
 		this.semCaminho += 20;
 		if (this.primeira || noChao > 8) {
 			return;
@@ -567,11 +626,19 @@ final class Cacada {
 				escolhido = pes.below();
 			}
 		}
+		// Água funda, longe da margem: não há bloco firme perto do jogador, e a conta zerava para sempre. O aviso
+		// que já existe passa a ser no próprio bloco de água em que ele está; sair de perto resolve, como sempre.
+		if (escolhido == null && !level.getFluidState(pes).isEmpty()) {
+			escolhido = pes;
+		}
 		if (escolhido == null) {
 			this.semCaminho = 0;
 			return;
 		}
+		this.avisoPorBaixo = escolhido.equals(pes.below());
 		this.avisoBloco = escolhido.immutable();
+		// Um piscar que estivesse marcado fica para trás: quando ele voltasse a perseguir, a tela já estaria aberta.
+		this.piscarEm = -1;
 		// O aviso também encurta com o uso: de 2,5 s até 1,5 s.
 		this.avisoAtravessar = Math.max(30, 50 - 5 * usos);
 		this.h.getNavigation().stop();
@@ -595,7 +662,17 @@ final class Cacada {
 		this.semCaminho = 0;
 		this.avisoBloco = null;
 		Vec3 centro = Vec3.atCenterOf(bloco);
-		if (alvo.position().add(0, 0.5, 0).distanceToSqr(centro) <= 1.9 * 1.9) {
+		boolean pegou;
+		if (this.avisoPorBaixo) {
+			// Ele sobe por dentro do pilar: o que escapa é sair da coluna, não subir mais dois blocos durante o
+			// aviso (escapava, e cada tentativa ainda encurtava os avisos seguintes).
+			double dx = alvo.getX() - centro.x;
+			double dz = alvo.getZ() - centro.z;
+			pegou = alvo.getY() >= bloco.getY() && dx * dx + dz * dz <= 1.9 * 1.9;
+		} else {
+			pegou = alvo.position().add(0, 0.5, 0).distanceToSqr(centro) <= 1.9 * 1.9;
+		}
+		if (pegou) {
 			this.capturar(level, alvo, "ATRAVESSOU");
 			return;
 		}
@@ -616,6 +693,9 @@ final class Cacada {
 			this.h.snapTo(saida.getX() + 0.5, saida.getY(), saida.getZ() + 0.5, this.h.getYRot(), 0.0F);
 			this.h.olharPara(alvo);
 			this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATRAVESSOU");
+			// "Sair de perto resolve" tem de valer: ele aparece ao lado do bloco e fica um segundo e meio parado.
+			// Sem a pausa, quem tinha saído a dois ou três blocos era tocado no tick seguinte.
+			this.barrado = 30;
 		}
 		this.mudar(level, alvo, Estagio.PERSEGUE, saida != null ? "ATRAVESSOU_VAZIO" : "NAO_COUBE");
 	}
