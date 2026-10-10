@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha16
+
+Consertos na caçada: fecha maneiras de escapar dela sem esforço nenhum, e torna mais justo o modo como ele alcança o jogador. Fugir para longe continua valendo. Não entra nada novo.
+
 ## 0.9.0-alpha15
 
 Consertos em cima da alpha14, achados numa revisão do código antes da primeira sessão: a parte nova da primeira hora ficou mais confiável, e foi corrigido um caso raro em que o mod podia quebrar de verdade um bloco do jogador. Não entra nada novo.

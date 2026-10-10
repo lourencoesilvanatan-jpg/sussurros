@@ -75,6 +75,16 @@ final class Aparicao {
 	/** Procura um ponto ao redor do jogador. Não retorna um ponto dentro do FOV seguro atual. */
 	@Nullable
 	static Candidato buscarAoRedor(ServerLevel level, ServerPlayer p, EstadoJogador e, Config cfg) {
+		return buscarAoRedor(level, p, e, cfg, 3);
+	}
+
+	/**
+	 * O mesmo, dizendo quantos blocos de ar ele precisa em cima do chão. De pé ele tem três blocos de altura;
+	 * na caça ele se abaixa e cabe em dois (ver HospedeEntity.CORPO_NA_CACA). Com três para todo mundo, a caçada
+	 * não achava onde começar numa mina de corredor de dois blocos, que é onde o jogador mais fica no escuro.
+	 */
+	@Nullable
+	static Candidato buscarAoRedor(ServerLevel level, ServerPlayer p, EstadoJogador e, Config cfg, int arLivre) {
 		RandomSource rnd = level.getRandom();
 		Candidato melhor = null;
 		double melhorNota = Double.NEGATIVE_INFINITY;
@@ -86,7 +96,7 @@ final class Aparicao {
 			double angulo = sinal * (cfg.anguloMin() + rnd.nextDouble() * Math.max(0.001, cfg.anguloMax() - cfg.anguloMin()));
 			double distancia = cfg.distanciaMin() + rnd.nextDouble() * Math.max(0.001, cfg.distanciaMax() - cfg.distanciaMin());
 			Vec3 alvo = pontoRelativo(p, angulo, distancia);
-			BlockPos chao = acharChao(level, alvo.x, p.getY(), alvo.z);
+			BlockPos chao = acharChao(level, alvo.x, p.getY(), alvo.z, arLivre);
 			if (chao == null || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 				continue;
 			}
@@ -184,13 +194,13 @@ final class Aparicao {
 	}
 
 	@Nullable
-	private static BlockPos acharChao(ServerLevel level, double x, double yBase, double z) {
+	private static BlockPos acharChao(ServerLevel level, double x, double yBase, double z, int arLivre) {
 		for (int dy = 6; dy >= -12; dy--) {
 			BlockPos pos = BlockPos.containing(x, yBase + dy, z);
 			BlockPos baixo = pos.below();
 			if (level.getBlockState(pos).isAir()
 					&& level.getBlockState(pos.above()).isAir()
-					&& level.getBlockState(pos.above(2)).isAir()
+					&& (arLivre < 3 || level.getBlockState(pos.above(2)).isAir())
 					&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
 				return pos;
 			}

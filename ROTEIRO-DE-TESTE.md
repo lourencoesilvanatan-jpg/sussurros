@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha16: consertos num momento das fases mais avançadas, que uma sessão de uma hora num mundo novo não alcança. Não muda nada no que você precisa fazer.
+
 Versão 0.9.0-alpha15: consertos em cima da alpha14, achados numa revisão antes de você jogar. Não muda nada no que você precisa fazer: vale o roteiro abaixo.
 
 Versão 0.9.0-alpha14: **mexe na primeira hora de um mundo novo.** Não tem coisa nova. Mudei a ordem em que as coisas chegam até você e o que o jogo te diz sobre os itens: a dica de cada item (o texto que aparece ao passar o mouse em cima dele) agora diz como ele se usa. Esta versão foi feita para ser testada **numa sessão só, de uma hora, num mundo novo**. O passo a passo está logo abaixo.

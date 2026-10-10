@@ -767,3 +767,16 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 
 - `LUZ_ERRADA tipo=CAIU` substitui o `QUEBROU_COM_DROP`: a tocha cai só para ele e volta. O mundo não é tocado.
 - `pedidas`: quantas páginas de item esperavam na hora da entrega. A linha `ENSINO pagina pedida: ele já tem uma página por ler` não existe mais: enquanto ele tiver uma página na mochila, ou caída ao lado, a entrega só espera.
+
+## 0.9.0-alpha16 — a caçada
+
+```
+[905s][Jogador] BUSCA id=M031 PROCURANDO -> ULTIMA_POSICAO motivo=OUVIU_COLOCOU conf=0.80 pontos=1
+[912s][Jogador] CACA id=M031 atalho n=1 de=12 para=10
+```
+
+- `OUVIU_COLOCOU`: o jogador clicou num bloco com um bloco na mão, a até 16 blocos dele. Como toda linha `BUSCA`, só aparece quando o estado da busca muda.
+- A audição garantida do fim do aviso não tem linha própria (a busca ainda está no estado inicial): ela acontece junto com `CACA ... AVISO -> PERSEGUE motivo=FIM_DO_AVISO`.
+- `atalho ... de=` menor que 16: é o atalho da zona morta (de 8 a 16 blocos, três segundos sem caminho). Antes o atalho só existia acima de 16.
+- Depois de `ATRAVESSOU_VAZIO` ele fica 30 ticks parado. Não há linha para isso: a captura por `TOCOU`, se vier, vem pelo menos um segundo e meio depois.
+- `CAPTURA deslocou ... para=-` num pilar alto é esperado: a mais de 10 blocos do chão a captura não acha para onde levar.
