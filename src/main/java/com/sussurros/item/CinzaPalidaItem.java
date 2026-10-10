@@ -6,6 +6,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -19,8 +20,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 
 import com.sussurros.assombracao.Conta;
+import com.sussurros.assombracao.Ensino;
 import com.sussurros.bloco.CinzaEspalhadaBlock;
 import com.sussurros.registro.ModBlocos;
+import com.sussurros.registro.ModSons;
 
 /**
  * Resíduo físico deixado por algumas manifestações. Não serve como prova perfeita:
@@ -58,7 +61,13 @@ public class CinzaPalidaItem extends Item {
 				contexto.getItemInHand().consume(1, contexto.getPlayer());
 			}
 			if (contexto.getPlayer() instanceof ServerPlayer jogador) {
-				Conta.somar(jogador, Conta.Item.LINHA);
+				// 0.9.0-alpha14: a Conta, cobrada na própria linha: esta já nasce gasta.
+				if (Conta.usar(jogador, Conta.Item.LINHA) && level instanceof ServerLevel mundo) {
+					CinzaEspalhadaBlock.desgastar(mundo, alvo);
+					CinzaEspalhadaBlock.desgastar(mundo, alvo);
+					ModSons.tocar(mundo, alvo.getX() + 0.5, alvo.getY() + 0.2, alvo.getZ() + 0.5, ModSons.Som.ARRASTO, 0.6F, 0.8F);
+				}
+				Ensino.aoRiscarLinha(jogador);
 			}
 		}
 		return InteractionResult.SUCCESS;
@@ -67,7 +76,6 @@ public class CinzaPalidaItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent,
 			Consumer<Component> textConsumer, TooltipFlag type) {
-		textConsumer.accept(Component.translatable("itemTooltip.sussurros.cinza_palida")
-				.withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+		Dicas.acrescentar(textConsumer, "cinza_palida", true);
 	}
 }

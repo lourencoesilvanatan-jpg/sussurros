@@ -81,7 +81,8 @@ public final class Baralho {
 
 	/** Uma vez por segundo, dentro do tick do Diretor. */
 	static void segundo(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase, long seg, long tick) {
-		if (fase < 2 || level.dimension() != Level.OVERWORLD) {
+		// 0.9.0-alpha14: nenhuma carta antes do primeiro contato (várias adiantam lugares e itens).
+		if (fase < 2 || level.dimension() != Level.OVERWORLD || !PrimeiroContato.liberado(m)) {
 			return;
 		}
 		if (m.get(CICLO) == 0) {

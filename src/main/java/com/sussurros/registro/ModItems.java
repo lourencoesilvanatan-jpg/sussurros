@@ -22,6 +22,7 @@ import com.sussurros.item.CaixaDeMusicaItem;
 import com.sussurros.item.CinzaPalidaItem;
 import com.sussurros.item.FioVigiliaItem;
 import com.sussurros.item.IscaPalidaItem;
+import com.sussurros.item.ItemDeBlocoComDica;
 import com.sussurros.item.OlhoSussurranteItem;
 import com.sussurros.item.OssosDeAgouroItem;
 import com.sussurros.item.SinoOcoItem;
@@ -60,10 +61,10 @@ public class ModItems {
 	public static final Item OSSOS_DE_AGOURO = register("ossos_de_agouro", OssosDeAgouroItem::new,
 			new Item.Properties().stacksTo(16));
 
-	public static final Item LAMPIAO_PALIDO = register("lampiao_palido", p -> new BlockItem(ModBlocos.LAMPIAO_PALIDO, p),
+	public static final Item LAMPIAO_PALIDO = register("lampiao_palido", p -> new ItemDeBlocoComDica(ModBlocos.LAMPIAO_PALIDO, p, "lampiao_palido", true),
 			new Item.Properties().useBlockDescriptionPrefix());
 
-	public static final Item TIGELA_OFERENDA = register("tigela_oferenda", p -> new BlockItem(ModBlocos.TIGELA_OFERENDA, p),
+	public static final Item TIGELA_OFERENDA = register("tigela_oferenda", p -> new ItemDeBlocoComDica(ModBlocos.TIGELA_OFERENDA, p, "tigela_oferenda", false),
 			new Item.Properties().useBlockDescriptionPrefix());
 
 	public static final Item OVO_HOSPEDE = register("ovo_hospede", SpawnEggItem::new,

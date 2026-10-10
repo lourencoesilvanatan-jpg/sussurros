@@ -33,7 +33,6 @@ public class CadernoVestigiosItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent,
 			Consumer<Component> textConsumer, TooltipFlag type) {
-		textConsumer.accept(Component.translatable("itemTooltip.sussurros.caderno_vestigios")
-				.withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+		Dicas.acrescentar(textConsumer, "caderno_vestigios", false);
 	}
 }

@@ -1,11 +1,11 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_cinza_palida": {
+    "has_isca_palida": {
       "conditions": {
         "items": [
           {
-            "items": "sussurros:cinza_palida"
+            "items": "sussurros:isca_palida"
           }
         ]
       },
@@ -21,7 +21,7 @@
   "requirements": [
     [
       "has_the_recipe",
-      "has_cinza_palida"
+      "has_isca_palida"
     ]
   ],
   "rewards": {

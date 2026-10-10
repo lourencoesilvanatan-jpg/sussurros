@@ -319,8 +319,14 @@ final class EstadoJogador {
 	long treguaCasaAte = -1;
 	/** Ele veio cobrar a oferenda que faltou (ou a afronta): as batidas na porta ganham peso até aqui. */
 	long desfeitaAte = -1;
-	/** A Conta estourou: a cobrança sai neste tick. */
-	long cobrancaEm = -1;
+	// --- O primeiro contato (0.9.0-alpha14, ver PrimeiroContato) ---
+	/** A criatura do contato foi vista. Quem grava isto na Memoria é o tick do Diretor. */
+	boolean contatoVisto;
+	/** Segundo a partir do qual o contato pode ser tentado de novo. */
+	long contatoProximaTentativa;
+	// --- O que o jogador já teve na mão (0.9.0-alpha14, ver Ensino) ---
+	/** Há uma página de item para entregar a partir deste segundo; -1 se não há. */
+	long paginaDeItemApos = -1;
 	/** Ossos de Agouro: quantas vezes jogou hoje (o dia do relógio do mundo). */
 	long ossosDia = -1;
 	int ossosNoDia;

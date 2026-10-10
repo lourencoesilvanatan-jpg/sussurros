@@ -41,7 +41,6 @@ public class FioVigiliaItem extends Item {
 	@Override
 	public void appendHoverText(ItemStack stack, TooltipContext context, TooltipDisplay displayComponent,
 			Consumer<Component> textConsumer, TooltipFlag type) {
-		textConsumer.accept(Component.translatable("itemTooltip.sussurros.fio_vigilia")
-				.withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
+		Dicas.acrescentar(textConsumer, "fio_vigilia", true);
 	}
 }

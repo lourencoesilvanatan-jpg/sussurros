@@ -88,7 +88,8 @@ public final class Memoria {
 	// 0.9: os itens
 	public static final String CAIXA_USOS = "caixa_usos"; // vezes que a Caixa de Música tocou: é assim que ele aprende a cantiga
 	public static final String VEUS = "veus"; // quantas vezes o Véu abriu para este jogador
-	public static final String RECEBEU_CAIXA = "recebeu_caixa"; // a caixa é deixada para o jogador na passagem para a fase 2
+	public static final String RECEBEU_CAIXA = "recebeu_caixa"; // até a alpha13 a caixa era deixada na passagem para a fase 2; ficou só nos mundos antigos
+	public static final String SINO_RESPONDEU = "sino_respondeu"; // 1: o sino já deu a primeira resposta de verdade (ver Diretor.usarSino)
 
 	public static final int MAX_INQUIETACAO = 200;
 

@@ -40,6 +40,12 @@ public final class Cantiga {
 		Memoria m = Memoria.de(p);
 		int usos = m.get(Memoria.CAIXA_USOS);
 		ModSons.Som som = usos >= 6 ? ModSons.Som.CAIXA_ARRUINADA : usos >= Diretor.CANTIGA_APRENDIDA ? ModSons.Som.CAIXA_GASTA : ModSons.Som.CAIXA_MUSICA;
+		// 0.9.0-alpha14: a Conta, cobrada na própria caixa: desta vez ela toca torta, como se já estivesse no fim.
+		// (Antes a caixa tocava sozinha, "na cabeça", de meio minuto a dois depois de estourar.)
+		if (Conta.cobrarNoUso(p, m, Conta.Item.CAIXA)) {
+			som = ModSons.Som.CAIXA_ARRUINADA;
+			Depuracao.log(p, tick / 20, "CONTA cobrada na CAIXA: toca arruinada");
+		}
 		int duracao = som == ModSons.Som.CAIXA_ARRUINADA ? 545 : som == ModSons.Som.CAIXA_GASTA ? 410 : 400;
 
 		e.caixaX = p.getX();

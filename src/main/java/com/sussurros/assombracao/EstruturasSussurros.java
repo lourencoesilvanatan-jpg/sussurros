@@ -37,7 +37,11 @@ final class EstruturasSussurros {
 				Depuracao.log(p, seg, "ESTRUTURA gerada=MARCO_ESTRADA pos=" + pos + " foraDaTela=sim");
 			}
 		}
-		if (fase >= 1 && m.get(Memoria.ESTRUTURA_POSTO) == 0 && chunks >= 10 && rnd.nextFloat() < 0.16F) {
+		// 0.9.0-alpha14: os lugares que entregam ferramenta esperam o primeiro contato. Antes, o posto e o nicho
+		// punham itens na mão do jogador sem ele nunca ter visto do que eles tratam. O marco, que não tem nada
+		// para pegar, continua como era.
+		boolean contato = PrimeiroContato.liberado(m);
+		if (contato && fase >= 1 && m.get(Memoria.ESTRUTURA_POSTO) == 0 && chunks >= 10 && rnd.nextFloat() < 0.16F) {
 			BlockPos pos = procurarSuperficie(level, p, rnd, 55, 95, 6);
 			if (pos != null && longeDaCasa(m, pos, 52) && gerarPosto(level, pos, rnd)) {
 				registrar(m, Memoria.ESTRUTURA_POSTO, Memoria.ESTRUTURA_POSTO_X, Memoria.ESTRUTURA_POSTO_Y,
@@ -45,7 +49,7 @@ final class EstruturasSussurros {
 				Depuracao.log(p, seg, "ESTRUTURA gerada=POSTO_VIGILIA pos=" + pos + " foraDaTela=sim");
 			}
 		}
-		if (fase >= 2 && subterraneo && m.get(Memoria.ESTRUTURA_NICHO) == 0 && rnd.nextFloat() < 0.18F) {
+		if (contato && fase >= 2 && subterraneo && m.get(Memoria.ESTRUTURA_NICHO) == 0 && rnd.nextFloat() < 0.18F) {
 			BlockPos pos = procurarCaverna(level, p, rnd);
 			if (pos != null && gerarNicho(level, pos, rnd)) {
 				registrar(m, Memoria.ESTRUTURA_NICHO, Memoria.ESTRUTURA_NICHO_X, Memoria.ESTRUTURA_NICHO_Y,

@@ -1117,3 +1117,111 @@ Ficam anotados. Uma sessão só, e com comandos de teste no meio, não justifica
 - O analisador passou a abrir o relatório com **alertas**: nenhuma aparição em vinte minutos de fase 2 ou mais, poucos eventos do Diretor, o ambiente falando mais que o Diretor, item usado como botão, Conta cobrando demais, fase 3 cedo.
 - A sessão sintética ganhou um jogador que reage (para e vira o rosto a cada coisa que acontece), para o Diretor sair do estado de observar. E deixou de usar `helper.onEachTick`, que agenda de uma vez uma tarefa para cada tick até o fim do teste.
 - `JogadorDeTeste.remover` solta os chunks que tinham sido forçados para aquele jogador (menos os que ainda são de outro).
+
+---
+# Versão 0.9.0-alpha14 — a primeira hora
+
+Nada novo: reordenar e garantir. É a primeira entrega depois da análise de design de 09/10 (`pesquisa/2026-10-09-analise-de-design.md`, seções 6.1 a 6.4, corrigidas pela seção 10) e da pesquisa de 10/10 sobre primeiro encontro e ensino de ferramentas. O que a sessão de 09/10 mostrou: em 55 minutos, nenhuma aparição; meia dúzia de itens na mão sem o jogador saber do que tratam; doze das vinte e sete coisas percebidas vindas de uma regra que ele não vê.
+
+## O primeiro contato (`PrimeiroContato`)
+
+A primeira vez que o jogador vê a criatura deixou de depender de sorteio, de fase e do portão de vulnerabilidade. É regra, por jogador.
+
+- **Quando.** De 15 a 25 minutos de jogo, na primeira vez em que ele estiver fora de casa com pouca luz (luz 7 ou menos, noite, ou fim de tarde). Não exige inquietação.
+- **Prazo final.** Passados os 25 minutos, acontece com qualquer luz e em qualquer lugar onde caiba. De dia e a céu aberto, a forma é a mesma, mais longe (26 a 36 blocos em vez de 18 a 26), porque de perto e ao sol ele parece só um boneco parado.
+- **O aviso.** É o da caçada: o mundo emudece, uma luz perto falha, um grave. Aqui ele diz a verdade (há alguém perto), então a primeira vez que o jogador ouve o aviso ele aprende o que o aviso quer dizer.
+- **Onde.** Fora da tela, de lado e para trás (100° a 165° do olhar), num lugar em que dá para vê-lo ao virar. Parado.
+- **Para ser visto.** Dois passos vindos dele, dois segundos depois, dizem o lado. Se ainda não foi visto, mais dois aos treze segundos. Ele espera quarenta segundos.
+- **Visto.** Olhado direto por cerca de um segundo (ou dois de canto), dissolve. Não toca, não persegue, não captura. É a única aparição do começo que aguenta mais que um relance, porque é a única que precisa ser vista com certeza.
+- **O que fica.** A primeira Cinza Pálida, que não some com o tempo, e um vestígio no lugar.
+- **Só conta quando foi visto.** Se o jogador não o teve na mira (olhar direto, nem que por um instante, ou tempo de tela bastante para ele dissolver), o contato continua devendo: nada de cinza, e uma nova tentativa de quatro a seis minutos depois. Nascer fora da tela é o jeito mais fácil de ninguém ver; por isso, a cada tentativa que ninguém viu, ele nasce mais perto da borda da tela (100°–165°, depois 80°–140°, depois 62°–110°).
+- **Atenção.** Não espera saldo nem passa pelo portão de V. Gasta o custo de uma cena, para o que vier depois respeitar o respiro.
+- **Mundos antigos.** Quem já viu a criatura (`vezes_visto` ou `cinzas_geradas` acima de zero) é dispensado.
+
+### O que espera o primeiro contato
+
+Até ele acontecer (ou até a fase 3, o que vier antes):
+
+- o vulto distante, que era a única aparição possível antes da fase 3;
+- os lugares que entregam ferramenta: o Posto de Vigília, o Nicho Selado e a Casa do Vigia;
+- o baralho.
+
+O Marco de Estrada (não tem nada para pegar), a Soleira e o Boneco continuam como eram.
+
+**Fora do alcance desta regra:** os baús do próprio jogo continuam podendo trazer itens do mod desde o primeiro minuto (`LootDoDiario`). É raro e não foi mexido.
+
+## O sino diz a verdade na primeira vez
+
+A pesquisa de 10/10 supunha que o sino responde ao que o primeiro contato deixa no lugar, sem ter lido o código. Conferido: respondia, mas só em 38% das vezes, sem texto nenhum, e o silêncio não tinha estado próprio. Na sessão de 09/10 foram 16 toques: 11 respostas vindas do caminho do próprio jogador e 5 silêncios mudos.
+
+Enquanto o sino não deu a sua primeira resposta de verdade (`sino_respondeu`):
+
+- com criatura a até 52 blocos, ou um vestígio a até 42, a resposta vem dali, **sempre**, com uma frase que dá o lado ("Algo responde, à esquerda de você.") e, se foi um vestígio, cinza subindo no lugar;
+- sem nada por perto, a resposta é o silêncio, com frase própria ("O sino soa no vazio. Nada responde."). Não há mais resposta inventada vinda do caminho dele;
+- a mentira (o sino que aponta errado depois de quatro usos) fica desligada.
+
+Depois da primeira resposta de verdade tudo volta a ser como o diário descreve: o caminho pode responder, a mentira pode acontecer. O silêncio continua tendo a sua frase, sempre.
+
+## Um verbo por vez: páginas e receitas (`Ensino`)
+
+- **A página chega com o item.** Na primeira vez em que ele tem um item na mochila, a página do diário daquele item é pedida: é ela que a próxima Página Rasgada mostra, e vinte segundos depois uma página é deixada para ele do jeito de sempre (quatro passos atrás, a página no chão), fora de qualquer aparição. Itens com página: Cinza (10), Sino (11), Vela (5), Olho (6), Fio (12), Isca (15), Tigela (27), Caixa (28). A página da Linha de Cinza (26) vem na primeira vez em que ele risca uma.
+- **O diário deixou de ser estritamente sequencial.** `Diario` guarda as páginas lidas como máscara. O cabeçalho mostra o número de verdade ("página arrancada (11 de 28)"), então dá para ver que há páginas faltando.
+- **As receitas chegam uma de cada vez.** Antes, as oito receitas com Cinza Pálida apareciam juntas com a primeira cinza. Agora:
+
+| Receita | Quando aparece no livro |
+|---|---|
+| Sino Oco | Com a primeira Cinza Pálida (como antes) |
+| Vela Pálida | Quando o sino dá a primeira resposta de verdade; ou na fase 2; ou ao achar uma vela |
+| Caderno de Vestígios | Na primeira cobrança da Conta; ou ao achar um |
+| Fio, Isca, Lampião, Tigela, Ossos | Ao achar o item num lugar; ou na fase 4 |
+| Caixa de Música | Ao ter uma caixa (como antes) |
+
+- **A Caixa de Música saiu da passagem para a fase 2.** A análise propunha que ela chegasse "depois da primeira vez que ele ouvir a cantiga". Isso não é possível como está escrito: a cantiga não toca em lugar nenhum antes de a caixa ser usada (o assobio exige três toques da caixa). A caixa passa a ser achada onde já existia, no baú da Casa do Vigia, com a página dela.
+- **O que é deixado para o jogador não some mais.** A página, o Olho e a página de item caem atrás dele como item sem prazo. Como item comum, quem não se virasse em cinco minutos perdia a entrega para sempre (a marca de "já entregue" fica na memória).
+
+## As dicas dos itens
+
+Cada item tem até três linhas: a frase de clima que já existia; uma linha que diz como se usa; e, nos nove itens que somam na Conta, uma linha igual em todos: "Tem um preço, e ele não é cobrado na hora." O Lampião Pálido e a Tigela de Oferenda, que não tinham texto nenhum, ganharam dica. A dica da Caixa dizia "a música você já ouviu em algum lugar", e não tinha ouvido: foi trocada.
+
+O princípio: esconder as regras do monstro, nunca os verbos do jogador. As dicas não dizem limite, número nem o que a criatura faz.
+
+## A Conta: carência, marcador, cobrança no uso, recibo
+
+A regra continua escondida (o limite, quanto cada item pesa). O que deixou de ficar escondido é a ligação entre causa e efeito.
+
+- **Carência.** Os três primeiros usos de cada item, na vida do personagem, não somam.
+- **Marcador.** Todo uso que soma faz o mesmo som, baixo e só para ele, na hora: um risco de giz. É um som que já existia no mod e nunca tinha tocado; não foi criado som novo. A primeira vez que ele soa é a virada: dali em diante aquele item conta.
+- **A cobrança é sempre no próprio item, no uso seguinte.** Ao estourar, a conta zera na hora e o item em que ele mais se apoiou fica marcado. Acabou a cobrança solta, de meio minuto a dois depois, "quando ele já tiver esquecido o que fez".
+
+| Item | A cobrança, no uso seguinte |
+|---|---|
+| Vela | Dura a metade, e a frase ao acender é outra ("A chama pega fraca. Não vai durar.") |
+| Olho | Dez segundos de escuridão, e ele vem (fase 3 ou mais) |
+| Sino | Continua tocando sozinho, duas vezes, e ninguém responde |
+| Fio | Alguém o dedilha três vezes logo depois de armado, sem atravessar |
+| Isca | Não arma: a cinza escorre e não se prende (antes era só ignorada depois, sem sinal) |
+| Caixa | Toca arruinada desta vez |
+| Ossos | A jogada é "presença", sem sorteio |
+| Linha | Já nasce gasta (dois estágios) |
+| Lampião | A chama esfria por um minuto assim que é alimentada |
+
+- **Recibo.** Depois de uma cobrança, o Caderno de Vestígios ganha uma linha por item cobrado, escrita como coisa que aconteceu no mundo e sem tom de bronca ("O sino continuou soando sozinho. Eu vinha perguntando demais."). A receita do caderno aparece na primeira cobrança.
+- **Os três avisos** (chamas, cantiga falhada, zumbido) continuam como eram.
+- De passagem: o relógio de esfriar ficava velho, e um uso isolado depois de um tempo parado era apagado no segundo seguinte. Corrigido.
+
+## O analisador
+
+`ferramentas/log/analisar.py` ganhou a seção "A primeira hora: os critérios", que troca o que se conta: aparições que estiveram na **mira** do jogador (não as criadas), sinais com lugar seguidos de **algo ali** em até dois minutos, saídas fortes por hora, e a parte da Conta no que ele percebeu. Três viram alerta: mundo novo sem aparição na mira até os 25 minutos; uma hora (ou 40 minutos, numa sessão curta) sem nenhuma saída forte; Conta acima de um terço. "De 6 a 12 aparições por hora" está suspenso e não vira alerta. Os números são ponto de partida e não foram validados.
+
+A sessão sintética ganhou um terceiro jogador, que começa do zero, como num mundo novo.
+
+## O que ficou de fora, de propósito
+
+- Os números da seção 6.7 e as fases mais curtas da 6.8: só depois da próxima sessão do dono.
+- Evento, item, lugar ou som novo.
+- As propostas de `pesquisa/2026-10-10-inteligencia-e-direcao.md` (ele notar o jogador, responder na hora, ter um paradeiro): são comportamento novo e ficam para a entrega seguinte.
+- Os defeitos listados no Apêndice D daquele documento, fora os três que esta entrega tocava de qualquer jeito (a entrega que sumia, a cobrança invisível da isca, o relógio da Conta). Em especial, o evento `LUZ_ERRADA` continua podendo quebrar uma tocha de verdade na fase 3 em diante: fere uma regra do mod e merece um conserto só dele.
+
+## Não verificado por ninguém
+
+Se o aviso e os dois passos bastam para o jogador virar e ver; se um segundo de olhar é muito ou pouco; se a forma diurna, a 26–36 blocos, lê como alguém ou como um boneco; se o som de giz se ouve, e se é ligado ao uso do item; se as dicas explicam o bastante sem estragar o clima; se a ordem sino, depois vela, deixa o jogador desprotegido por tempo demais.

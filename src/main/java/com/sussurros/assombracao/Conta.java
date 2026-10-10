@@ -2,13 +2,11 @@ package com.sussurros.assombracao;
 
 import java.util.Locale;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
-import com.sussurros.bloco.CinzaEspalhadaBlock;
 import com.sussurros.bloco.LampiaoPalidoBlock;
 import com.sussurros.registro.ModSons;
 
@@ -21,6 +19,15 @@ import com.sussurros.registro.ModSons;
  * zera. A cobrança nunca mata e nunca estraga nada.
  *
  * É isto que deixa os itens serem bons de verdade: o preço não está em cada uso, está em se apoiar demais.
+ *
+ * 0.9.0-alpha14: a regra do monstro continua escondida (o limite, quanto cada item pesa), mas a ligação
+ * entre causa e efeito deixou de ser. Na primeira sessão de verdade, doze das vinte e sete coisas que o
+ * jogador percebeu vieram daqui, e ele as ouviu como ruído. O que mudou:
+ *   - carência: os três primeiros usos de cada item, na vida do personagem, não somam;
+ *   - marcador: todo uso que soma faz o mesmo som baixo, na hora (um risco de giz). A primeira vez que ele
+ *     soa é a virada: dali em diante aquele item conta;
+ *   - a cobrança é sempre no próprio item, no uso seguinte, e não mais meio minuto ou dois depois;
+ *   - recibo: depois de cobrado, o Caderno ganha uma linha contando o que aconteceu.
  *
  * Tudo aqui fica na Memoria (salva com o personagem). Uso forçado por comando de teste não soma.
  */
@@ -42,15 +49,29 @@ public final class Conta {
 		String chaveCobrado() {
 			return "cobrado_" + this.name().toLowerCase(Locale.ROOT);
 		}
+
+		/** Quantas vezes ele usou este item na vida do personagem (não zera com a cobrança). */
+		String chaveVida() {
+			return "conta_vida_" + this.name().toLowerCase(Locale.ROOT);
+		}
+
+		/** Quantas vezes este item já foi cobrado: é o que o Caderno conta. */
+		String chaveRecibo() {
+			return "recibo_" + this.name().toLowerCase(Locale.ROOT);
+		}
 	}
 
 	static final String TOTAL = "conta";
 	static final String LIMITE = "conta_limite";
 	static final String AVISOS = "conta_avisos";
 	static final String DECAIU_EM = "conta_decaiu_em";
+	/** Quantas cobranças já aconteceram, somando todos os itens. */
+	static final String RECIBOS = "recibos";
 
 	/** A cada tantos segundos sem estourar, a conta perde 1. */
 	private static final int DECAI_A_CADA = 600;
+	/** Os primeiros usos de cada item não somam: o jogador aprende o item antes de pagar por ele. */
+	public static final int CARENCIA = 3;
 
 	private Conta() {
 	}
@@ -62,24 +83,67 @@ public final class Conta {
 		m.salvar();
 	}
 
-	/** O mesmo, para quem já tem a Memoria aberta e vai salvá-la. */
+	/**
+	 * Um uso de item feito de fora do tick do Diretor (um bloco clicado, um item usado no chão): confere se
+	 * este uso é a cobrança, soma e salva. Devolve true se era a cobrança: quem chama mostra a cara dela.
+	 */
+	public static boolean usar(ServerPlayer p, Item item) {
+		Memoria m = Memoria.de(p);
+		boolean cobrado = cobrarNoUso(p, m, item);
+		somar(p, m, item, 1);
+		m.salvar();
+		return cobrado;
+	}
+
+	/** O mesmo, para quem já tem a Memoria aberta e vai salvá-la. Cada chamada é um uso; "vezes" é só o peso. */
 	static void somar(ServerPlayer p, Memoria m, Item item, int vezes) {
+		long seg = p.level().getGameTime() / 20;
 		if (m.get(LIMITE) == 0) {
 			m.set(LIMITE, 6 + p.getRandom().nextInt(5));
 		}
+		int usosNaVida = m.get(item.chaveVida());
+		m.add(item.chaveVida(), 1);
+		if (usosNaVida < CARENCIA) {
+			Depuracao.log(p, seg, String.format(Locale.ROOT, "CONTA carencia item=%s uso=%d/%d", item, usosNaVida + 1, CARENCIA));
+			return;
+		}
+		if (m.get(TOTAL) <= 0) {
+			// O relógio de esfriar só anda com a conta acima de zero. Sem isto ele ficava velho, e o primeiro uso
+			// depois de um tempo parado era apagado no segundo seguinte.
+			m.set(DECAIU_EM, (int) seg);
+		}
 		m.add(TOTAL, item.peso * vezes);
 		m.add(item.chave(), vezes);
-		Depuracao.log(p, p.level().getGameTime() / 20, String.format(Locale.ROOT, "CONTA +%d item=%s total=%d limite=%d",
+		// O marcador: o mesmo som, baixo, em todo uso que soma, no instante do uso. Não explica nada; só deixa
+		// o jogador ligar "usei" a "alguma coisa anotou". Sem ele, a cobrança no uso seguinte seria atribuída
+		// só a esse uso. É o som de giz na pedra, que já existia no mod e nunca tinha tocado.
+		ModSons.tocarNaCabeca(p, ModSons.Som.GIZ, 0.30F, 0.92F);
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "CONTA +%d item=%s total=%d limite=%d",
 				item.peso * vezes, item, m.get(TOTAL), m.get(LIMITE)));
 	}
 
-	/** O jogador vai usar este item agora: há cobrança pendente nele? Consome a marca. */
-	static boolean cobrarNoUso(Memoria m, Item item) {
+	/**
+	 * O jogador vai usar este item agora: há cobrança pendente nele? Consome a marca e anota o recibo.
+	 * Quem chama é que mostra a cobrança, no próprio item (a vela que dura a metade, o sino que toca sozinho).
+	 */
+	static boolean cobrarNoUso(ServerPlayer p, Memoria m, Item item) {
 		if (m.get(item.chaveCobrado()) == 0) {
 			return false;
 		}
 		m.set(item.chaveCobrado(), 0);
+		m.add(item.chaveRecibo(), 1);
+		m.add(RECIBOS, 1);
+		if (m.get(RECIBOS) == 1) {
+			// A primeira vez que alguma coisa volta: o caderno, que é onde isso fica anotado, passa a ter receita.
+			Ensino.aoCobrar(p);
+		}
+		Depuracao.log(p, p.level().getGameTime() / 20, "CONTA cobrada no uso item=" + item + " recibos=" + m.get(RECIBOS));
 		return true;
+	}
+
+	/** Quantas vezes este item já foi cobrado (para o Caderno). */
+	static int recibos(Memoria m, Item item) {
+		return m.get(item.chaveRecibo());
 	}
 
 	/** Uma vez por segundo, dentro do tick do Diretor (recebe a Memoria do tick). */
@@ -93,7 +157,7 @@ public final class Conta {
 		// Sem estourar, esfria devagar.
 		if (m.get(DECAIU_EM) == 0 || seg < m.get(DECAIU_EM)) {
 			m.set(DECAIU_EM, (int) seg);
-		} else if (seg - m.get(DECAIU_EM) >= DECAI_A_CADA && e.cobrancaEm < 0) {
+		} else if (seg - m.get(DECAIU_EM) >= DECAI_A_CADA) {
 			m.set(DECAIU_EM, (int) seg);
 			m.set(TOTAL, total - 1);
 			Depuracao.log(p, seg, "CONTA esfriou total=" + (total - 1) + " limite=" + limite);
@@ -109,14 +173,20 @@ public final class Conta {
 			avisar(level, p, m, e, degrau, seg, tick);
 		}
 
-		if (total >= limite && e.cobrancaEm < 0) {
-			// Não cobra na hora: daqui a meio minuto ou dois, quando ele já tiver esquecido o que fez.
-			e.cobrancaEm = tick + 20L * (30 + p.getRandom().nextInt(91));
-			Depuracao.log(p, seg, "CONTA estourou total=" + total + " limite=" + limite + " cobraEm=" + (e.cobrancaEm - tick) / 20 + "s");
-		}
-		if (e.cobrancaEm >= 0 && tick >= e.cobrancaEm && !Diretor.bloqueado(p, e, tick)) {
-			e.cobrancaEm = -1;
-			cobrar(level, p, m, e, maisUsado(m), seg);
+		if (total >= limite) {
+			// Estourou. A cobrança fica marcada no item em que ele mais se apoiou e acontece no próximo uso dele,
+			// no próprio item. (Até a alpha13 vinha solta, de meio minuto a dois depois, "quando ele já tiver
+			// esquecido o que fez": para quem joga, era um som sem dono.)
+			Item item = maisUsado(m);
+			m.set(item.chaveCobrado(), 1);
+			Depuracao.log(p, seg, "CONTA estourou total=" + total + " limite=" + limite + " cobraNoProximoUso=" + item);
+			m.set(TOTAL, 0);
+			m.set(AVISOS, 0);
+			m.set(LIMITE, 6 + p.getRandom().nextInt(5));
+			m.set(DECAIU_EM, (int) seg);
+			for (Item i : Item.values()) {
+				m.set(i.chave(), 0);
+			}
 		}
 	}
 
@@ -161,72 +231,5 @@ public final class Conta {
 			}
 		}
 		return maior;
-	}
-
-	/** A cobrança, na moeda do item em que ele mais se apoiou. Depois, tudo zera e um limite novo é sorteado. */
-	private static void cobrar(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, Item item, long seg) {
-		String como;
-		switch (item) {
-			case SINO -> {
-				// O sino toca sozinho, de onde estiver guardado. Três vezes, espaçadas.
-				for (int i = 0; i < 3; i++) {
-					Diretor.agendar(level, 40 + i * (240 + p.getRandom().nextInt(200)), () -> {
-						if (!p.isRemoved()) {
-							ModSons.tocarNaCabeca(p, ModSons.Som.GRAVE, 0.38F, 1.35F);
-							ModSons.tocarNaCabeca(p, ModSons.Som.ESTALO, 0.30F, 0.72F);
-						}
-					});
-				}
-				como = "O_SINO_TOCA_SOZINHO";
-			}
-			case FIO -> {
-				// Alguém dedilha o fio por fora: três estalos, nenhum rompimento.
-				for (int i = 0; i < 3; i++) {
-					Diretor.agendar(level, 20 + i * (100 + p.getRandom().nextInt(120)), () -> {
-						if (!p.isRemoved()) {
-							Vec3 ponto = Diretor.pontoRelativo(p, 120 + p.getRandom().nextDouble() * 120, 6);
-							ModSons.tocarPara(p, ponto.x, p.getY() + 0.3, ponto.z, ModSons.Som.ESTALO, 0.7F, 0.72F);
-						}
-					});
-				}
-				como = "DEDILHA_O_FIO";
-			}
-			case CAIXA -> {
-				// A caixa toca sozinha, da mochila: gasta, torta, sem ninguém ter dado corda.
-				ModSons.tocarNaCabeca(p, ModSons.Som.CAIXA_ARRUINADA, 0.5F, 0.92F);
-				como = "A_CAIXA_TOCA_SOZINHA";
-			}
-			case LINHA -> {
-				// Uma das linhas dele é gasta de uma vez, até romper.
-				BlockPos linha = CinzaEspalhadaBlock.linhaPerto(level, p.blockPosition(), 16);
-				if (linha != null) {
-					while (CinzaEspalhadaBlock.desgastar(level, linha)) {
-						// até romper
-					}
-					ModSons.tocar(level, linha.getX() + 0.5, linha.getY() + 0.2, linha.getZ() + 0.5, ModSons.Som.ARRASTO, 0.8F, 0.8F);
-					como = "ROMPEU_UMA_LINHA pos=" + linha.toShortString();
-				} else {
-					m.set(Item.VELA.chaveCobrado(), 1);
-					como = "SEM_LINHA_PERTO->VELA";
-				}
-			}
-			case LAMPIAO -> {
-				int n = LampiaoPalidoBlock.perturbar(level, p.blockPosition(), 24, LampiaoPalidoBlock.Chama.FRIA, 20 * 60);
-				como = "LAMPIOES_FRIOS n=" + n;
-			}
-			default -> {
-				// Vela, Olho, Isca e Ossos: vale no próximo uso (ver cobrarNoUso).
-				m.set(item.chaveCobrado(), 1);
-				como = "NO_PROXIMO_USO";
-			}
-		}
-		Depuracao.log(p, seg, "CONTA cobranca item=" + item + " como=" + como + " total=" + m.get(TOTAL));
-		m.set(TOTAL, 0);
-		m.set(AVISOS, 0);
-		m.set(LIMITE, 6 + p.getRandom().nextInt(5));
-		m.set(DECAIU_EM, (int) seg);
-		for (Item i : Item.values()) {
-			m.set(i.chave(), 0);
-		}
 	}
 }

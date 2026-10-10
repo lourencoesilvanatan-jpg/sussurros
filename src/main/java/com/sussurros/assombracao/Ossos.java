@@ -79,7 +79,7 @@ public final class Ossos {
 			e.ossosNoDia = 0;
 		}
 		Desfecho d = forcado != null ? forcado : sortear(sorte, e.ossosNoDia);
-		if (forcado == null && Conta.cobrarNoUso(m, Conta.Item.OSSOS)) {
+		if (forcado == null && Conta.cobrarNoUso(p, m, Conta.Item.OSSOS)) {
 			d = Desfecho.PRESENCA;
 		}
 		e.ossosNoDia++;
