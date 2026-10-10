@@ -29,9 +29,16 @@ import com.sussurros.registro.ModItems;
  *   - olhado por cerca de um segundo, dissolve. Não toca, não persegue, não captura;
  *   - onde ele estava ficam a primeira Cinza Pálida e um vestígio.
  *
- * Só conta quando foi visto. Se o jogador não o teve na tela, o contato continua devendo e é refeito alguns
- * minutos depois, cada vez mais perto da borda da tela. Não passa pelo portão de vulnerabilidade nem espera saldo de atenção (mas gasta, para o que
- * vem depois respeitar o respiro).
+ * Só conta quando foi visto, e "visto" tem uma definição só (HospedeEntity.contatoFoiVisto, a mesma do
+ * analisador de log): olhado direto, por uns instantes, num lugar com luz. Por isso ele só nasce onde há luz
+ * para enxergá-lo. Se não foi visto, o contato continua devendo e é refeito alguns minutos depois, cada vez
+ * mais perto da borda da tela.
+ *
+ * Não passa pelo portão de vulnerabilidade nem espera saldo de atenção. A tentativa segura os outros sistemas
+ * pelo respiro, mas só custa atenção quando é vista; só a primeira traz o aviso inteiro, as seguintes ficam
+ * com os passos; e, fora a primeira do prazo final, nenhuma acontece com o Diretor recuando. Na alpha14 cada tentativa
+ * custava e avisava, vista ou não: na sessão sintética, quatro tentativas deram 25 minutos de avisos sem
+ * nenhum evento do Diretor (pesquisa/2026-10-10-revisao-da-alpha14.md, achados 2.1 e 2.2).
  *
  * As pesquisas que sustentam isto estão em pesquisa/2026-10-09-analise-de-design.md (seções 6.1 e 10) e em
  * pesquisa/2026-10-10-primeiro-encontro-e-ferramentas.md.
@@ -51,10 +58,8 @@ public final class PrimeiroContato {
 	/** Quanto ele fica esperando ser visto. */
 	private static final int VIDA_TICKS = 20 * 40;
 	/**
-	 * Depois de uma tentativa que ninguém viu, espera de quatro a seis minutos antes da próxima. Cada tentativa
-	 * traz o aviso inteiro (o mundo emudece, uma luz falha); a sessão sintética mostrou seis em dezesseis minutos
-	 * com a espera mais curta, e aviso repetido sem nada à vista é justamente o sinal sem referente que esta
-	 * versão quer tirar.
+	 * Depois de uma tentativa que ninguém viu, espera de quatro a seis minutos antes da próxima. A sessão
+	 * sintética mostrou seis em dezesseis minutos com a espera mais curta.
 	 */
 	private static final int ESPERA_MIN = 240;
 	private static final int ESPERA_SORTEIO = 121;
@@ -104,6 +109,11 @@ public final class PrimeiroContato {
 			return;
 		}
 		boolean prazo = relogio >= JANELA_FECHA;
+		// Com o Diretor recuando (a trégua depois de um pico), o contato também espera. Só a primeira tentativa
+		// do prazo final passa por cima: é a garantia. Repetição nenhuma passa.
+		if (e.estado == EstadoDiretor.RECUANDO && !(prazo && m.get(TENTATIVAS) == 0)) {
+			return;
+		}
 		boolean poucaLuz = luz <= POUCA_LUZ || noite || entardecer(level);
 		boolean foraDeCasa = e.contexto != ContextoMundo.Tipo.CASA;
 		if (!prazo && !(poucaLuz && foraDeCasa)) {
@@ -136,8 +146,9 @@ public final class PrimeiroContato {
 		int feitas = m.get(TENTATIVAS);
 		double angMin = feitas == 0 ? 100 : feitas == 1 ? 80 : 62;
 		double angMax = feitas == 0 ? 165 : feitas == 1 ? 140 : 110;
-		if (!Diretor.invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, angMin, angMax, distMin, distMax, VIDA_TICKS, 1.0,
-				true, 10.0, true, pedido)) {
+		// Só onde há luz para enxergá-lo: no breu ele estaria ali e ninguém veria.
+		if (!Diretor.invocarOndeHaLuz(level, p, e, HospedeEntity.Modo.OBSERVAR, angMin, angMax, distMin, distMax, VIDA_TICKS,
+				10.0, pedido)) {
 			return false;
 		}
 		HospedeEntity h = e.criatura;
@@ -146,19 +157,25 @@ public final class PrimeiroContato {
 		}
 		h.marcarContato();
 		m.add(TENTATIVAS, 1);
-		// O aviso da caçada, e aqui ele diz a verdade: há alguém perto.
-		Diretor.prenunciar(level, p, e, tick, rnd, true, "contato");
+		// O aviso da caçada, e aqui ele diz a verdade: há alguém perto. Só na primeira tentativa: aviso repetido
+		// sem nada à vista é o sinal sem referente que o contato veio tirar. As seguintes ficam com os passos.
+		boolean aviso = feitas == 0;
+		if (aviso) {
+			Diretor.prenunciar(level, p, e, tick, rnd, true, "contato");
+			// O aviso inteiro é uma saída que o jogador percebe: o piso do Diretor conta a partir dele. Os passos
+			// das repetições não zeram esse relógio (zeravam, e o piso nunca chegava).
+			e.ultimoEventoSeg = seg;
+		}
 		// Nascer fora da tela é o jeito mais fácil de ninguém ver. Dois passos vindos dele dizem o lado;
 		// se ainda não foi visto, mais dois, uma vez.
 		passos(level, p, h, 44);
 		passos(level, p, h, 260);
-		// Gasta atenção sem esperar por ela: o que vier depois respeita o respiro.
-		Atencao.gastar(p, e, "contato", Atencao.CENA, seg);
-		e.ultimoEventoSeg = seg;
+		// Segura os outros sistemas enquanto ele espera ser visto, sem gastar: o custo vem em aoSumir, se foi visto.
+		Atencao.respirar(e, seg);
 		Depuracao.log(p, seg, String.format(Locale.ROOT,
-				"CONTATO tentativa=%d relogio=%ds prazo=%s luz=%d dia=%s dist=%.1f manifestacao=%s",
+				"CONTATO tentativa=%d relogio=%ds prazo=%s luz=%d dia=%s dist=%.1f aviso=%s manifestacao=%s",
 				m.get(TENTATIVAS), relogio, prazo ? "sim" : "nao", luz, diaAberto ? "sim" : "nao",
-				Math.sqrt(h.distanceToSqr(p)), h.getIdManifestacao()));
+				Math.sqrt(h.distanceToSqr(p)), aviso ? "sim" : "nao", h.getIdManifestacao()));
 		return true;
 	}
 
@@ -183,16 +200,21 @@ public final class PrimeiroContato {
 	static void aoSumir(ServerPlayer p, HospedeEntity h, String motivo) {
 		ServerLevel level = p.level();
 		long seg = level.getGameTime() / 20;
-		// "Visto" é ter estado na mira dele: olhado direto, nem que por um instante, ou na tela por tempo bastante
-		// para dissolver. Passar pela borda da tela não conta: a sessão sintética marcou como visto um contato em
-		// que o jogador de mentira só esbarrou nele de lado.
-		boolean visto = h.jaFoiEncarado() || "VISTO_DEMAIS".equals(motivo);
-		Depuracao.log(p, seg, String.format(Locale.ROOT, "CONTATO visto=%s motivo=%s naTela=%dt encarado=%s manifestacao=%s",
-				visto ? "sim" : "nao", motivo, h.getTicksNaTela(), h.jaFoiEncarado() ? "sim" : "nao", h.getIdManifestacao()));
+		// "Visto" é ter estado na mira dele por uns instantes, com luz (HospedeEntity.contatoFoiVisto). Ficar no
+		// canto da tela até dissolver não conta, nem a mira que passou por ele numa virada de câmera: na sessão
+		// sintética os contatos dados como vistos tinham naTela=37t e encarado=nao.
+		boolean visto = h.contatoFoiVisto();
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "CONTATO visto=%s motivo=%s naTela=%dt encarado=%s naMira=%dt manifestacao=%s",
+				visto ? "sim" : "nao", motivo, h.getTicksNaTela(), h.jaFoiEncarado() ? "sim" : "nao", h.getTicksNaMira(),
+				h.getIdManifestacao()));
 		if (!visto) {
 			return;
 		}
-		Diretor.estadoParaTeste(p).contatoVisto = true;
+		EstadoJogador e = Diretor.estadoParaTeste(p);
+		e.contatoVisto = true;
+		// Agora sim foi uma saída, e das fortes: custa atenção e o piso do Diretor conta a partir daqui.
+		Atencao.gastar(p, e, "contato", Atencao.CENA, seg);
+		e.ultimoEventoSeg = seg;
 		Memoria m = Memoria.de(p);
 		m.set(FEITO, 1);
 		m.add(Memoria.CINZAS_GERADAS, 1);
@@ -219,6 +241,24 @@ public final class PrimeiroContato {
 
 	public static boolean feitoParaTeste(ServerPlayer p) {
 		return feito(Memoria.de(p));
+	}
+
+	/** O aviso da caçada (o mundo emudece, uma luz falha) está valendo para este jogador agora? */
+	public static boolean avisoAtivoParaTeste(ServerPlayer p) {
+		return Diretor.estadoParaTeste(p).cacaAvisoAte > p.level().getGameTime();
+	}
+
+	/** Libera já a próxima tentativa, sem mexer no relógio, para um teste não esperar os minutos entre uma e outra. */
+	public static void liberarTentativaParaTeste(ServerPlayer p) {
+		Diretor.estadoParaTeste(p).contatoProximaTentativa = 0;
+	}
+
+	/** Põe o Diretor recuando (a trégua depois de um pico) por um bom tempo, ou o tira de lá. */
+	public static void recuarParaTeste(ServerPlayer p, boolean recuando) {
+		EstadoJogador e = Diretor.estadoParaTeste(p);
+		e.estado = recuando ? EstadoDiretor.RECUANDO : EstadoDiretor.CALMO;
+		e.estadoDesde = p.level().getGameTime() / 20;
+		e.duracaoEstado = 600;
 	}
 
 	/** Dá o contato por feito, para os testes que tratam do que vem depois dele. */

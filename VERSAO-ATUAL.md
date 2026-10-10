@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha15
+
+Consertos em cima da alpha14, achados numa revisão do código antes da primeira sessão: a parte nova da primeira hora ficou mais confiável, e foi corrigido um caso raro em que o mod podia quebrar de verdade um bloco do jogador. Não entra nada novo.
+
 ## 0.9.0-alpha14
 
 Mexe na primeira hora de um mundo novo: a ordem em que as coisas chegam até o jogador e o que o jogo diz sobre os itens. As dicas dos itens passam a dizer como cada um se usa. Não entra nada novo: é reordenar e garantir.

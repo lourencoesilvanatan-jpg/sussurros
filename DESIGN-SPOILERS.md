@@ -1225,3 +1225,51 @@ A sessão sintética ganhou um terceiro jogador, que começa do zero, como num m
 ## Não verificado por ninguém
 
 Se o aviso e os dois passos bastam para o jogador virar e ver; se um segundo de olhar é muito ou pouco; se a forma diurna, a 26–36 blocos, lê como alguém ou como um boneco; se o som de giz se ouve, e se é ligado ao uso do item; se as dicas explicam o bastante sem estragar o clima; se a ordem sino, depois vela, deixa o jogador desprotegido por tempo demais.
+
+---
+# Versão 0.9.0-alpha15 — consertos depois da revisão da alpha14
+
+A alpha14 foi revista por outra sessão antes de o dono jogar (`pesquisa/2026-10-10-revisao-da-alpha14.md`, no PR #32). Esta versão é só conserto: cada achado foi conferido no código antes de mexer, e nada novo entrou.
+
+## O que cada achado virou
+
+| Achado | Conferência | O que foi feito |
+|---|---|---|
+| 2.1 Tentativa de contato que ninguém vê cala o Diretor | **Confirmado**, e era pior do que o saldo: além de gastar 24 de atenção, cada tentativa zerava o relógio do piso (`ultimoEventoSeg`). Com tentativa a cada 4–6 minutos e piso de 7, o piso nunca chegava | A tentativa impõe o respiro e não gasta (`Atencao.respirar`); o custo (24) vem quando o contato é visto. Só a primeira traz o aviso inteiro e mexe no relógio do piso; as seguintes ficam com os passos. Com o Diretor recuando nenhuma tentativa acontece, fora a primeira do prazo final |
+| 2.2 (a) Visto de canto de olho | **Confirmado** (`VISTO_DEMAIS` contava sempre) | "Visto" passou a ter uma definição só, em `HospedeEntity.contatoFoiVisto`: na mira dele por 6 ticks seguidos (0,3 s), com luz. O tempo de canto ainda o dissolve, mas o contato continua devendo, e isso não soma pressão nem `VEZES_VISTO` (somava, e no segundo seguinte o contato era "dispensado" sem cinza) |
+| 2.2 (b) O "tímido" numa virada de câmera | **Confirmado** | O ramo `SUMIU_NO_DESVIO` só vale para o contato depois de ele ter sido visto |
+| 2.2 (c) Visto no breu | **Confirmado na lógica** (a menos de 20 blocos a luz não era olhada, e a criatura não tem nada que brilhe) | O contato só nasce onde há luz para enxergá-lo (`Diretor.invocarOndeHaLuz`, luz efetiva 4 ou mais: céu aberto de noite passa, caverna sem tocha não), e a mira só conta com essa luz |
+| 2.3 Uma página para várias pedidas | **Confirmado** | Quem decide a entrega é a Memoria (as páginas pedidas), não um agendamento em memória. Uma página de cada vez; a seguinte vem depois de ele ler a que tem; nunca mais páginas deixadas do que pedidas; e nenhuma enquanto houver uma na mochila ou caída a 16 blocos |
+| 2.4 A tocha quebrada de verdade | **Confirmado** (`destroyBlock` no ramo `QUEBROU_COM_DROP`) | Virou miragem (`LUZ_ERRADA tipo=CAIU miragem=sim`): o som de quebrar só para ele, a tocha some só para ele, e volta quando ele chega a três blocos ou em meio minuto. Era o ponto que a revisão apontou; as alterações temporárias (`AlteracoesTemporarias`) e o que o mod ergue no mundo não foram auditados de novo nesta rodada |
+| 2.5 Alerta de "nenhuma aparição até os 25 minutos" | **Confirmado** | O limite foi para 30 minutos de jogo (o prazo só começa a tentar aos 25) |
+| 2.6 "Hora sem saída forte" contando tempo fora do mundo | **Confirmado** | As horas andam pelo tempo de jogo (`jogado_ate`), não pelo relógio do log |
+| 2.7 Critérios que não medem o que dizem | Só o das duas sessões coladas | O relatório avisa quando o relógio do log volta para trás. O resto fica para depois da sessão do dono |
+| 2.8 Passos da página fora da `Atencao` | É decisão de desenho | Não mexi. Atenção: com o conserto do 2.3 chegam mais páginas (uma por item), cada uma com os seus quatro passos |
+| 2.9 Menores | — | Não mexi |
+
+Achados meus, ao ler a sessão sintética depois dos consertos:
+
+- **Quem põe a mira nele na hora em que ele dissolve viu.** Com trinta ticks de canto e a mira chegando no fim, ele dissolvia com três ou quatro ticks de mira, abaixo dos seis: o jogador via a dissolução no meio da tela e o contato não contava. Agora, se ele dissolve com a mira nele e com luz, conta.
+- **Uma tentativa que ninguém viu deixou de ser "saída forte" no analisador** (só a vista é), e os eventos da sequência de ameaça passaram a ser (não tinham a linha `SELECAO`, e uma espreita seguida de "atrás de você" valia zero). Os dois erravam o alerta de "hora parada", um para cada lado.
+
+## Medição
+
+Sessão sintética de uma hora, jogador que começa do zero. O que a revisão mediu na alpha14 foi 25 minutos e meio sem evento do Diretor, com quatro avisos de caçada no meio. Agora: nove tentativas de contato (o jogador de mentira não se vira para o som e nunca o vê), **um aviso só**, 19 eventos do Diretor na hora, e o maior silêncio entre duas saídas foi de 4 minutos e 55 segundos. Os outros dois jogadores (fases 2 e 4) ficaram em 26 e 31 eventos por hora, na faixa do que a alpha13 mediu.
+
+O que a sessão sintética não mede: se um jogador de verdade vê o contato. O de mentira nunca põe a mira nele, então a definição nova de "visto" só foi exercitada pelos testes de servidor.
+
+## Os testes
+
+Três novos e dois refeitos em `TestesDaPrimeiraHora` (48 no total):
+
+- `oContatoQueNinguemViuContinuaDevendo` passou a provar que a tentativa não gasta atenção, que a segunda tentativa existe, que ela espera o Diretor sair do recuo e que vem sem o aviso inteiro;
+- `oContatoSoContaQuandoEVisto` ganhou a virada de câmera (dois ticks de mira e o outro lado): ele não some e o contato não conta;
+- `oContatoDeCantoDeOlhoNaoConta`: 37 ticks a trinta graus da mira dissolvem, não contam, não deixam cinza e não somam `VEZES_VISTO`;
+- `oContatoVistoQuandoDissolveConta`: o caso da mira que chega no fim;
+- `duasPaginasParaDoisItens`.
+
+Sem teste: o breu (o mundo de teste não tem lugar escuro; a regra da luz foi conferida só lendo), a forma diurna do prazo, a tocha (o ramo é sorteado dentro do evento) e os testes 1, 3 e 5 da seção 3 da revisão.
+
+## Para observar na sessão do dono
+
+Além do que a revisão lista na seção 5: **quantas tentativas até o `visto=sim`** pesa mais agora. A definição ficou mais exigente, e as repetições são discretas (quatro passos, sem aviso). Se o log mostrar três ou mais tentativas com `naTela` maior que zero e `visto=nao`, o limite de seis ticks ou a luz mínima estão altos demais para um jogador de verdade.

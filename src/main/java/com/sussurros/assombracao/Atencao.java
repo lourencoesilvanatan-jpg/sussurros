@@ -126,6 +126,17 @@ public final class Atencao {
 				fonte, custo, e.atencaoSaldo, e.ambienteSaldo));
 	}
 
+	/**
+	 * Impõe o respiro sem gastar saldo. Para o que ainda não se sabe se o jogador percebeu: a tentativa de
+	 * primeiro contato segura os outros sistemas enquanto espera ser vista, mas só custa quando é vista. (Na
+	 * alpha14 cada tentativa custava, vista ou não, e três seguidas calavam o Diretor por vinte minutos.)
+	 */
+	static void respirar(EstadoJogador e, long seg) {
+		if (!e.forcando) {
+			e.atencaoLivreEm = Math.max(e.atencaoLivreEm, seg + (long) (RESPIRO[e.atencaoFase] / ritmo.fator));
+		}
+	}
+
 	/** Uma vez por segundo, no começo do tick do Diretor: o saldo volta. */
 	static void segundo(EstadoJogador e, int fase) {
 		e.atencaoFase = Math.max(0, Math.min(4, fase));
