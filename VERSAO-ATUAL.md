@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha13
+
+Corrige o limite de ritmo da alpha12, que tinha ficado apertado demais: na primeira sessão de verdade o mod quase não fez a sua parte principal. Corrige também um caso em que ele podia ficar calado por muito tempo, mais provável em servidor.
+
 ## 0.9.0-alpha12
 
 O ritmo do mod foi espaçado, e passa a ter três opções: `/sussurros ritmo calmo`, `padrao` ou `intenso`.

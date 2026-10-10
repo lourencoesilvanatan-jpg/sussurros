@@ -15,7 +15,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import com.sussurros.Sussurros;
 
 /**
- * A atenção do jogador (0.9): um orçamento só, por jogador, para tudo o que o mod empurra para ele.
+ * A atenção do jogador (0.9): o orçamento, por jogador, de tudo o que o mod empurra para ele.
  *
  * Antes cada sistema tinha o seu relógio (o Diretor, a Atmosfera, as cinco cenas, os avisos da Conta, o
  * baralho) e nenhum sabia dos outros: o ritmo final não era decidido por ninguém, era a soma. No log de
@@ -24,9 +24,12 @@ import com.sussurros.Sussurros;
  *
  * Como funciona:
  *  - o jogador tem um saldo que volta devagar (mais depressa nas fases altas);
- *  - cada saída perceptível custa: um evento do Diretor custa 12 mais a intensidade dele; um presságio, 14;
- *    uma perturbação de ambiente, 20; o começo de uma cena, 36; um aviso da Conta, 10; uma caçada, 50;
+ *  - cada saída perceptível custa: um evento do Diretor custa 10 mais metade da intensidade dele; um presságio,
+ *    14; uma perturbação de ambiente, 20; o começo de uma cena, 24; uma caçada, 40;
  *  - para COMEÇAR algo novo é preciso ter saldo e ter passado o respiro mínimo desde a última saída;
+ *  - SÃO DOIS SALDOS, com um respiro só. O Diretor (eventos, cenas, cartas, caçada) tem o dele; o ambiente
+ *    (presságios e perturbações) tem outro, menor e mais lento. Nenhum dos dois gasta o do outro. O que os
+ *    une é o respiro: depois de qualquer saída, de qualquer um, os dois esperam;
  *  - o que já começou termina: elos de cadeia, a sequência de ameaça e os passos de uma cena não esperam o
  *    saldo, só o gastam (ele pode ficar negativo, e aí o silêncio seguinte é mais longo);
  *  - com o Diretor recuando (depois de um pico, de uma captura), nada começa e o saldo não volta: a trégua
@@ -37,6 +40,13 @@ import com.sussurros.Sussurros;
  *
  * O ritmo tem três perfis, para o dono comparar sem ler o que muda: calmo, padrão e intenso. O intenso é
  * perto do que o mod fazia antes desta classe existir.
+ *
+ * Os dois saldos existem por causa de um erro (0.9.0-alpha12, corrigido na alpha13). Na primeira versão todos
+ * disputavam um saldo só, e o mais barato ganhava sempre: o presságio (14) e o aviso da Conta (10) gastavam o
+ * saldo assim que ele chegava lá, e o Diretor (16 ou mais) nunca alcançava. Na primeira sessão de verdade, em
+ * 09/10/2026, foram 55 minutos até a fase 3 com cinco eventos do Diretor, nenhuma aparição da criatura e a
+ * obsessão em 100. A sessão sintética não pegou porque eu olhei só os intervalos, não O QUE estava saindo.
+ * Regra para quem mexer aqui: confira a mistura, não só o ritmo.
  */
 public final class Atencao {
 	public enum Ritmo {
@@ -50,19 +60,20 @@ public final class Atencao {
 	}
 
 	static final double CAPACIDADE = 60.0;
+	static final double CAPACIDADE_AMBIENTE = 30.0;
 	/** Quanto do saldo volta por segundo, por fase, no ritmo padrão. */
-	private static final double[] VOLTA = {0.06, 0.08, 0.10, 0.14, 0.20};
+	private static final double[] VOLTA = {0.0, 0.05, 0.065, 0.10, 0.16};
+	/** O saldo do ambiente volta mais devagar. Na fase 0 ele é a única voz do mod; depois, é o fundo. */
+	private static final double[] VOLTA_AMBIENTE = {0.05, 0.03, 0.025, 0.025, 0.025};
 	/** Respiro mínimo, em segundos, entre uma saída e o começo da seguinte, por fase, no ritmo padrão. */
-	private static final int[] RESPIRO = {120, 110, 90, 60, 45};
-
-	static final double MINIMO = 16.0;          // o evento mais barato que existe (intensidade 4)
+	private static final int[] RESPIRO = {90, 75, 60, 45, 30};
+	static final double MINIMO = 12.0;          // o evento mais barato que existe (intensidade 4)
 	static final double PRESSAGIO = 14.0;
 	static final double MICROCENA = 20.0;
-	static final double CENA = 36.0;
-	static final double AVISO_DA_CONTA = 10.0;
+	static final double CENA = 24.0;
 	static final double CARTA = 16.0;
-	static final double VEU = 32.0;
-	static final double CACADA = 50.0;
+	static final double VEU = 20.0;
+	static final double CACADA = 40.0;
 
 	/** Só para a sessão sintética: mede o ritmo sem o limite (os gastos continuam no log). */
 	public static boolean semLimiteNosTestes;
@@ -74,7 +85,26 @@ public final class Atencao {
 	}
 
 	static double custo(int intensidade) {
-		return 12.0 + intensidade;
+		return 10.0 + intensidade / 2.0;
+	}
+
+	/** Dá para o AMBIENTE (presságio, perturbação) começar agora? Tem saldo próprio, e o respiro é o mesmo. */
+	static boolean podeGastarAmbiente(EstadoJogador e, double custo, long seg) {
+		if (e.forcando || semLimiteNosTestes) {
+			return true;
+		}
+		return e.estado != EstadoDiretor.RECUANDO && seg >= e.atencaoLivreEm && e.ambienteSaldo >= custo;
+	}
+
+	/** Uma saída do ambiente aconteceu. Gasta do saldo dele e impõe o respiro a todos. */
+	static void gastarAmbiente(ServerPlayer p, EstadoJogador e, String fonte, double custo, long seg) {
+		if (e.forcando) {
+			return;
+		}
+		e.ambienteSaldo = Math.max(0, e.ambienteSaldo - custo);
+		e.atencaoLivreEm = seg + (long) (RESPIRO[e.atencaoFase] / ritmo.fator);
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "ATENCAO fonte=%s custo=%.0f saldo=%.0f ambiente=%.0f",
+				fonte, custo, e.atencaoSaldo, e.ambienteSaldo));
 	}
 
 	/** Dá para começar algo novo agora? O que é forçado por comando de teste sempre pode. */
@@ -92,7 +122,8 @@ public final class Atencao {
 		}
 		e.atencaoSaldo = Math.max(-CAPACIDADE, e.atencaoSaldo - custo);
 		e.atencaoLivreEm = seg + (long) (RESPIRO[e.atencaoFase] / ritmo.fator);
-		Depuracao.log(p, seg, String.format(Locale.ROOT, "ATENCAO fonte=%s custo=%.0f saldo=%.0f", fonte, custo, e.atencaoSaldo));
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "ATENCAO fonte=%s custo=%.0f saldo=%.0f ambiente=%.0f",
+				fonte, custo, e.atencaoSaldo, e.ambienteSaldo));
 	}
 
 	/** Uma vez por segundo, no começo do tick do Diretor: o saldo volta. */
@@ -100,6 +131,7 @@ public final class Atencao {
 		e.atencaoFase = Math.max(0, Math.min(4, fase));
 		if (e.estado != EstadoDiretor.RECUANDO) {
 			e.atencaoSaldo = Math.min(CAPACIDADE, e.atencaoSaldo + VOLTA[e.atencaoFase] * ritmo.fator);
+			e.ambienteSaldo = Math.min(CAPACIDADE_AMBIENTE, e.ambienteSaldo + VOLTA_AMBIENTE[e.atencaoFase] * ritmo.fator);
 		}
 	}
 
@@ -141,6 +173,14 @@ public final class Atencao {
 	/** Só para os testes: pergunta e gasta como um sistema do mod faria, no segundo atual do mundo. */
 	public static boolean podeParaTeste(ServerPlayer p, double custo) {
 		return podeGastar(Diretor.estadoParaTeste(p), custo, p.level().getGameTime() / 20);
+	}
+
+	public static boolean ambienteParaTeste(ServerPlayer p, double custo) {
+		return podeGastarAmbiente(Diretor.estadoParaTeste(p), custo, p.level().getGameTime() / 20);
+	}
+
+	public static double saldoDoAmbienteParaTeste(ServerPlayer p) {
+		return Diretor.estadoParaTeste(p).ambienteSaldo;
 	}
 
 	public static void gastarParaTeste(ServerPlayer p, double custo) {

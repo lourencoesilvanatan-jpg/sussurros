@@ -4,6 +4,14 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha13: **corrige um erro meu da alpha12.** O limite de ritmo que eu tinha posto ficou apertado demais e, na sua sessão de 09/10, calou quase tudo o que importa. O "parado" que você sentiu veio daí, não do seu jeito de jogar. Os comandos de ritmo continuam valendo.
+
+Para a próxima sessão valer como sessão de verdade:
+
+- comece um **mundo novo**, em sobrevivência;
+- de comando do mod, use só `/sussurros debug on` (e o `/sussurros ritmo`, se quiser trocar). Os outros (`/sussurros estrutura`, `evento`, `cena`, `teste`, `memoria`, `esquecer`) são ferramentas de quem programa: adiantam coisas fora de hora, e alguns mostram o que você pediu para não ver. Num mundo novo o `esquecer` nem é preciso;
+- `/give` de tocha e de comida, tudo bem. Evite só `/give` de item do mod e `/tp` para longe.
+
 Versão 0.9.0-alpha12: o ritmo do mod foi espaçado (medi a sua sessão de 08/10 e as coisas vinham uma atrás da outra). Se você achar parado demais, ou agitado demais, dá para trocar sem saber de nada: `/sussurros ritmo calmo`, `/sussurros ritmo padrao` ou `/sussurros ritmo intenso`. Me diga qual você preferiu.
 
 Versão 0.9.0-alpha11: correções por baixo do pano (uma delas só aparece jogando com amigos) e uma ferramenta para eu ler as suas sessões mais depressa. Não muda nada no que você precisa fazer.
@@ -54,7 +62,7 @@ Da versão 0.9.0-alpha1, que você ainda não jogou:
 4. **Jogar normalmente.** De preferência sessões longas, num mundo de sobrevivência, com som ligado (fone é melhor).
 5. No menu de som do jogo, deixar "Criaturas hostis" e "Ambiente" audíveis. Boa parte dos sons do mod sai por aí.
 
-Se quiser adiantar o relógio do mod em vez de esperar, `/sussurros fase 2`, `3` ou `4` continua valendo.
+Se quiser adiantar o relógio do mod em vez de esperar, `/sussurros fase 2`, `3` ou `4` continua valendo. Mas a primeira sessão num mundo novo vale mais sem pular nada.
 
 Vale a pena jogar em **sobrevivência**, e não em criativo: boa parte do que é novo você encontra, recebe ou fabrica. Experimente o que aparecer, do jeito que parecer natural. Nada do que é novo mata você nem estraga a sua construção.
 

@@ -294,10 +294,14 @@ final class EstadoJogador {
 	long cacaAvisoAte = -1;
 	// --- A atenção (0.9): o orçamento único de tudo o que o mod empurra para este jogador (ver Atencao) ---
 	double atencaoSaldo = Atencao.CAPACIDADE / 2;
+	double ambienteSaldo = Atencao.CAPACIDADE_AMBIENTE / 2;
 	long atencaoLivreEm;
 	int atencaoFase;
 	/** Uma carta do baralho deixou mais tochas empalidecerem até este segundo. */
 	long chamasExtraAteSeg;
+	/** Vigia da criatura parada no tempo: o tickCount dela na última olhada, e há quantos segundos não muda. */
+	int criaturaTickVisto = -1;
+	int criaturaParadaSeg;
 	/** A caçada devida só é cobrada depois deste segundo (um ou dois minutos depois de entrar ou de fugir). */
 	long cacaDevidaApos;
 

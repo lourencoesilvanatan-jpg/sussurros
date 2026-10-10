@@ -1040,3 +1040,80 @@ Para comparar, a sessão de verdade de 08/10 (antes da expansão, fases 0 a 3): 
 A referência da revisão externa era mediana de 180 s ou mais na fase 2 e de 90 s ou mais na fase 4. A fase 4 está no alvo; a fase 2 ficou perto, com poucos intervalos medidos. Com um jogador de verdade, que puxa o Diretor para estados mais ativos, quem passa a mandar é o saldo: na conta, cerca de 220 s entre saídas na fase 2 e 110 s na fase 4.
 
 Limite da medição: o jogador de mentira não reage, e o Diretor o trata como alguém indiferente (fica a maior parte do tempo observando). Um jogador de verdade puxa o Diretor para estados mais ativos, e aí é o orçamento que segura. As execuções variam bastante entre si, porque o Diretor sorteia. O que a sessão garante é a forma: acabaram as rajadas, e o intervalo mínimo é o respiro.
+
+---
+# Versão 0.9.0-alpha13 — o orçamento de atenção, consertado
+
+## O que deu errado na alpha12
+
+A primeira sessão de verdade com a expansão (09/10/2026, mundo novo, 55 minutos, até a fase 3) teve **cinco eventos do Diretor, nenhuma aparição da criatura e a obsessão em 100**. O que o jogador viu foi quase só ambiente (nove presságios) e os avisos da Conta (oito). Ele disse depois que o jogo parecia parado, e tinha razão.
+
+A causa foi o orçamento de atenção da alpha12. Todos os sistemas disputavam um saldo só, em pé de igualdade, e o mais barato ganhava sempre: o presságio (14) e o aviso da Conta (10) gastavam o saldo assim que ele chegava lá, e o Diretor, que precisava de 16 ou mais, nunca alcançava. Em 55 minutos houve cinco sorteios de evento, quatro deles pelo piso.
+
+A sessão sintética não pegou o defeito porque eu olhei só os intervalos entre saídas, e não o que estava saindo. E o jogador de mentira não reagia nem usava itens, então o Diretor mal competia.
+
+## O conserto
+
+- **Dois saldos, um respiro.** O Diretor (eventos, cenas, cartas, caçada) tem o seu saldo. O ambiente (presságios e perturbações) tem outro, menor e mais lento. Nenhum gasta o do outro. O que os une é o respiro: depois de qualquer saída, os dois esperam.
+- **Os avisos da Conta saíram do orçamento.** São consequência do que o próprio jogador fez com os itens. É como era até a alpha11.
+- **Custos mais baixos e mais parecidos.** Um evento do Diretor custa 10 mais metade da intensidade (de 12 a 25, e não de 16 a mais de 40): evento forte deixou de ser quase impossível de pagar. Cena, 24; caçada devida, 40.
+
+| Fase | Saldo do Diretor (por segundo) | Saldo do ambiente (por segundo) | Respiro comum |
+|---|---|---|---|
+| 0 | não há eventos | 0,05 | 90 s |
+| 1 | 0,05 | 0,03 | 75 s |
+| 2 | 0,065 | 0,025 | 60 s |
+| 3 | 0,10 | 0,025 | 45 s |
+| 4 | 0,16 | 0,025 | 30 s |
+
+O Diretor guarda até 60 pontos e o ambiente, até 30. O que já começou (elo de cadeia, sequência de ameaça, passos de cena) continua sem esperar.
+
+## Medição
+
+O que se olha agora é a **mistura**: de onde veio o que o jogador percebeu, e quantas vezes a criatura se manifestou. Por hora de jogo:
+
+| Sessão | Total | Eventos do Diretor | Ambiente | Conta | Manifestações da criatura |
+|---|---|---|---|---|---|
+| De verdade, 09/10, alpha12 (fases 0 a 3, 55 min) | 25 | 5 | 11 | 9 | **0** |
+| Sintética, alpha13, começa na fase 2 | 27 | 23 | 4 | 0 | 6 |
+| Sintética, alpha13, fase 4 | 40 | 32 | 5 | 0 | 8 |
+| Sintética, alpha13, começa na fase 2 (outra execução) | 17 | 11 | 6 | 0 | 2 |
+| De verdade, 08/10, antes do orçamento (fases 0 a 3, 1h10) | 45 | — | — | — | 34 |
+
+Na execução da fase 4 houve, além dos eventos, um Véu e uma sequência de ameaça completa (espreita, caçada, captura), seguida da trégua de sempre: quase nove minutos de silêncio e mais cinco até o primeiro evento. É o maior silêncio da tabela de intervalos, e é de propósito.
+
+Intervalo entre uma saída e a seguinte (mediana), na primeira execução: 81 s na fase 2, 130 s na fase 3 e de 56 a 73 s na fase 4. A referência da revisão externa era 180 s ou mais na fase 2 e 90 s ou mais na fase 4. Fiquei abaixo dela de propósito: a única opinião de quem jogou, até aqui, é que estava parado. Quem achar demais tem o `/sussurros ritmo calmo`.
+
+Limites desta medição:
+
+- O jogador de mentira reage sempre igual e não usa itens. Os avisos da Conta, que na sessão de verdade foram um terço do que o jogador percebeu, não aparecem nas sintéticas.
+- **Os números variam muito de uma execução para outra** (17 e 27 por hora com os mesmos valores). Duas execuções não fecham número nenhum; servem para ver que o Diretor voltou a ser a voz principal e que a criatura aparece.
+- Uma execução anterior, com a volta do saldo um pouco mais alta ({0, 0,06, 0,075, 0,12, 0,19}), deu 31 e 49 por hora: a fase 4 passava do que havia antes de o orçamento existir (45). Por isso os valores atuais são um pouco mais baixos.
+- Outra execução foi a que mostrou a criatura parada no tempo (abaixo): o jogador da fase 4 ficou com 13 saídas por hora porque o Diretor esperou por ela 52 minutos.
+
+## A criatura parada no tempo
+
+Achado pela sessão sintética, não pela sessão de verdade. Um vulto nasceu a 71 blocos do jogador, num chunk que estava carregado mas fora da distância de simulação. Ali o mundo existe e não anda: a criatura não envelhece e não some. Como o Diretor não começa nada enquanto ela existir, ele ficou mudo por 52 minutos.
+
+Num jogo de um jogador só isso é raro. Num servidor de amigos, onde a distância de simulação costuma ser de 4 a 6 chunks, e com quem viaja depressa, não é.
+
+- O vulto deixou de nascer onde o mundo não anda (`level.isPositionEntityTicking`, além de `isLoaded`).
+- O Diretor vigia o relógio da criatura (`tickCount`) uma vez por segundo. Se não mudou em cinco segundos, ela é tirada, com a linha `HOSPEDE ... sumiu motivo=PARADA_NO_TEMPO`. Se era uma caçada de verdade, fica devendo, como quando o jogador foge para longe.
+
+## O que mais a sessão de verdade mostrou (sem mexer em nada)
+
+Ficam anotados. Uma sessão só, e com comandos de teste no meio, não justifica mudar número.
+
+- **Os lugares e os itens chegaram antes da criatura.** A Soleira foi erguida aos 24 minutos e a Casa do Vigia aos 25 (logo depois da fase 2, como está escrito), e ele visitou a Casa aos 30, com tudo o que há dentro. Somando as três estruturas que ele gerou por comando, teve meia dúzia de itens na mão sem nunca ter visto do que eles tratam. Cheguei a subir as exigências das duas (fase 3, mais chunks, chance menor) e desfiz antes de enviar: com a queixa dele sendo "parado", tirar da primeira hora uma das poucas coisas que ele encontrou é decisão de desenho, não de conserto.
+- **Dois itens viraram botão.** O Sino foi tocado 16 vezes e a Caixa de Música, 9, em meia hora. A Conta estourou quatro vezes e cobrou (o sino sozinho três vezes, a caixa sozinha uma). O sistema fez o que devia; para quem joga, foi som sem dono. A revisão externa sugere um "recibo" no diário depois de uma cobrança.
+- **As fases andam depressa.** Fase 3 aos 39 minutos.
+- **O jogador reage, e o mod lê.** Das cinco leituras, duas foram claras (giro de mais de 60 graus, parada).
+- Ele usou comandos do `LEIA-ME.md` (gerar estruturas, teleporte, ver e apagar a memória). O roteiro passou a dizer quais não usar numa sessão de verdade.
+
+**O que este conserto não resolve.** Outra sessão do Claude Code analisou o mesmo log a pedido do dono, pelo lado do desenho: `pesquisa/2026-10-09-analise-de-design.md`, na branch `docs/analise-de-design` (ainda fora da `main` quando isto foi escrito). A tese dela: devolver a voz ao Diretor é necessário e não basta, porque o que ele tem para dizer nas três primeiras fases é pequeno, as ferramentas chegam antes da ameaça e o jogo não ensina a usá-las. O dono pediu mais pesquisa e análise antes de estruturar as próximas versões; o que vem depois desta sai de lá, não daqui.
+
+## Ferramentas
+
+- O analisador passou a abrir o relatório com **alertas**: nenhuma aparição em vinte minutos de fase 2 ou mais, poucos eventos do Diretor, o ambiente falando mais que o Diretor, item usado como botão, Conta cobrando demais, fase 3 cedo.
+- A sessão sintética ganhou um jogador que reage (para e vira o rosto a cada coisa que acontece), para o Diretor sair do estado de observar. E deixou de usar `helper.onEachTick`, que agenda de uma vez uma tarefa para cada tick até o fim do teste.
+- `JogadorDeTeste.remover` solta os chunks que tinham sido forçados para aquele jogador (menos os que ainda são de outro).

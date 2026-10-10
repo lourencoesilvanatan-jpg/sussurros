@@ -114,6 +114,9 @@ Principais mudanças:
 É uma **alpha experimental**. Preserve sua versão anterior e teste primeiro em um mundo de desenvolvimento.
 
 ## Comandos de teste (precisa de cheats ligados)
+
+**Numa sessão de verdade, não use estes comandos** (só o `/sussurros debug on`, mais abaixo, e o `/sussurros ritmo`, se quiser trocar). Eles adiantam coisas fora de hora, e a lista abaixo conta o que o mod faz.
+
 - `/sussurros fase <0-4>` pula para uma fase. Subindo, entrega o que as fases puladas dariam
   (página, Olho). Descendo, o tempo de assombração volta junto (o chat avisa).
 - `/sussurros evento <nome>` força um evento. Ele acontece de verdade, mas **não conta** para o
