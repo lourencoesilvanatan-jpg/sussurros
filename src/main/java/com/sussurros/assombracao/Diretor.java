@@ -460,6 +460,7 @@ public final class Diretor {
 		if (e.ultimoEventoSeg < 0) {
 			e.ultimoEventoSeg = seg;
 		}
+		soltarCriaturaParada(p, e, seg);
 		if (e.estadoDesde < 0) {
 			e.estadoDesde = seg;
 			e.duracaoEstado = sortearDuracao(EstadoDiretor.CALMO, rnd);
@@ -695,7 +696,7 @@ public final class Diretor {
 		if (!tregua && cobrarCacadaDevida(level, p, m, e, escuro, calma, seg, tick, rnd)) {
 			tregua = true;
 		}
-		if (!tregua && Atencao.podeGastar(e, Atencao.CENA, seg)) {
+		if (!tregua && Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
 			String antes = cenaAtiva(e);
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
@@ -2741,7 +2742,9 @@ public final class Diretor {
 			double dist = VULTO_DIST_MIN + rnd.nextDouble() * (VULTO_DIST_MAX - VULTO_DIST_MIN);
 			Vec3 alvo = pontoRelativo(p, ang, dist);
 			BlockPos coluna = BlockPos.containing(alvo.x, p.getY(), alvo.z);
-			if (!level.isLoaded(coluna)) {
+			// Carregado não basta: além da distância de simulação o mundo existe, mas não anda. Ali ele nasceria
+			// e ficaria parado no tempo, sem nunca sumir.
+			if (!level.isLoaded(coluna) || !level.isPositionEntityTicking(coluna)) {
 				continue;
 			}
 			// O topo do terreno (sem contar folhas) em vez do nível do jogador: a essa distância o chão pode estar bem acima ou abaixo.
@@ -3355,6 +3358,41 @@ public final class Diretor {
 		}
 		Depuracao.log(p, tick / 20, "PRENUNCIO real=" + (deVerdade ? "sim" : "nao") + " luz=" + apagadas
 				+ " assobio=" + (assobio ? "sim" : "nao"));
+	}
+
+	/**
+	 * A criatura parada no tempo. Num chunk carregado mas fora da distância de simulação (comum em servidor, onde
+	 * essa distância costuma ser de 4 a 6 chunks, e em quem viaja depressa), ela existe mas não anda: não envelhece,
+	 * não some, e o Diretor, que não começa nada enquanto ela existir, ficava esperando para sempre. Numa sessão
+	 * sintética um vulto nascido a 71 blocos travou o Diretor por 52 minutos.
+	 *
+	 * Se o relógio dela não anda há cinco segundos, ela é tirada. Se era uma caçada de verdade, fica devendo:
+	 * o jogador saiu do alcance dela.
+	 */
+	private static void soltarCriaturaParada(ServerPlayer p, EstadoJogador e, long seg) {
+		HospedeEntity h = e.criatura;
+		if (h == null || h.isRemoved()) {
+			e.criaturaTickVisto = -1;
+			e.criaturaParadaSeg = 0;
+			return;
+		}
+		if (h.tickCount != e.criaturaTickVisto) {
+			e.criaturaTickVisto = h.tickCount;
+			e.criaturaParadaSeg = 0;
+			return;
+		}
+		if (++e.criaturaParadaSeg < 5) {
+			return;
+		}
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "HOSPEDE id=%s sumiu motivo=PARADA_NO_TEMPO modo=%s dist=%.1f",
+				h.getIdManifestacao(), h.getModo(), Math.sqrt(h.distanceToSqr(p))));
+		if (h.getModo() == HospedeEntity.Modo.CACAR && !h.isSumindo()) {
+			cacadaFugiu(p, h, "FUGIU_LONGE");
+		}
+		h.discard();
+		e.criatura = null;
+		e.criaturaTickVisto = -1;
+		e.criaturaParadaSeg = 0;
 	}
 
 	/** O jogador saiu do jogo. Se era no meio de uma caçada de verdade, ela fica devendo. */

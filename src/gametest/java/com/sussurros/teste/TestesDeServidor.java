@@ -13,8 +13,10 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import com.sussurros.Sussurros;
 import com.sussurros.assombracao.Atencao;
+import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
+import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.rede.PacoteSentidos;
 import com.sussurros.registro.ModEntidades;
 import com.sussurros.registro.ModItems;
@@ -26,6 +28,29 @@ import com.sussurros.registro.ModItems;
  * jogador de mentira e que as regras básicas valem. O que só o olho vê fica para os testes de cliente.
  */
 public class TestesDeServidor {
+	/**
+	 * Uma criatura parada no tempo (num pedaço de mundo carregado que não anda) é tirada em poucos segundos, e o
+	 * Diretor deixa de esperar por ela. Sem isso ele ficava mudo para sempre.
+	 */
+	@GameTest(maxTicks = 400)
+	public void aCriaturaParadaNoTempoESolta(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -2600, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 3);
+		HospedeEntity[] ele = new HospedeEntity[1];
+		helper.runAfterDelay(5, () -> {
+			helper.assertTrue(Avesso.criaturaParaTeste(jogador, false), "deveria haver lugar para ele");
+			ele[0] = Diretor.criatura(jogador);
+			// Levada para onde nada anda: duzentos blocos adiante, fora do pedaço de mundo forçado para este jogador.
+			ele[0].snapTo(jogador.getX() + 200, jogador.getY(), jogador.getZ(), 0.0F, 0.0F);
+		});
+		helper.succeedWhen(() -> {
+			helper.assertTrue(ele[0] != null && ele[0].isRemoved(), "a criatura parada no tempo ainda não foi tirada");
+			helper.assertTrue(Diretor.criatura(jogador) == null || Diretor.criatura(jogador).isRemoved(), "o Diretor não deveria mais esperar por ela");
+			JogadorDeTeste.remover(jogador);
+		});
+	}
+
 	/**
 	 * O orçamento de atenção: gastar baixa o saldo e impõe um respiro; com o saldo no chão nada começa; o saldo
 	 * volta com o tempo; e o que é forçado por comando de teste não gasta nem espera.
@@ -50,10 +75,14 @@ public class TestesDeServidor {
 			helper.assertTrue(Math.abs(Atencao.saldoParaTeste(jogador) - antesDoComando) < 0.5, "evento forçado não gasta atenção");
 		});
 		helper.runAfterDelay(225, () -> {
-			// Dez segundos depois: o saldo voltou um pouco (0,2 por segundo na fase 4), mas o respiro (45 s) ainda vale.
+			// Dez segundos depois: o saldo voltou um pouco (0,16 por segundo na fase 4), mas o respiro (30 s) ainda vale.
 			helper.assertTrue(Atencao.saldoParaTeste(jogador) > depois[0] + 1.0, "o saldo deveria voltar com o tempo: "
 					+ depois[0] + " -> " + Atencao.saldoParaTeste(jogador));
-			helper.assertFalse(Atencao.podeParaTeste(jogador, 1), "dez segundos não bastam: o respiro na fase 4 é de 45 s");
+			helper.assertFalse(Atencao.podeParaTeste(jogador, 1), "dez segundos não bastam: o respiro na fase 4 é de 30 s");
+			// O ambiente tem saldo próprio: o que o Diretor gastou não tirou nada dele. Mas o respiro é de todos.
+			helper.assertTrue(Atencao.saldoDoAmbienteParaTeste(jogador) >= 14, "o saldo do ambiente não é o do Diretor: "
+					+ Atencao.saldoDoAmbienteParaTeste(jogador));
+			helper.assertFalse(Atencao.ambienteParaTeste(jogador, 14), "mesmo com saldo, o ambiente espera o respiro");
 			// Saldo no chão: nada que custe mais do que ele começa.
 			Atencao.gastarParaTeste(jogador, 200);
 			helper.assertTrue(Atencao.saldoParaTeste(jogador) >= -60.5, "o saldo não desce abaixo de menos a capacidade");

@@ -59,6 +59,8 @@ public final class JogadorDeTeste {
 
 	/** O canal de mentira de cada jogador: tudo o que o servidor manda para ele fica guardado ali. */
 	private static final Map<UUID, EmbeddedChannel> CANAIS = new HashMap<>();
+	/** O chunk central do pedaço de mundo forçado para cada jogador de mentira (para soltar quando ele sai). */
+	private static final Map<UUID, int[]> FORCADOS = new HashMap<>();
 
 	/**
 	 * Quantos sons o servidor mandou este jogador ouvir desde a última vez que isto foi chamado.
@@ -112,6 +114,7 @@ public final class JogadorDeTeste {
 				level.setChunkForced(cx + dx, cz + dz, true);
 			}
 		}
+		FORCADOS.put(jogador.getUUID(), new int[] {cx, cz});
 		return jogador;
 	}
 
@@ -141,6 +144,23 @@ public final class JogadorDeTeste {
 	public static void remover(ServerPlayer jogador) {
 		if (jogador.level().getServer().getPlayerList().getPlayers().contains(jogador)) {
 			jogador.level().getServer().getPlayerList().remove(jogador);
+		}
+		// Solta o pedaço de mundo que foi forçado para ele. Sem isto cada teste deixava 81 chunks vivos até o
+		// fim da execução, com os bichos e tudo, e a sessão longa (TestesDeSessao) carregava o peso de todos.
+		int[] centro = FORCADOS.remove(jogador.getUUID());
+		if (centro != null && jogador.level() instanceof ServerLevel level) {
+			for (int dx = -4; dx <= 4; dx++) {
+				for (int dz = -4; dz <= 4; dz++) {
+					int cx = centro[0] + dx;
+					int cz = centro[1] + dz;
+					// Os testes ficam a cem blocos uns dos outros e os pedaços forçados se sobrepõem: não solta o
+					// chunk que ainda é de outro jogador de mentira.
+					boolean deOutro = FORCADOS.values().stream().anyMatch(o -> Math.abs(o[0] - cx) <= 4 && Math.abs(o[1] - cz) <= 4);
+					if (!deOutro) {
+						level.setChunkForced(cx, cz, false);
+					}
+				}
+			}
 		}
 	}
 }

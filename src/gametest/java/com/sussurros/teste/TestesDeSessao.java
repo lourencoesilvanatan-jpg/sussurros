@@ -17,7 +17,7 @@ import com.sussurros.rede.Rede;
  * em campo aberto com pausas. Não diz se o mod assusta. Diz se o RITMO está dentro do esperado antes de gastar
  * o tempo do dono: o log que ela deixa passa por ferramentas/log/analisar.py.
  *
- * Fica desligada no dia a dia (leva uns quinze minutos de relógio). Para rodar:
+ * Fica desligada no dia a dia. Para rodar (uma hora de jogo leva poucos minutos de relógio):
  *
  *     SUSSURROS_SESSAO=1 ./gradlew runGameTest
  *     SUSSURROS_SESSAO=1 SUSSURROS_SESSAO_SEM_LIMITE=1 ./gradlew runGameTest     (como era sem o orçamento de atenção)
@@ -25,14 +25,16 @@ import com.sussurros.rede.Rede;
  *
  * Os nomes dos dois jogadores saem no log do servidor, numa linha que começa por "[sessao]".
  *
- * Limites, para ninguém ler demais no resultado: o jogador de mentira não reage (o Diretor o vê como alguém
- * indiferente), não usa itens, não entra em casa nem em caverna, e não visita a dimensão.
+ * Limites, para ninguém ler demais no resultado: o jogador de mentira "reage" sempre do mesmo jeito (para e
+ * vira o rosto a cada coisa que acontece), não usa itens, não entra em casa nem em caverna, e não visita a
+ * dimensão. Ao ler o resultado, olhe a MISTURA (quantos eventos do Diretor, quantas aparições), não só os
+ * intervalos: o analisador põe os alertas no começo do relatório.
  */
 public class TestesDeSessao {
 	private static final boolean LIGADA = "1".equals(System.getenv("SUSSURROS_SESSAO"));
 	/** SUSSURROS_SESSAO_SEM_LIMITE=1 mede o ritmo como era antes do orçamento de atenção, para comparar. */
 	private static final boolean SEM_LIMITE = "1".equals(System.getenv("SUSSURROS_SESSAO_SEM_LIMITE"));
-	/** Minutos de jogo. SUSSURROS_SESSAO_MINUTOS muda (o padrão, uma hora, leva uns nove minutos de relógio). */
+	/** Minutos de jogo. SUSSURROS_SESSAO_MINUTOS muda (até 240). */
 	private static final int TICKS = 20 * 60 * Integer.parseInt(System.getenv().getOrDefault("SUSSURROS_SESSAO_MINUTOS", "60"));
 
 	@GameTest(maxTicks = 20 * 60 * 60 * 4)
@@ -52,17 +54,37 @@ public class TestesDeSessao {
 		int[] fases = {2, 4};
 		Vec3[] centros = new Vec3[2];
 		for (int i = 0; i < 2; i++) {
-			JogadorDeTeste.acompanhar(helper, jogadores[i], "sessao-fase-" + fases[i]);
 			Diretor.esquecer(jogadores[i]);
 			Diretor.definirFase(jogadores[i], fases[i]);
 			centros[i] = jogadores[i].position();
 		}
 		Sussurros.LOGGER.info("[sessao] fase 2 = {}, fase 4 = {}", jogadores[0].getName().getString(), jogadores[1].getName().getString());
 		int[] relogio = new int[1];
-		helper.onEachTick(() -> {
+		double[] saldoAnterior = {Atencao.saldoParaTeste(jogadores[0]), Atencao.saldoParaTeste(jogadores[1])};
+		int[] reageAte = new int[2];
+		// Não usa helper.onEachTick nem JogadorDeTeste.acompanhar: os dois agendam de uma vez uma tarefa para cada tick
+		// até o fim do teste, e o servidor de teste percorre a lista inteira a cada tick. Com um teste de horas isso
+		// são centenas de milhares de tarefas, e a sessão andava mais devagar que o jogo de verdade.
+		cadaTick(helper, () -> {
 			int t = relogio[0]++;
 			for (int i = 0; i < 2; i++) {
-				andar(jogadores[i], centros[i], t);
+				// Um jogador de verdade avisa o servidor a cada passo, e é isso que mantém o mundo carregado em volta.
+				helper.getLevel().getChunkSource().move(jogadores[i]);
+				// Ele "reage" a cada coisa que o mod faz (o saldo de atenção cai quando algo acontece): para por
+				// três segundos e vira o rosto. Sem isso o Diretor o lê como indiferente e fica só observando, e a
+				// sessão não mostra o que acontece com um jogador de verdade (na alpha12 isso escondeu um defeito).
+				double saldo = Atencao.saldoParaTeste(jogadores[i]);
+				if (saldo < saldoAnterior[i] - 5) {
+					reageAte[i] = t + 60;
+				}
+				saldoAnterior[i] = saldo;
+				if (t < reageAte[i]) {
+					if (t % 10 == 0) {
+						jogadores[i].snapTo(jogadores[i].getX(), jogadores[i].getY(), jogadores[i].getZ(), jogadores[i].getYRot() + 35.0F, 0.0F);
+					}
+				} else {
+					andar(jogadores[i], centros[i], t);
+				}
 			}
 		});
 		helper.runAfterDelay(TICKS, () -> {
@@ -72,6 +94,14 @@ public class TestesDeSessao {
 				JogadorDeTeste.remover(jogador);
 			}
 			helper.succeed();
+		});
+	}
+
+	/** Roda a ação em todo tick, agendando só o tick seguinte de cada vez. */
+	private static void cadaTick(GameTestHelper helper, Runnable acao) {
+		helper.runAfterDelay(1, () -> {
+			acao.run();
+			cadaTick(helper, acao);
 		});
 	}
 

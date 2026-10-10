@@ -392,6 +392,33 @@ def analisar(linhas, jogador, caminho):
     if not achou:
         out.append('Nada.')
     out.append('')
+
+    # ----- alertas: o que merece ser olhado primeiro (vão para o começo do relatório) -----
+    alertas = []
+    tempo_fase2 = sum(seg for f, seg in tempo_fase.items() if f >= 2)
+    tempo_ativo = sum(seg for f, seg in tempo_fase.items() if f >= 1)
+    eventos_total = sum(eventos.values())
+    do_ambiente = fontes.get('pressagio', 0) + fontes.get('atmosfera', 0)
+    if tempo_fase2 >= 20 * 60 and not criadas:
+        alertas.append('**Nenhuma manifestação da criatura em %s de fase 2 ou mais.** O mod ficou sem a sua parte principal: '
+                       'veja se algum limite está travando o Diretor.' % hms(tempo_fase2))
+    if tempo_ativo >= 30 * 60 and por_hora(eventos_total, tempo_ativo) < 6:
+        alertas.append('**Só %d eventos do Diretor em %s de fase 1 ou mais (%.1f por hora).** Nas sessões sintéticas da alpha13 foram de 11 a 32 por hora.'
+                       % (eventos_total, hms(tempo_ativo), por_hora(eventos_total, tempo_ativo)))
+    if len(saidas) >= 10 and do_ambiente > 2 * eventos_total:
+        alertas.append('**O ambiente falou mais que o Diretor:** %d presságios e perturbações contra %d eventos.' % (do_ambiente, eventos_total))
+    for nome, n in usos:
+        if n >= 8 and por_hora(n, jogado) >= 8:
+            alertas.append('O jogador usou **%s** %d vezes (%.0f por hora): está usando como botão.' % (nome, n, por_hora(n, jogado)))
+    if len(cobrancas) >= 3:
+        alertas.append('A Conta cobrou %d vezes: ele se apoia muito nos itens, ou o limite está curto.' % len(cobrancas))
+    if 3 in fase_em and fase_em[3] - linhas[0][0] < 45 * 60:
+        alertas.append('Chegou à fase 3 com %s de jogo: a progressão das fases está rápida.' % hms(fase_em[3] - linhas[0][0]))
+    bloco = ['## Alertas', '']
+    bloco += ['- ' + alerta for alerta in alertas] if alertas else ['Nenhum.']
+    bloco.append('')
+    corte = out.index('## Fases e estados')
+    out[corte:corte] = bloco
     return '\n'.join(out) + '\n'
 
 

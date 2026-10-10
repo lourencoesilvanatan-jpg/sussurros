@@ -676,3 +676,15 @@ ATENCAO fonte=conta custo=10 saldo=31
 Também novos: `EXPOSICAO id=M012 modo=OBSERVAR naTela=14t perto=0t` (logo depois de cada `HOSPEDE ... sumiu`: ticks na tela do alvo, e quantos deles perto e iluminado) e, na busca da caçada, o motivo `VIU` (`BUSCA id=... OLHANDO -> ULTIMA_POSICAO motivo=VIU`).
 
 Sai uma linha a cada saída perceptível, com o saldo depois do gasto. Saldo negativo quer dizer que algo que já tinha começado (um elo de cadeia, a ameaça) gastou sem esperar. O analisador resume isso na seção "Ritmo".
+
+## 0.9.0-alpha13 — a atenção, com dois saldos
+
+```
+ATENCAO fonte=evento:VULTO custo=14 saldo=3 ambiente=22
+ATENCAO fonte=pressagio custo=14 saldo=31 ambiente=2
+HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
+```
+
+`saldo` é o do Diretor e `ambiente` é o do ambiente. Os avisos da Conta deixaram de aparecer aqui. O saldo do Diretor perto de zero depois de cada gasto é o normal quando ele está ativo; o que denuncia problema é a mistura (ver os alertas no começo do relatório do analisador).
+
+`PARADA_NO_TEMPO`: a criatura estava num pedaço de mundo carregado que não anda (fora da distância de simulação) e o relógio dela ficou cinco segundos sem mudar. O Diretor a tirou para não ficar esperando por ela. Se aparecer muito num servidor, a distância de simulação está curta para as distâncias em que o mod trabalha.

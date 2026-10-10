@@ -276,13 +276,13 @@ Continuam valendo as regras: nada alto, nada que mate, nada que estrague a const
 
 # O que foi conferido e feito (por quem programa)
 
-Atualizado em 09/10/2026, na 0.9.0-alpha12.
+Atualizado em 10/10/2026, na 0.9.0-alpha13.
 
 | Ponto da revisão | Conferência | Situação |
 |---|---|---|
 | Sons que ainda eram públicos (seção 5) | **Confirmado.** A alpha7 só olhou `ModSons.tocar`; ficaram doze chamadas `level.playSound(null, ...)` de assombração: passos fantasmas, o passo único, o eco de ação, a porta e as batidas do sinal falso, a batida na porta, o som atrás, a porta do presságio e o passo da cena da casa | Corrigido na alpha11: tocam só para o alvo (`ModSons.tocarEventoPara`). Continuam públicos os sons de coisa que aconteceu de verdade: porta que abriu, vela que apagou, itens, blocos, e os sons que saem do corpo da criatura |
 | Analisador de log (3a) | — | Feito na alpha11: `ferramentas/log/analisar.py` |
-| Densidade (seção 1) | **Confirmado com número.** O analisador, rodado no log de 08/10 (antes da expansão, 1h10 de jogo): 45 saídas por hora, mediana de 56 s entre uma e outra (72 s na fase 2, 39 s na fase 3), 34 manifestações da criatura por hora. Bem abaixo das referências de 180 s e 90 s | Feito na alpha12: `Atencao`, com três ritmos e uma sessão sintética (`TestesDeSessao`) para medir |
+| Densidade (seção 1) | **Confirmado com número.** O analisador, rodado no log de 08/10 (antes da expansão, 1h10 de jogo): 45 saídas por hora, mediana de 56 s entre uma e outra (72 s na fase 2, 39 s na fase 3), 34 manifestações da criatura por hora. Bem abaixo das referências de 180 s e 90 s | Feito na alpha12 e **refeito na alpha13**: a primeira versão (um saldo só para todos) deixou o mais barato ganhar sempre, e na primeira sessão de verdade a criatura não apareceu nenhuma vez em 55 minutos. Agora são dois saldos (Diretor e ambiente) com um respiro comum, três ritmos e uma sessão sintética (`TestesDeSessao`) em que se confere a mistura |
 | Fundo grave no `RECUANDO` (seção 7) | **Confirmado.** O fundo seguia o "peso" (fase e obsessão) e não sabia do estado do Diretor | Na alpha11 o peso cai à metade no `RECUANDO` |
 | Legendas que denunciam o aviso falso (seção 7) | **Não se confirma.** O aviso verdadeiro e o falso usam os mesmos sons (`prenunciar` é um método só; o assobio é o mesmo `assobiar`; o sinal falso usa os sons do jogo e do mod que as aparições usam). Não há legenda exclusiva de um dos lados | Nada a fazer |
 | Visibilidade da criatura só para o alvo (seção 10) | A criatura é uma entidade comum: quem estiver perto vê | Fica para a fase F, como a revisão propõe |

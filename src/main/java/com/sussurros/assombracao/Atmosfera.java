@@ -127,8 +127,8 @@ final class Atmosfera {
 		if (e.zonaAteTick > tick || e.forcando || temCenaAtiva(e) || tick - e.ultimoDanoTick < 200) {
 			return;
 		}
-		// 0.9: o orçamento de atenção é um só para todos os sistemas (ver Atencao).
-		if (!Atencao.podeGastar(e, Atencao.PRESSAGIO, seg)) {
+		// 0.9: o ambiente tem saldo próprio de atenção, e respeita o respiro comum (ver Atencao).
+		if (!Atencao.podeGastarAmbiente(e, Atencao.PRESSAGIO, seg)) {
 			return;
 		}
 
@@ -136,7 +136,7 @@ final class Atmosfera {
 		if (seg >= a.proximoPressagio) {
 			boolean feito = tentarPressagio(level, p, m, e, fase, subterraneo, noite, seg, tick, rnd);
 			if (feito) {
-				Atencao.gastar(p, e, "pressagio", Atencao.PRESSAGIO, seg);
+				Atencao.gastarAmbiente(p, e, "pressagio", Atencao.PRESSAGIO, seg);
 				int base = fase == 0 ? 120 : 210;
 				int variacao = fase == 0 ? 150 : 210;
 				a.proximoPressagio = seg + base + rnd.nextInt(variacao + 1);
@@ -146,10 +146,10 @@ final class Atmosfera {
 		}
 
 		if (fase >= 1 && seg >= a.proximaPerturbacao && e.criatura == null) {
-			boolean feito = Atencao.podeGastar(e, Atencao.MICROCENA, seg)
+			boolean feito = Atencao.podeGastarAmbiente(e, Atencao.MICROCENA, seg)
 					&& tentarMicrocena(level, p, m, e, fase, subterraneo, noite, seg, tick, rnd);
 			if (feito) {
-				Atencao.gastar(p, e, "atmosfera", Atencao.MICROCENA, seg);
+				Atencao.gastarAmbiente(p, e, "atmosfera", Atencao.MICROCENA, seg);
 			}
 			a.proximaPerturbacao = seg + (feito ? 260 + rnd.nextInt(281) : 60 + rnd.nextInt(61));
 		}
