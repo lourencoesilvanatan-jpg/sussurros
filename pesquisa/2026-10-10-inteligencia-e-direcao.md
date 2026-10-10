@@ -663,7 +663,7 @@ Propostas **7**, **8**, **11** e o registro mínimo da **12**.
 
 ### Depois, quando o dono pedir
 
-A **13** quando houver servidor marcado (o "só o alvo vê" pode vir antes). A **14** aos poucos. A **15** por último.
+A **13** quando houver servidor marcado (o "só o alvo vê" pode vir antes). A **14** aos poucos. A **15** saiu da fila: em 10/10 o dono disse que por enquanto o mod não tem fim (seção 7).
 
 Entre uma atualização e a seguinte: o dono joga, eu leio o log, e número só muda com mais de uma sessão.
 
@@ -738,6 +738,41 @@ Entre uma atualização e a seguinte: o dono joga, eu leio o log, e número só 
 5. Você prefere começar com **poucos itens** e ir ganhando os outros com o tempo, mesmo que alguns dos que você já viu demorem a aparecer num mundo novo?
 
 Continuam sem resposta as cinco perguntas da análise de 09/10. A 2 e a 4 de lá (sons que parecem falsos; dicas dos itens) pesam nas propostas daqui.
+
+### Respostas do dono (10/10/2026) e o que elas mudam
+
+As respostas estão entre aspas, como ele escreveu. O que vem depois de cada uma é leitura minha.
+
+**1. "Sim de vez em quando, pode ate ter algum som, ou de vez em quando ter som tmbem, pra dar aquele sustinho".**
+
+- A variante longa da **proposta 1** está liberada: de vez em quando, de longe, um ou dois segundos. O relance continua sendo a regra. Ponto de partida: no máximo uma em cada quatro ou cinco aparições, só a mais de 20 blocos.
+- Ele aceita **um som junto, às vezes**. Isso muda a **proposta 4**: "perto e visível, nenhum som" deixa de ser absoluto. Passa a ser o normal, com uma exceção rara: um som curto que sai dele no instante em que ele nota o jogador, ou no instante em que some.
+- Leitura minha: "sustinho" é um som curto e baixo, não um estouro. A regra "nunca alto" continua valendo; ele mesmo a repetiu no pedido desta pesquisa. Se ele quiser mais forte que isso, precisa dizer.
+- Cuidado de execução, da equipe de áudio do Alien: Isolation (seção 3.2): o som tem de sair no mesmo tick do gesto. Um segundo de atraso vira comédia, e num servidor o pacote viaja.
+
+**2. "Por enquanto sem fim, vamos falar disso depois".**
+
+- A **proposta 15** sai da fila até ele voltar ao assunto.
+- A **proposta 12** fica com dois atos (Estudo e Ensaio) e sem data. O risco passa a ser o platô: depois que ele "domina" tudo, o que muda? Resposta dentro do que já está proposto: os saberes envelhecem. O jogador muda de cama, de porta, de caminho, e ele volta a observar e a errar (proposta 9). O arco vira um ciclo que acompanha as mudanças do jogador, não uma contagem até um fim.
+- A cópia do Avesso ficando mais certa continua valendo; só não precisa chegar a lugar nenhum.
+
+**3. "acho que ainda não, usar gravações livres e bibliotecas de sons".**
+
+- Nenhum som pareceu falso para ele até agora. Ele ouviu poucos: isso baixa a urgência de regravar, não prova que as vozes sintetizadas estão boas.
+- Para o que é voz ou sopro (sussurro, cantarolar, assobio), a fonte passa a ser **gravação livre**, processada pelo mesmo script. Não pedir gravação a ele.
+- Como o repositório é público: preferir CC0; anotar a origem e a licença de cada arquivo importado, num arquivo ao lado do script; não usar som tirado de outros jogos (um dos mods lidos credita sons de Dead Space e SOMA; aqui não).
+
+**4. "acho que uma ou outra coisa todos veem, bom se fosse pra jogar realmente usariamos no jogo eua cho".**
+
+- Confirma a **proposta 13** como está: quase tudo por jogador, e poucas coisas físicas compartilhadas (as marcas, o Boneco).
+- Com chat de voz dentro do jogo, quem se afasta deixa de ouvir os outros de verdade, e a separação do grupo passa a pesar sem o mod fazer nada. Vale conferir a combinação com o Simple Voice Chat quando houver servidor marcado.
+- A imitação de voz continua adiada pelos motivos da seção 3.2. A resposta só tira dela o rótulo de hipótese remota.
+
+**5. "faça o que achar melhor".**
+
+- Fica como a análise de 09/10 e a seção 6 propõem: nas duas primeiras horas, dois verbos (afastar e perguntar). Os outros itens chegam depois, pelos lugares, cada um com a página que o explica. Os Ossos e a Isca saem do começo.
+
+**A sequência da seção 5 não muda.** A atualização A ganha a variante longa e o som raro da resposta 1.
 
 ---
 
