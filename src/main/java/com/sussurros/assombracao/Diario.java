@@ -53,7 +53,12 @@ public final class Diario {
 
 	/** Há página pedida esperando para ser lida? */
 	static boolean temPedida(Memoria m) {
-		return (m.get(PEDIDAS) & ~lidas(m) & TODAS) != 0;
+		return quantasPedidas(m) != 0;
+	}
+
+	/** Quantas páginas pedidas esperam para ser lidas. */
+	static int quantasPedidas(Memoria m) {
+		return Integer.bitCount(m.get(PEDIDAS) & ~lidas(m) & TODAS);
 	}
 
 	/** A página que a próxima leitura mostra: a pedida mais antiga na ordem do diário, senão a primeira não lida. -1 se acabou. */

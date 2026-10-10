@@ -96,6 +96,12 @@ public class HospedeEntity extends PathfinderMob {
 	 */
 	private static final int LIMITE_VISTO_NO_CONTATO = 36;
 
+	/**
+	 * Quantos ticks seguidos na mira do jogador, com luz para enxergá-lo, fazem o primeiro contato valer como
+	 * visto (0,3 s). Uma virada de câmera que passa por ele dá dois ou três; quem parou para olhar dá muito mais.
+	 */
+	private static final int MIRA_DO_CONTATO = 6;
+
 	@Nullable
 	private ServerPlayer alvo;
 	private Modo modo = Modo.OBSERVAR;
@@ -133,6 +139,9 @@ public class HospedeEntity extends PathfinderMob {
 	private int fadeInicioCliente = -1;  // cliente: idade (ticks) em que começou a dissolver
 	private boolean avisaVigia = true;   // se esta manifestação é "sentida" quando olha de fora da tela
 	private boolean contato = false;     // é a aparição do primeiro contato (ver PrimeiroContato)
+	private int contatoMira = 0;         // contato: ticks seguidos na mira dele, com luz (cai um por tick fora dela)
+	private boolean contatoVisto = false; // contato: já esteve na mira por tempo bastante para valer
+	private int ticksNaMira = 0;         // contato, só para o log: quantos ticks ao todo esteve na mira, com luz
 
 	// Espreita
 	private int reposicoes = 0;
@@ -244,6 +253,20 @@ public class HospedeEntity extends PathfinderMob {
 
 	public boolean ehContato() {
 		return this.contato;
+	}
+
+	/**
+	 * O primeiro contato foi visto? A definição é uma só, aqui e no analisador de log: olhado direto, por uns
+	 * instantes seguidos, num lugar com luz para enxergá-lo. Passar a mira por ele numa virada de câmera não
+	 * conta; tê-lo no canto da tela não conta; olhar para onde ele está no breu não conta.
+	 */
+	public boolean contatoFoiVisto() {
+		return this.contatoVisto;
+	}
+
+	/** Só para o log. */
+	public int getTicksNaMira() {
+		return this.ticksNaMira;
 	}
 
 	/** Já foi olhada direto alguma vez. */
@@ -473,6 +496,16 @@ public class HospedeEntity extends PathfinderMob {
 		if (encarado) {
 			this.marcarEncarado();
 		}
+		if (this.contato) {
+			if (encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
+				this.ticksNaMira++;
+				if (++this.contatoMira >= MIRA_DO_CONTATO) {
+					this.contatoVisto = true;
+				}
+			} else {
+				this.contatoMira = Math.max(0, this.contatoMira - 1);
+			}
+		}
 		if (percebido && !this.jaAvistada) {
 			this.jaAvistada = true;
 			this.entityData.set(AVISTADO_VISUAL, true);
@@ -619,7 +652,10 @@ public class HospedeEntity extends PathfinderMob {
 
 		// Enquanto ele é tímido, basta olhar direto e desviar: quando o jogador olha de novo, ele não está
 		// mais lá. Sumir fora da tela é o que deixa a dúvida ("será que eu vi?").
-		if (this.foiEncarado && !percebido && this.foraDaTelaTicks >= 4 && this.ousadia < OUSADIA_FICA) {
+		// O primeiro contato só entra aqui depois de ter sido visto de verdade: uma virada de câmera que passa
+		// a mira por ele durante um tick não o manda embora (ele sumia sem ninguém ter visto, e contava).
+		if (this.foiEncarado && !percebido && this.foraDaTelaTicks >= 4 && this.ousadia < OUSADIA_FICA
+				&& (!this.contato || this.contatoVisto)) {
 			Diretor.criaturaFoiVista(this.alvo, this);
 			this.sumir(level, false, "SUMIU_NO_DESVIO");
 			return;
@@ -628,7 +664,16 @@ public class HospedeEntity extends PathfinderMob {
 		// Quanto mais ousado, mais tempo ele aguenta ser visto. No começo é um relance: 0,3 s olhando direto
 		// ou 0,6 s de canto (era 0,75 s e 1,5 s, e dava para focar nele). Com ousadia 10 chega a 1,8 s.
 		if (this.contarVisto(percebido, encarado, this.contato ? LIMITE_VISTO_NO_CONTATO : 12 + this.ousadia * 6)) {
-			Diretor.criaturaFoiVista(this.alvo, this);
+			// Quem o teve no canto da tela e pôs a mira nele bem na hora em que ele dissolve viu: a dissolução
+			// acontece no meio da tela dele, mesmo que a mira não tenha chegado a completar os seus instantes.
+			if (this.contato && encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
+				this.contatoVisto = true;
+			}
+			// O contato que dissolveu só de canto de olho não foi visto: não soma pressão nem ousadia, e
+			// continua devendo (ver PrimeiroContato.aoSumir).
+			if (!this.contato || this.contatoVisto) {
+				Diretor.criaturaFoiVista(this.alvo, this);
+			}
 			this.sumir(level, true, "VISTO_DEMAIS");
 		}
 	}

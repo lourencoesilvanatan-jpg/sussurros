@@ -327,6 +327,10 @@ final class EstadoJogador {
 	// --- O que o jogador já teve na mão (0.9.0-alpha14, ver Ensino) ---
 	/** Há uma página de item para entregar a partir deste segundo; -1 se não há. */
 	long paginaDeItemApos = -1;
+	/** Quantas páginas de item foram deixadas desde a última leitura dele: nunca mais do que as pedidas. */
+	int paginasDeItemSemLer;
+	/** Quantas páginas ele tinha lido na última olhada (para notar que leu mais uma). */
+	int paginasLidasVistas = -1;
 	/** Ossos de Agouro: quantas vezes jogou hoje (o dia do relógio do mundo). */
 	long ossosDia = -1;
 	int ossosNoDia;

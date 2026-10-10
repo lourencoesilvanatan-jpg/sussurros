@@ -16,6 +16,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
@@ -393,11 +394,17 @@ final class Atmosfera {
 			ModSons.tocarEventoPara(p, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS,
 					origem.getX() + 0.5, origem.getY() + 0.5, origem.getZ() + 0.5, 0.45F, 0.85F);
 		} else if (!tochas.isEmpty() && fase >= 3 && escolha < 74) {
+			// Miragem: a tocha "cai" só para ele (o som de quebrar, e ela some), e volta quando ele chega perto
+			// para conferir ou depois de meio minuto. Até a alpha14 este ramo quebrava a tocha de verdade
+			// (destroyBlock, com o item no chão): era o único ponto do mod que estragava a construção do jogador.
 			BlockPos pos = tochas.get(rnd.nextInt(tochas.size()));
-			level.destroyBlock(pos, true);
+			SoundEvent quebra = level.getBlockState(pos).getSoundType().getBreakSound();
+			ok = Miragem.mostrar(level, p, pos, Blocks.AIR.defaultBlockState(), 20L * (25 + rnd.nextInt(21)), 3.0, "LUZ_CAIU");
 			fonte = Vec3.atCenterOf(pos);
-			tipo = "QUEBROU_COM_DROP";
-			ok = true;
+			tipo = "CAIU miragem=sim";
+			if (ok) {
+				ModSons.tocarEventoPara(p, quebra, SoundSource.BLOCKS, pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 0.8F, 0.9F);
+			}
 		} else {
 			BlockPos destino = acharPontoParaTocha(level, p, rnd, 10, 28);
 			if (destino == null) return null;

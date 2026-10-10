@@ -115,6 +115,17 @@ def trechos_de_jogo(linhas):
     return trechos
 
 
+def jogado_ate(trechos, t):
+    """Segundos de jogo, sem os buracos de jogador fora do mundo, do começo do log até o instante t."""
+    total = 0
+    for a, b in trechos:
+        if t >= b:
+            total += b - a
+        elif t > a:
+            total += t - a
+    return total
+
+
 def hms(segundos):
     segundos = int(segundos)
     return '%dh%02dm' % (segundos // 3600, segundos % 3600 // 60) if segundos >= 3600 else '%dm%02ds' % (segundos // 60, segundos % 60)
@@ -411,6 +422,10 @@ def analisar(linhas, jogador, caminho):
     forma_de = {}
     do_mod = 0          # manifestações que não vieram de comando
     na_mira = []        # (t, forma) das que o jogador encarou
+    # A aparição do primeiro contato tem a sua definição de "visto" (olhado direto por uns instantes, com luz),
+    # e quem a aplica é o mod: aqui ela vale pela linha CONTATO visto=sim, não pelo primeiro tick de ENCAROU.
+    # Assim o relatório e o jogo nunca dizem coisas diferentes sobre o mesmo contato.
+    do_contato = set(m.group(1) for m in (re.match(r'^CONTATO tentativa=.* manifestacao=(\S+)', texto) for _, texto in linhas) if m)
     for t, texto in linhas:
         m = re.match(r'^HOSPEDE id=(\S+) criado origem=(\S+) evento=(\S+) modo=(\S+)', texto)
         if m:
@@ -420,8 +435,12 @@ def analisar(linhas, jogador, caminho):
                 do_mod += 1
             continue
         m = re.match(r'^HOSPEDE id=(\S+) ENCAROU', texto)
-        if m and origem_de.get(m.group(1), 'COMANDO') != 'COMANDO':
+        if m and origem_de.get(m.group(1), 'COMANDO') != 'COMANDO' and m.group(1) not in do_contato:
             na_mira.append((t, forma_de.get(m.group(1), '?')))
+            continue
+        m = re.match(r'^CONTATO visto=sim .*manifestacao=(\S+)', texto)
+        if m:
+            na_mira.append((t, forma_de.get(m.group(1), '?') + ' (contato)'))
     tentativas = sum(1 for _, texto in linhas if texto.startswith('CONTATO tentativa='))
     contato_visto = next((t for t, texto in linhas if texto.startswith('CONTATO visto=sim')), None)
 
@@ -442,19 +461,29 @@ def analisar(linhas, jogador, caminho):
     seguidos = sum(1 for t, x, z in sinais
                    if any(0 <= t2 - t <= 120 and (x2 - x) ** 2 + (z2 - z) ** 2 <= 12 * 12 for t2, x2, z2 in coisas))
 
-    fortes_t = [t for t, f, d in saidas if (f == 'evento' and intensidade.get((t, d), 0) >= 22) or f in ('cena', 'contato', 'cacada', 'captura', 'veu')]
+    # Uma tentativa de contato que ninguém viu não é saída forte: só a que foi vista.
+    fortes_t = [t for t, f, d in saidas if (f == 'evento' and intensidade.get((t, d), 0) >= 22) or f in ('cena', 'cacada', 'captura', 'veu')]
+    if contato_visto is not None:
+        fortes_t.append(contato_visto)
+    # Os eventos da sequência de ameaça não passam pelo sorteio, e por isso não têm a linha SELECAO com a
+    # intensidade: sem isto, uma espreita seguida de "atrás de você" não contava como saída forte.
+    fortes_t += [t for t, texto in linhas if texto.startswith('EVENTO ') and '(estado=AMEACANDO' in texto
+                 and 'forçado por comando' not in texto and t not in fortes_t]
     fase1_em = fase_em.get(1, inicio if not mundo_novo else None)
     horas_sem_forte = []
     if fase1_em is not None:
-        h = fase1_em
-        fim = linhas[-1][0]
-        while h + 3600 <= fim:
-            if not any(h <= t < h + 3600 for t in fortes_t):
-                horas_sem_forte.append(h - inicio)
+        # Anda pelo tempo de JOGO, não pelo relógio do log: o tempo fora do mundo normal (Nether, End, o
+        # outro lado, espectador) não deixa linha nenhuma e não pode contar como hora parada.
+        fortes_j = [jogado_ate(trechos, t) for t in fortes_t]
+        fase1_j = jogado_ate(trechos, fase1_em)
+        h = fase1_j
+        while h + 3600 <= jogado:
+            if not any(h <= t < h + 3600 for t in fortes_j):
+                horas_sem_forte.append(h)
             h += 3600
         # Sessão de menos de uma hora cheia: quarenta minutos sem nada forte já é o caso que interessa.
-        if not horas_sem_forte and fim - fase1_em >= 40 * 60 and not any(t >= fase1_em for t in fortes_t):
-            horas_sem_forte.append(fase1_em - inicio)
+        if not horas_sem_forte and jogado - fase1_j >= 40 * 60 and not any(t >= fase1_j for t in fortes_j):
+            horas_sem_forte.append(fase1_j)
     parte_conta = fontes.get('conta', 0) / float(len(saidas)) if saidas else 0.0
 
     out.append('## A primeira hora: os critérios')
@@ -471,7 +500,7 @@ def analisar(linhas, jogador, caminho):
     criterios.append(('Aparições na mira / criadas pelo mod', '%d de %d' % (len(na_mira), do_mod)))
     criterios.append(('Formas diferentes entre as vistas', ', '.join(sorted(set(f for _, f in na_mira))) or '—'))
     criterios.append(('Sinais com lugar seguidos de algo ali em até 2 min', '%d de %d' % (seguidos, len(sinais))))
-    criterios.append(('Saídas fortes (evento de 22 ou mais, cena, contato, caçada, captura, Véu)', str(len(fortes_t))))
+    criterios.append(('Saídas fortes (evento de 22 ou mais ou da sequência de ameaça, cena, contato visto, caçada, captura, Véu)', str(len(fortes_t))))
     criterios.append(('Horas (ou 40 min, numa sessão curta), da fase 1 em diante, sem nenhuma saída forte',
                       ', '.join('a que começa aos ' + hms(h) for h in horas_sem_forte) or 'nenhuma'))
     criterios.append(('Parte da Conta no que ele percebeu', '%.0f%% (%d de %d)' % (100 * parte_conta, fontes.get('conta', 0), len(saidas))))
@@ -482,10 +511,17 @@ def analisar(linhas, jogador, caminho):
 
     # ----- alertas: o que merece ser olhado primeiro (vão para o começo do relatório) -----
     alertas = []
-    visto_cedo = any(t - inicio <= 25 * 60 for t, _ in na_mira) or (contato_visto is not None and contato_visto - inicio <= 25 * 60)
-    if mundo_novo and jogado >= 25 * 60 and not visto_cedo:
-        alertas.append('**Mundo novo e nenhuma aparição na mira dele até os 25 minutos.** O primeiro contato devia ter acontecido: '
-                       'houve %d tentativa(s).' % tentativas)
+    # O prazo final do contato só COMEÇA a tentar aos 25 minutos (PrimeiroContato.JANELA_FECHA); ele ainda
+    # precisa achar lugar e ser olhado. Com o limite nos 25 em ponto, o alerta disparava justamente quando o
+    # prazo funcionava. Cinco minutos de folga, contados em tempo de jogo.
+    limite = 30 * 60
+    if any(b < a for (_, a), (b, _) in zip(trechos, trechos[1:])):
+        alertas.append('**O relógio do log volta para trás: há mais de uma sessão neste arquivo.** Separe as linhas da última '
+                       'num arquivo à parte antes de ler os números abaixo.')
+    visto_cedo = any(jogado_ate(trechos, t) <= limite for t, _ in na_mira)
+    if mundo_novo and jogado >= limite and not visto_cedo:
+        alertas.append('**Mundo novo e nenhuma aparição na mira dele até os 30 minutos de jogo** (o prazo do primeiro contato é aos 25, '
+                       'com cinco de folga). Houve %d tentativa(s).' % tentativas)
     if horas_sem_forte:
         alertas.append('**%d trecho(s) de uma hora (ou de 40 minutos, numa sessão curta), da fase 1 em diante, sem nenhuma saída forte.** É o "parado" que ele sentiu em 09/10.' % len(horas_sem_forte))
     if len(saidas) >= 9 and parte_conta > 1 / 3.0:

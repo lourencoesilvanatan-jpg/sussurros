@@ -317,7 +317,7 @@ LUZ_ERRADA tipo=MIGRA pos=(x,y,z) semCriatura=sim
 LUZ_ERRADA tipo=SEQUENCIA qtd=3 semCriatura=sim
 LUZ_ERRADA tipo=QUEBROU_COM_DROP pos=(x,y,z) semCriatura=sim
 ```
-`QUEBROU_COM_DROP` é raro e só entra em fase alta; as outras alterações são temporárias.
+`QUEBROU_COM_DROP` existiu até a alpha14 e quebrava a tocha de verdade. Desde a alpha15 é `CAIU miragem=sim`: todas as alterações de luz são temporárias e só para o jogador.
 
 ### Mundo fora do lugar
 ```
@@ -744,3 +744,26 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 - `CONTA +N`: somou, e o marcador (o som de giz) tocou para ele.
 - `estourou ... cobraNoProximoUso=`: a conta zera na hora e o item fica marcado. Deixaram de existir `cobraEm=` e a linha `CONTA cobranca item=... como=...`.
 - `CONTA cobrada no uso`: aconteceu a cobrança, no próprio item. `recibos` é o total de cobranças na vida do personagem (é o que o Caderno mostra).
+
+## 0.9.0-alpha15 — consertos depois da revisão da alpha14
+
+```
+[905s][Jogador] CONTATO tentativa=1 relogio=905s prazo=nao luz=4 dia=nao dist=22.6 aviso=sim manifestacao=M001
+[921s][Jogador] CONTATO visto=sim motivo=VISTO_DEMAIS naTela=19t encarado=sim naMira=17t manifestacao=M001
+[921s][Jogador] ATENCAO fonte=contato custo=24 saldo=6 ambiente=15
+[1243s][Jogador] CONTATO tentativa=2 relogio=1243s prazo=nao luz=4 dia=nao dist=22.5 aviso=nao manifestacao=M027
+[1250s][Jogador] CONTATO visto=nao motivo=VISTO_DEMAIS naTela=37t encarado=nao naMira=0t manifestacao=M027
+```
+
+- `aviso=sim` só na primeira tentativa: é a única que traz o aviso inteiro (`PRENUNCIO real=contato`). As seguintes ficam com os passos.
+- `naMira`: ticks em que ele esteve na mira do jogador, com luz. "Visto" é seis seguidos, ou estar na mira no instante em que dissolve. `encarado=sim` com `visto=nao` quer dizer que a mira só passou por ele.
+- `visto=nao motivo=VISTO_DEMAIS`: dissolveu de tanto ficar no canto da tela, sem nunca ter estado na mira. Continua devendo.
+- `ATENCAO fonte=contato` aparece quando o contato é visto, não a cada tentativa.
+
+```
+[2100s][Jogador] LUZ_ERRADA tipo=CAIU miragem=sim pos=(x,y,z) semCriatura=sim
+[951s][Jogador] ENSINO pagina entregue proxima=10 pedidas=2
+```
+
+- `LUZ_ERRADA tipo=CAIU` substitui o `QUEBROU_COM_DROP`: a tocha cai só para ele e volta. O mundo não é tocado.
+- `pedidas`: quantas páginas de item esperavam na hora da entrega. A linha `ENSINO pagina pedida: ele já tem uma página por ler` não existe mais: enquanto ele tiver uma página na mochila, ou caída ao lado, a entrega só espera.

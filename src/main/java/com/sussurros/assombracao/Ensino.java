@@ -8,6 +8,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.crafting.Recipe;
 
@@ -64,6 +65,8 @@ public final class Ensino {
 
 	/** A página chega um pouco depois de ele pegar o item, nunca na mesma hora. */
 	private static final int ESPERA_DA_PAGINA = 20;
+	/** Entre uma página deixada e a seguinte, o tempo de ele pegar a primeira do chão. */
+	private static final int ESPERA_ENTRE_PAGINAS = 60;
 
 	private Ensino() {
 	}
@@ -81,35 +84,62 @@ public final class Ensino {
 			m.set(licao.chave(), 1);
 			boolean nova = !Diario.foiLida(m, licao.pagina);
 			Diario.pedir(m, licao.pagina);
-			if (nova && e.paginaDeItemApos < 0) {
-				e.paginaDeItemApos = seg + ESPERA_DA_PAGINA;
-			}
 			Depuracao.log(p, seg, "ENSINO primeiro=" + licao + " pagina=" + (licao.pagina + 1) + " nova=" + (nova ? "sim" : "nao"));
 		}
 		entregarPagina(level, p, m, e, seg, tick);
 	}
 
-	/** A página pedida chega fora de qualquer aparição, e só se ele não tiver uma página por ler na mochila. */
+	/**
+	 * Uma Página Rasgada para cada página pedida, uma de cada vez: a seguinte só vem depois de ele ler a que
+	 * tem, e nunca são deixadas mais páginas do que as pedidas (quem não pegou a do chão não ganha uma pilha).
+	 * Chega fora de qualquer aparição.
+	 *
+	 * Quem decide se há o que entregar é a Memoria (as pedidas), não um agendamento: na alpha14 havia um só,
+	 * em memória, e quem pegava quatro itens no mesmo baú recebia uma página; quem saía do mundo dentro da
+	 * espera, nenhuma.
+	 */
 	private static void entregarPagina(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, long seg, long tick) {
-		if (e.paginaDeItemApos < 0 || seg < e.paginaDeItemApos) {
+		int lidas = m.get(Memoria.PAGINAS_LIDAS);
+		if (lidas != e.paginasLidasVistas) {
+			// Ele leu mais uma (ou acabou de entrar): a conta do que foi deixado recomeça.
+			e.paginasLidasVistas = lidas;
+			e.paginasDeItemSemLer = 0;
+		}
+		int pedidas = Diario.quantasPedidas(m);
+		if (pedidas == 0 || e.paginasDeItemSemLer >= pedidas) {
+			e.paginaDeItemApos = -1;
 			return;
 		}
-		if (!Diario.temPedida(m)) {
-			e.paginaDeItemApos = -1;
+		if (e.paginaDeItemApos < 0) {
+			// Um pouco depois de ele pegar o item (ou de ler a anterior, ou de entrar no mundo), nunca na mesma hora.
+			e.paginaDeItemApos = seg + ESPERA_DA_PAGINA;
+			return;
+		}
+		if (seg < e.paginaDeItemApos) {
 			return;
 		}
 		if ((e.criatura != null && !e.criatura.isRemoved()) || EstruturasSussurros.temCenaAtiva(e) || tick < e.veuAte
 				|| Diretor.bloqueado(p, e, tick)) {
 			return; // espera: explicar durante uma aparição é o pior momento
 		}
-		e.paginaDeItemApos = -1;
-		if (p.getInventory().contains(pilha -> pilha.is(ModItems.PAGINA_RASGADA))) {
-			Depuracao.log(p, seg, "ENSINO pagina pedida: ele já tem uma página por ler");
+		if (p.getInventory().contains(pilha -> pilha.is(ModItems.PAGINA_RASGADA)) || paginaNoChaoPerto(level, p)) {
+			// Ele já tem uma página por ler, na mochila ou no chão ao lado, e é a pedida que ela vai mostrar.
+			// Olha de novo daqui a pouco.
+			e.paginaDeItemApos = seg + ESPERA_DA_PAGINA;
 			return;
 		}
+		// A seguinte, se houver, só depois de ele ter tido tempo de pegar esta.
+		e.paginaDeItemApos = seg + ESPERA_ENTRE_PAGINAS;
+		e.paginasDeItemSemLer++;
 		m.add(Memoria.PAGINAS_ENTREGUES, 1);
 		Diretor.deixarPagina(level, p);
-		Depuracao.log(p, seg, "ENSINO pagina entregue proxima=" + (Diario.proxima(m) + 1));
+		Depuracao.log(p, seg, "ENSINO pagina entregue proxima=" + (Diario.proxima(m) + 1) + " pedidas=" + pedidas);
+	}
+
+	/** Há uma Página Rasgada caída perto dele, ainda por pegar? */
+	private static boolean paginaNoChaoPerto(ServerLevel level, ServerPlayer p) {
+		return !level.getEntitiesOfClass(ItemEntity.class, p.getBoundingBox().inflate(16.0),
+				item -> item.getItem().is(ModItems.PAGINA_RASGADA)).isEmpty();
 	}
 
 	/** Ele riscou uma Linha de Cinza. Chamado do uso do item, fora do tick do Diretor. */
@@ -122,12 +152,8 @@ public final class Ensino {
 		boolean nova = !Diario.foiLida(m, PAGINA_DA_LINHA);
 		Diario.pedir(m, PAGINA_DA_LINHA);
 		m.salvar();
-		EstadoJogador e = Diretor.estadoParaTeste(p);
-		long seg = p.level().getGameTime() / 20;
-		if (nova && e.paginaDeItemApos < 0) {
-			e.paginaDeItemApos = seg + ESPERA_DA_PAGINA;
-		}
-		Depuracao.log(p, seg, "ENSINO primeiro=LINHA pagina=" + (PAGINA_DA_LINHA + 1) + " nova=" + (nova ? "sim" : "nao"));
+		// A entrega da página fica com o tick do Diretor, que vê a página pedida na Memoria (ver entregarPagina).
+		Depuracao.log(p, p.level().getGameTime() / 20, "ENSINO primeiro=LINHA pagina=" + (PAGINA_DA_LINHA + 1) + " nova=" + (nova ? "sim" : "nao"));
 	}
 
 	// ----- Receitas: uma de cada vez -----

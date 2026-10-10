@@ -2489,6 +2489,36 @@ public final class Diretor {
 		return true;
 	}
 
+	/**
+	 * Como invocar com exigirVisivel, e mais exigente: o lugar precisa de luz para ele ser enxergado mesmo de
+	 * perto. A regra geral aceita qualquer lugar a menos de 20 blocos; no breu de uma caverna ele estaria ali
+	 * e ninguém veria. É o que o primeiro contato usa, porque é a única aparição que precisa ser vista.
+	 */
+	static boolean invocarOndeHaLuz(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
+			double angMin, double angMax, double distMin, double distMax, int duracao, double distSumir, PedidoManifestacao pedido) {
+		Aparicao.Config cfg = new Aparicao.Config(
+				angMin, angMax, distMin, distMax, 20,
+				true, false, true, true, true, 1,
+				2.2, 0.9, 1.4, (distMin + distMax) / 2.0);
+		Aparicao.Candidato candidato = null;
+		// A busca devolve o melhor lugar pela nota dela, que gosta de penumbra; se esse não tem luz, procura de novo.
+		for (int i = 0; i < 3 && candidato == null; i++) {
+			Aparicao.Candidato achado = Aparicao.buscarAoRedor(level, p, e, cfg);
+			if (achado != null && temLuzParaVer(level, achado.chao())) {
+				candidato = achado;
+			}
+		}
+		if (candidato == null) {
+			return false;
+		}
+		pedido = pedido.comNota("APARICAO2 " + candidato.resumo());
+		criar(level, p, e, candidato.chao(), modo, duracao, 1.0, distSumir, pedido);
+		if (!e.forcando) {
+			Aparicao.registrar(e, candidato);
+		}
+		return true;
+	}
+
 
 	/**
 	 * Variante de PRESENCA que so aceita pontos onde ha alguma cobertura entre ele e o jogador,
@@ -2980,6 +3010,14 @@ public final class Diretor {
 		int luzBloco = level.getBrightness(LightLayer.BLOCK, pos);
 		int luzCeu = level.getBrightness(LightLayer.SKY, pos);
 		return Math.max(luzBloco, ehNoite(level) ? luzCeu - 11 : luzCeu);
+	}
+
+	/**
+	 * Há luz bastante, naquele chão, para enxergar a criatura a qualquer distância? É a mesma medida que
+	 * "longe, só com alguma luz" usa. O primeiro contato exige isto também de perto (ver HospedeEntity.contatoFoiVisto).
+	 */
+	public static boolean temLuzParaVer(ServerLevel level, BlockPos chao) {
+		return luzEfetiva(level, chao.above()) >= 4;
 	}
 
 	/** Daria para enxergá-lo ali? Perto sempre; longe, só com alguma luz. */
