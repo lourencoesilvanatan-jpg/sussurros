@@ -211,6 +211,18 @@ Item, lugar, evento ou dimensão nova; o corpo novo da criatura; a fase final. T
 - A leitura dos outros mods vem da pesquisa de 08/10, com os limites que ela mesma registra.
 - Não li o código da caçada nem do Avesso. Se algo aqui contradisser o que eles já fazem, vale o código.
 
+## 9. Acréscimos de 10/10/2026
+
+Depois desta análise, a revisão externa leu o mesmo log e as duas leituras foram conferidas uma contra a outra. O que saiu disso:
+
+- **A alpha13 (PR #31) entrou** com a correção do orçamento: o Diretor tem reserva e os avisos da Conta saíram dele. É conserto, não desenho. A seção 4 continua valendo.
+- **O portão de V barra o que é forte, mesmo com o orçamento corrigido.** `Seletor.portao` pede V de 20, 40, 55 ou 70 conforme a intensidade (até 10, até 20, até 30, acima). `PRESENCA` (22) e `ATRAS` (30) precisam de 55; a caçada, de 70. Na sessão de 09/10, na fase 2, V não passou de 35 em 19 leituras; na fase 3, só 2 de 16 chegaram a 65, com a inquietação em zero quase o tempo todo. O único visual que passava era o `VULTO`, que só vale de dia e a céu aberto (`podeVulto`).
+- **Consequência para a seção 6:** o primeiro contato (6.1) e o pico por sessão (6.6) precisam passar por cima do portão de V. No sorteio normal ele continua, porque serve para não gastar um momento forte numa hora ruim. Vale acrescentar ao `analisar.py` a distribuição de V por fase.
+- **O trecho antigo do log é a sessão de 07–08/10**, de antes das correções de alcance de som e de leitura de reação (o som a 236 blocos está lá, aos 2192 s). As reações daquele trecho não servem de evidência do que funciona. Da sessão de 09/10, a única leitura repetida é a do `VIGIA`: duas vezes, duas reações claras.
+- **A primeira aparição feita pelo próprio Diretor, antes de existir orçamento, veio aos 4154 s** (69 minutos). O "parado" é anterior à alpha12.
+
+A ordem combinada com o dono em 10/10: uma atualização pequena só sobre a primeira hora (6.1 a 6.4 e os critérios da 6.7), depois ele joga, depois o log é lido contra a 6.7. Em paralelo, duas pesquisas: como outros jogos montam o primeiro encontro e como ensinam uma ferramenta sem tutorial.
+
 ## Fontes novas
 
 - Josh Bycer, "The Balancing Act of Tension in Horror Game Design" (2015): https://www.gamedeveloper.com/design/the-balancing-act-of-tension-in-horror-game-design
