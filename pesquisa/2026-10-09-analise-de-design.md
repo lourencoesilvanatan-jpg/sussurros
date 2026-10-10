@@ -223,6 +223,44 @@ Depois desta análise, a revisão externa leu o mesmo log e as duas leituras for
 
 A ordem combinada com o dono em 10/10: uma atualização pequena só sobre a primeira hora (6.1 a 6.4 e os critérios da 6.7), depois ele joga, depois o log é lido contra a 6.7. Em paralelo, duas pesquisas: como outros jogos montam o primeiro encontro e como ensinam uma ferramenta sem tutorial.
 
+## 10. O que a pesquisa de 10/10 muda nas propostas
+
+A pesquisa está em `pesquisa/2026-10-10-primeiro-encontro-e-ferramentas.md`, com as fontes. Ela confirma a direção da seção 6 e a corrige nos pontos abaixo. Onde as duas divergirem, vale esta seção.
+
+**Duas frases da seção 5 estavam erradas ou incompletas:**
+
+- From The Fog não tem "três dias de nada": pegadas, portas, doações e estruturas já são tentadas antes do portão, e acender o santuário pula a espera.
+- "O som tem dono" não vale para o Cave Dweller Evolved: nele o som de aviso toca sem criatura nenhuma. A frase fica como princípio, não como descrição daquele mod.
+
+**6.1, primeiro contato:**
+
+- Com prazo final. Se a condição de pouca luz não vier até o fim da janela, ele acontece assim mesmo, na forma diurna que existir. The Obsessed faz isso aos 60 minutos.
+- Só conta quando foi visto. Enquanto o jogador não o teve na mira por um instante, o contato continua devendo e é refeito. Nascer atrás é o jeito mais fácil de ninguém ver.
+- Por jogador, não por mundo.
+- "Cedo" não é a virtude. A pesquisa sustenta garantido, visto, curto e com a espera preenchida; não sustenta "quanto antes melhor". A janela de 15 a 25 minutos é compatível com o que foi lido, sem prova de que seja a melhor.
+
+**6.3, primeiro uso:**
+
+- A resposta do primeiro uso tem de ser verdadeira, não encenada. Uma resposta fabricada ensina que o item sempre responde, e o silêncio seguinte vira defeito. O caminho é o primeiro uso acontecer diante de algo real: o que o primeiro contato deixou no lugar. Falta conferir no código se o Sino responde a esse vestígio.
+- O silêncio precisa de um estado próprio. "Ouvi, não há nada" tem de soar e parecer diferente de "não funcionou".
+
+**6.2, entrega:**
+
+- Um verbo por vez: entregar um, esperar um uso entendido, entregar o outro. Detecção antes de proteção.
+- A página do item não pode ser o único canal nem chegar durante uma aparição. A dica do item leva uma linha de uso e uma linha que admite que há preço, sem dizer qual.
+
+**6.4, a Conta:**
+
+- Um marcador sensorial, igual em todo uso que soma, no instante do uso. Sem ele, a cobrança no uso seguinte tende a ser atribuída só a esse uso.
+- A carência de três usos pode ensinar "é de graça". A virada precisa ser marcada.
+- O recibo é escrito como algo que aconteceu no mundo, não como bronca.
+
+**6.5, sinal com referente:** 30 a 90 s é muito para ligar causa e efeito. O que vem depois do som tem de ser no mesmo lugar, e ajuda existir um som reservado que nunca mente.
+
+**6.6, pico por sessão:** um pico forçado não pode chegar a frio; precisa de preparação antes.
+
+**6.7, critérios:** trocar o que se conta. Aparições que estiveram na mira do jogador, não aparições criadas; sinais seguidos de algo no mesmo lugar; itens que o dono consegue explicar depois da sessão. "De 6 a 12 aparições por hora" não foi validado e fica suspenso até a próxima sessão.
+
 ## Fontes novas
 
 - Josh Bycer, "The Balancing Act of Tension in Horror Game Design" (2015): https://www.gamedeveloper.com/design/the-balancing-act-of-tension-in-horror-game-design
