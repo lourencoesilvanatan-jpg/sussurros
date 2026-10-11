@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha18: **corrige a alpha17, que não funcionou na sua casa.** O que ela prometia dependia do terreno, e o terreno em volta da sua base (capim e flor por toda parte) fazia o mod desistir. O mesmo defeito escondia outras coisas, então você deve ver mais coisa acontecendo. Também diminuí bastante uma coisa que você achou repetitiva na caverna. Continua valendo o teste no **mesmo mundo**.
+
 Versão 0.9.0-alpha17: a primeira parte do que você pediu depois da sessão de 10 e 11/10. Não tem coisa nova para achar: muda o jeito como uma parte do que já existe acontece. Vale o teste descrito abaixo, no **mesmo mundo**. Uma pergunta só para esta versão, para responder depois de jogar: **alguma coisa que você viu pareceu "de boneco", artificial no jeito de se mexer?**
 
 Versão 0.9.0-alpha16: consertos num momento das fases mais avançadas, que uma sessão de uma hora num mundo novo não alcança. Não muda nada no que você precisa fazer.

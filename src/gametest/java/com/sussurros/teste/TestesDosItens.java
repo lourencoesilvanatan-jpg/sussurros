@@ -371,6 +371,35 @@ public class TestesDosItens {
 		});
 	}
 
+	/**
+	 * Uma tocha empalidece de cada vez, com pelo menos três minutos entre uma e outra: na fase 4, com quatro
+	 * tochas por perto, depois de um minuto ainda é uma só. (Eram duas ou três o tempo todo, repostas a cada
+	 * vinte segundos: noventa em noventa minutos na sessão de 11/10/2026.)
+	 */
+	@GameTest(maxTicks = 1500)
+	public void asChamasVemUmaDeCadaVez(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -5600, 0);
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		ServerLevel level = helper.getLevel();
+		Vec3 olhar = jogador.getLookAngle();
+		BlockPos atras = jogador.blockPosition().offset((int) Math.round(-olhar.x * 4), 0, (int) Math.round(-olhar.z * 4));
+		BlockPos[] tochas = {atras, atras.east(2), atras.west(2), atras.offset((int) Math.round(-olhar.x * 3), 0, (int) Math.round(-olhar.z * 3))};
+		for (BlockPos tocha : tochas) {
+			level.setBlockAndUpdate(tocha, Blocks.TORCH.defaultBlockState());
+		}
+		int[] maximo = {0};
+		helper.onEachTick(() -> maximo[0] = Math.max(maximo[0], Diretor.miragensParaTeste(jogador, "CHAMA_PALIDA")));
+		helper.runAfterDelay(1300, () -> {
+			helper.assertTrue(maximo[0] == 1, "em um minuto deveria haver uma chama pálida, e só uma; houve " + maximo[0]);
+			for (BlockPos tocha : tochas) {
+				level.removeBlock(tocha, false);
+			}
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
 	private static ResourceKey<Recipe<?>> receita(String nome) {
 		return ResourceKey.create(Registries.RECIPE, Identifier.fromNamespaceAndPath("sussurros", nome));
 	}

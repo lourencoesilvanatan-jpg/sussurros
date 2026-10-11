@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha18
+
+Corrige a alpha17, que não funcionava em terreno com capim e flores (ou seja, em quase todo lugar da superfície). O mesmo defeito impedia outras coisas de acontecer. Um efeito que se repetia demais, sobretudo em caverna, ficou bem mais raro.
+
 ## 0.9.0-alpha17
 
 Primeira parte do que foi pedido depois da sessão de 10 e 11/10: uma parte do que o mod já fazia passa a acontecer mais cedo e a terminar de um jeito menos previsível. Não entra coisa nova para achar.

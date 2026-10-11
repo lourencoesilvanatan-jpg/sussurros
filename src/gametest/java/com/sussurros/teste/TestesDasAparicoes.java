@@ -130,8 +130,64 @@ public class TestesDasAparicoes {
 	 */
 	@GameTest(maxTicks = 1200)
 	public void pelaJanelaEleSaiDoQuadroAndando(GameTestHelper helper) {
-		BlockPos pes = JogadorDeTeste.chao(helper, 4, -5300);
+		cenaDaJanela(helper, -5300, false);
+	}
+
+	/**
+	 * A mesma cena num quintal de verdade: capim e flores em todas as colunas, dos dois lados da parede. Era
+	 * assim em volta da casa do dono em 11/10/2026, e ali ele não saiu andando nenhuma vez: o capim não contava
+	 * como ar nem como chão, e não sobrava um lugar válido para onde ir.
+	 */
+	@GameTest(maxTicks = 1200)
+	public void noQuintalComCapimEleTambemSaiAndando(GameTestHelper helper) {
+		cenaDaJanela(helper, -5400, true);
+	}
+
+	/**
+	 * Num campo coberto de capim a caçada acha onde começar, e ele nasce no meio do capim. (Com a exigência de
+	 * ar puro não havia uma coluna válida: a sequência de ameaça acabava sem ninguém aparecer.)
+	 */
+	@GameTest(maxTicks = 300)
+	public void noCapimEleAchaOndeAparecer(GameTestHelper helper) {
+		BlockPos pes = JogadorDeTeste.chao(helper, 4, -5500);
 		ServerLevel level = helper.getLevel();
+		for (int dx = -16; dx <= 16; dx++) {
+			for (int dz = -30; dz <= -10; dz++) {
+				level.setBlock(pes.offset(dx, 0, dz), (dx + dz) % 5 == 0 ? Blocks.POPPY.defaultBlockState() : Blocks.SHORT_GRASS.defaultBlockState(), 2);
+			}
+		}
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -5500, 0);
+		JogadorDeTeste.acompanhar(helper, jogador, "capim");
+		Diretor.esquecer(jogador);
+		Diretor.definirFase(jogador, 4);
+		helper.runAfterDelay(5, () -> {
+			helper.setTime(18000);
+			boolean ok = false;
+			for (int i = 0; i < 6 && !ok; i++) {
+				ok = Diretor.cacadaParaTeste(jogador, false);
+			}
+			helper.assertTrue(ok, "num campo de capim a caçada deveria achar onde começar");
+			HospedeEntity h = Diretor.criatura(jogador);
+			helper.assertTrue(h != null && !level.getBlockState(h.blockPosition()).isAir(),
+					"ele deveria ter nascido no meio do capim, em " + (h == null ? "lugar nenhum" : h.blockPosition().toShortString()));
+			h.sumir(level, false, "FIM_DO_TESTE");
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
+	private static void cenaDaJanela(GameTestHelper helper, int dzDoTeste, boolean comCapim) {
+		BlockPos pes = JogadorDeTeste.chao(helper, 4, dzDoTeste);
+		ServerLevel level = helper.getLevel();
+		if (comCapim) {
+			for (int dx = -14; dx <= 14; dx++) {
+				for (int dz = -16; dz <= 6; dz++) {
+					if (dx != 0 || dz != 0) {
+						level.setBlock(pes.offset(dx, 0, dz), (dx * 3 + dz) % 4 == 0 ? Blocks.POPPY.defaultBlockState() : Blocks.SHORT_GRASS.defaultBlockState(), 2);
+					}
+				}
+			}
+		}
 		// A parede fica cinco blocos atrás do jogador (ele olha para o sul), alta o bastante para ninguém subir
 		// nela, com um vidro na altura dos olhos.
 		for (int dx = -5; dx <= 5; dx++) {
@@ -141,8 +197,8 @@ public class TestesDasAparicoes {
 		}
 		BlockPos vidro = pes.offset(0, 1, -5);
 		level.setBlockAndUpdate(vidro, Blocks.GLASS.defaultBlockState());
-		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -5300, 0);
-		JogadorDeTeste.acompanhar(helper, jogador, "janela");
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, dzDoTeste, 0);
+		JogadorDeTeste.acompanhar(helper, jogador, comCapim ? "janela-com-capim" : "janela");
 		Diretor.esquecer(jogador);
 		boolean[] foiEmbora = new boolean[1];
 		boolean[] dissolveu = new boolean[1];

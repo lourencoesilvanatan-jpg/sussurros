@@ -180,6 +180,75 @@ Três peças pequenas e uma média, todas em cima do que existe. Valem as regras
 
 A etapa 1 (5.1 e 5.2) entrou na 0.9.0-alpha17. O que saiu diferente do escrito acima: a saída `FICA` com a cabeça inclinada ficou para depois (pede mexer no modelo e foto); no lugar dela, toda saída andando segura o olhar de 0,4 a 1 segundo antes de virar. A etapa 2 (5.3) não foi começada.
 
+---
+
+## 8. A segunda parte: uma hora e meia na alpha17 (11/10, à tarde)
+
+O mesmo mundo, das 14:00 às 15:35, com a irmã dele jogando uma parte. Relógio do mundo de 3924 a 9368 s. Comandos do mod só nos três últimos minutos (`evento espreita`, `cena marco`, `cena janela` três vezes); antes, só `/give` de coisa do jogo e dois Ossos de Agouro. Nenhum erro do mod nos logs.
+
+### O que ele disse
+
+- "To achando massa os efeitos de ficar tudo branco, a dimensão é isso? [...] quando fica mais forte, os bichos somem, mas poderiam acontecer mais coisas."
+- A irmã "se assustou com os barulhos", viram o bicho e houve interações, "mas até ela em algum momento perguntou: cadê o bicho?".
+- "Na caverna achei que os eventos e coisas ficaram muito focados em mudar a tocha de cor, e sons, poderiam ter mais interações físicas."
+- "Quando ele apareceu mais fortemente na caverna e eu ataquei ele, ele estava preso num local": sugere que ele se esprema ou se agache para passar por um ou dois blocos, como o Cave Dweller.
+- "Eu avancei bastante? teve muita coisa que não vi?"
+
+### Os números
+
+| Medida | Primeira hora (alpha16) | Esta parte (alpha17, 1h30) |
+|---|---|---|
+| Fase | 0 a 3 | 3 e 4 (a 4 aos 75 min de mundo) |
+| Saídas por hora | 22 | 33 |
+| Eventos do Diretor | 14 | 36 |
+| Manifestações (sem as de comando) | 4 | 5 |
+| Dessas, na tela dele | 3 | 3 |
+| Tempo dele na tela | 2 s | 23 s (18 deles na caçada) |
+| Sequências de ameaça | 1 | 3, **duas sem aparição** (`SEM_LUGAR`) |
+| Caçadas e capturas | 0 | 1 e 1 |
+| Véu | 0 | 2 |
+| Cenas | 0 | 2 (a volta para casa; o túnel) |
+| Chamas pálidas | (não contei) | **90** |
+| Itens usados | 10 usos | **nenhum** |
+| Visitas ao Avesso | 0 | 0 |
+| Saída andando (a novidade da alpha17) | — | **0** |
+
+### Respostas às perguntas dele
+
+**"A dimensão é isso?" Não.** O que ele viu foi o Véu, duas vezes: aos 5332 s, numa caverna, por 32 segundos (o Diretor achou que ele nem percebeu), e aos 7305 s, em casa, por 50 segundos (pela carta do baralho). O Véu usa de propósito a cor, a neblina e o silêncio do Avesso, e esconde tudo o que é entidade, mas o jogador não sai do lugar. Nos dois Véus dele não houve porta, nem vidro, nem o vulto na borda da neblina (o sorteio de metade das vezes deu "não" nas duas): foram os dois Véus mais vazios possíveis. O "poderiam acontecer mais coisas" é justo.
+
+**O Avesso ele ainda não visitou.** As duas portas são sorteio: 15% ao deitar na cama, da fase 3 em diante, e uma parte das capturas. A única captura dele o deslocou 26 blocos em vez de levá-lo.
+
+**"Cadê o bicho?"** Tem número. Em 90 minutos o Diretor quis mostrá-lo oito vezes e conseguiu três: duas sequências de ameaça acabaram sem aparição por falta de lugar, a única presença sorteada falhou pelo mesmo motivo, e outras duas nunca entraram na tela (uma espreita a 33 blocos de alguém que estava se afastando, e a da cena do túnel). O que ele viu: a caçada, a cena da volta para casa (3,7 segundos, a aparição mais longa fora da caçada) e um vulto. A causa das faltas na superfície é o defeito do capim, corrigido na alpha18. Na caverna a causa é outra (abaixo).
+
+**"Muito focado em mudar a tocha de cor."** Noventa chamas pálidas em noventa minutos: uma por minuto. Contra isso, de coisa física na caverna: um vestígio, pegadas, uma marca impossível, um nicho. A alpha18 espaça as chamas (três minutos entre uma e outra). "Mais interação física" é conteúdo novo e fica na proposta.
+
+**"Ele estava preso."** Foi a caçada (5520 a 5564 s). Duas coisas juntas. Uma é a regra: ele só anda quando não é olhado, e o jogador o encarou; ele avançou por três piscadas (de 13,6 para 4,8 blocos). A outra é defeito ou terreno: a busca registrou `CAMINHO_FALHOU` três vezes nos primeiros segundos. Li o mundo salvo: ele nasceu na boca de um túnel em diagonal de um bloco de largura, que desce para o salão onde o jogador estava. O jogador bateu nele (ele recuou, como está escrito) e foi tocado quatro segundos depois. Do ponto de vista dele: um bicho parado num canto, que apanha e depois o pega. A caçada, vista de fora, não se explica.
+
+**"Avancei bastante?"** Sim: chegou à última fase e viveu o momento mais forte do mod uma vez (ameaça, caçada, captura). Do que existe, não viu: o Avesso; nenhuma cobrança da Conta; sete das dez coisas de usar (só riscou Linha, deu corda na Caixa e jogou os Ossos, tudo na primeira hora); a cena da janela por conta própria; as cenas do campo e do marco; onze das doze cartas do baralho; a caçada devida; a vela diante dele. Na conta grossa, metade.
+
+### O que a alpha18 já corrige
+
+O capim (seção própria no `DESIGN-SPOILERS.md`) e o intervalo das chamas pálidas.
+
+### O que fica como proposta, em ordem
+
+**A. Ele aparecer em lugar apertado (caverna, dentro de casa). É a maior falta.** A espreita pede de 22 a 38 blocos e três de altura; a presença, de 14 a 35. Numa caverna quase nunca há isso. Proposta: uma "forma de perto" para lugar fechado, com 8 a 14 blocos, no limite da luz das tochas dele ou na curva do túnel, e aceitando teto de dois blocos (a pose abaixada da caçada já existe). É a mesma criatura e o mesmo relance; muda onde ele cabe. Medida de sucesso: nenhuma sequência de ameaça terminar em `SEM_LUGAR`.
+
+**B. Passar por um bloco (o pedido dele).** Na caçada ele já passa por dois de altura. Para um bloco falta uma pose rastejando, que é trabalho de modelo e de caixa de colisão, com foto para conferir. Antes disso vale descobrir por que o caminho falhou naquele túnel em diagonal: pode ser só a largura dele (0,7) nas quinas, e aí estreitar a caixa na caça resolve sem pose nova.
+
+**C. A caverna com corpo.** Coisas que mexem no que é dele, sem estragar nada: uma tocha que ele pôs e que aparece caída no chão (miragem, já existe o ramo), cascalho ou pó que cai de um ponto do teto com o som no mesmo lugar, a picareta dele "respondida" por duas batidas vindas de dentro da pedra (o eco de ação já existe; falta ser no bloco ao lado), pegadas de cinza que vêm até a última tocha e param. Todas com lugar, para servirem de referente.
+
+**D. O Véu nunca vazio.** Se não há porta nem vidro por perto, o vulto na borda da neblina deixa de ser sorteio e passa a ser certo. Uma linha.
+
+**E. A afronta** (seção 5.3), que continua valendo: nesta sessão ele bateu nele uma vez e a resposta foi a de sempre.
+
+**F. Os itens.** Zero usos em 90 minutos, com o inventário cheio deles. O jogo não dá motivo para usar. Não é para agora, mas é o próximo "por que isso existe?".
+
+A ordem que eu seguiria: **A e D juntas** (são as que respondem "cadê o bicho?" e "poderia acontecer mais"), ele joga; depois C; depois B e E.
+
+---
+
 ## 7. Limites
 
 - Uma sessão, um jogador, em duas partes. O que digo sobre o que ele sentiu é inferência do log, fora as frases dele.
