@@ -12,7 +12,17 @@ Versão 0.9.0-alpha14: **mexe na primeira hora de um mundo novo.** Não tem cois
 
 Versão 0.9.0-alpha13: corrige um erro meu da alpha12. O limite de ritmo que eu tinha posto ficou apertado demais e, na sua sessão de 09/10, calou quase tudo o que importa. O "parado" que você sentiu veio daí, não do seu jeito de jogar.
 
-## Como testar: uma hora, num mundo novo
+## Como testar agora: continue no mesmo mundo
+
+A primeira hora de um mundo novo você já testou (10 e 11/10) e ela funcionou como planejado. O que falta testar vem **depois** dela. Por isso, daqui em diante:
+
+- abra o **mesmo mundo** dessa sessão, em vez de criar outro;
+- jogue mais uma hora, ou duas se der, do jeito de sempre: parte do tempo em casa, parte fora, de dia e de noite;
+- o resto vale como está escrito abaixo (só o `/sussurros debug on`, som ligado, ler a dica dos itens).
+
+Os passos abaixo são os da primeira hora. Servem de novo se um dia você começar outro mundo.
+
+### A primeira hora, num mundo novo
 
 1. No GitHub Desktop, trocar para a branch `main` e clicar em "Pull origin".
 2. Abrir o jogo de teste (`runClient`).
@@ -82,6 +92,8 @@ Versão 0.9.0-alpha1: sons novos e uma trilha; uma camada nova no jogo, do lado 
 Numa sessão de uma hora num mundo novo você não vai chegar à maior parte disso, e está certo assim: esta versão é sobre o começo.
 
 ## Já conferido antes desta versão
+
+Pelo log da sessão de 10 e 11/10/2026 (mundo novo, uma hora, só com o `/sussurros debug on`): o jogo rodou sem erro do mod; a primeira hora deixou de ser parada, e a parte principal do mod apareceu nela; as explicações dos itens chegaram junto com os itens. Faltam as suas respostas às perguntas de cima, que o log não tem como dar.
 
 Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abre e roda sem erro do mod; as cenas rodam do começo ao fim; você ouviu e gostou dos sons distantes; as aparições somem do jeito que você pediu ("tem como perceber algo piscando, e é justamente isso que eu queria").
 
