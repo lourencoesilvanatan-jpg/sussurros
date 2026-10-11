@@ -35,10 +35,11 @@ public class HospedeRenderer extends MobRenderer<HospedeEntity, HospedeRenderSta
 		state.olhos = entity.temOlhosVisuais();
 		state.alfa = entity.alfaVisual(tickProgress);
 		// Caçando e com teto a menos de três blocos: o corpo dobra. A caixa de colisão já é baixa na caça;
-		// isto é só o desenho acompanhando.
+		// isto é só o desenho acompanhando. Fora da caça ele não anda sob teto baixo: quem o pôs ali já decidiu
+		// se ele nasce dobrado, e o desenho só obedece (0.9.0-alpha19).
 		BlockPos acima = entity.blockPosition().above(2);
-		state.agachado = state.modoVisual == HospedeEntity.Modo.CACAR.ordinal()
-				&& !entity.level().getBlockState(acima).getCollisionShape(entity.level(), acima).isEmpty();
+		state.agachado = entity.isAbaixado() || (state.modoVisual == HospedeEntity.Modo.CACAR.ordinal()
+				&& !entity.level().getBlockState(acima).getCollisionShape(entity.level(), acima).isEmpty());
 	}
 
 	// Enquanto dissolve, o corpo é desenhado translúcido e cada vez mais transparente.

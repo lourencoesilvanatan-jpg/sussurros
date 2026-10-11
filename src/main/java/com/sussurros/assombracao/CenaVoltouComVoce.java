@@ -162,6 +162,7 @@ final class CenaVoltouComVoce {
 					e.cenaCasaDesde = seg;
 				} else if (seg - e.cenaCasaDesde > 30) {
 					Depuracao.log(p, seg, "CENA id=" + e.cenaCasaId + " etapa=PRESENCA SEM_LUGAR");
+					Diretor.logarFaltaDeLugar(p, e, seg);
 					silencioCenaCasa(p, e, seg, rnd);
 				}
 			}

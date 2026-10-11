@@ -62,6 +62,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			avesso(context, mundo);
 			sentidos(context, mundo);
 			saidaAndando(context, mundo);
+			dePerto(context, mundo);
 			cacada(context, mundo);
 			capturaQueLeva(context, mundo);
 		}
@@ -605,6 +606,79 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.waitTicks(4);
 		context.takeScreenshot("39-saida-andando-mais-longe");
 		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		context.waitTicks(20);
+	}
+
+	/**
+	 * Ele de perto, num lugar apertado (0.9.0-alpha19): um túnel de pedra de um bloco de largura e dois de altura,
+	 * com uma curva e uma tocha, igual ao dos testes de servidor. A procura é a de verdade; só o modo é outro,
+	 * para ele não sumir quando o jogador vira (ver Diretor.dePertoParaTeste). Ninguém tinha visto a pose
+	 * abaixada parada, olhando: estas fotos são para isso.
+	 */
+	private static void dePerto(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		String virar = "execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] eyes run tp @s ~ ~ ~ ~ ~";
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		// Longe do que as outras fotos montam e de onde a caçada, a seguir, vai procurar lugar.
+		BlockPos pes = partida.offset(80, 0, 0);
+		int curva = -10;
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			for (int x = -3; x <= 11; x++) {
+				for (int z = curva - 3; z <= 6; z++) {
+					for (int y = 0; y <= 4; y++) {
+						level.setBlock(pes.offset(x, y, z), Blocks.STONE.defaultBlockState(), 3);
+					}
+				}
+			}
+			for (int y = 0; y <= 1; y++) {
+				for (int z = curva; z <= 3; z++) {
+					level.setBlock(pes.offset(0, y, z), Blocks.AIR.defaultBlockState(), 3);
+				}
+				for (int x = 0; x <= 8; x++) {
+					level.setBlock(pes.offset(x, y, curva), Blocks.AIR.defaultBlockState(), 3);
+				}
+			}
+			level.setBlock(pes.offset(-1, 1, curva), Blocks.TORCH.defaultBlockState(), 3);
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5));
+		context.waitTicks(40);
+		mundo.getServer().runCommand("execute as @p run sussurros teste deperto parado");
+		context.waitTicks(10);
+		String nasceu = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			HospedeEntity h = Diretor.criatura(p);
+			return h == null ? "ninguém" : String.format(Locale.ROOT, "dist=%.1f abaixado=%s altura=%.1f", h.distanceTo(p), h.isAbaixado(), h.getBbHeight());
+		});
+		Sussurros.LOGGER.info("[de perto] {}", nasceu);
+		conferir(nasceu.startsWith("dist=10.0 abaixado=true altura=1.9"), "no túnel ele deveria nascer na curva, a dez blocos, abaixado: " + nasceu);
+		// O que o jogador vê: vira, e ele está na curva, à luz da tocha.
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(15);
+		context.takeScreenshot("40-de-perto-na-curva-do-tunel");
+		// Mais perto do que ele deixaria num jogo de verdade, só para ver a pose.
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 0", pes.getX() + 0.5, pes.getY(), pes.getZ() + curva + 4.5));
+		context.waitTicks(5);
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(15);
+		context.takeScreenshot("41-de-perto-a-quatro-blocos");
+		// A mesma pose à luz do dia: o teto do túnel vira vidro.
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			for (int y = 2; y <= 4; y++) {
+				for (int z = curva; z <= 3; z++) {
+					level.setBlock(pes.offset(0, y, z), Blocks.GLASS.defaultBlockState(), 3);
+				}
+			}
+		});
+		context.waitTicks(30);
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(10);
+		context.takeScreenshot("42-de-perto-com-teto-de-vidro");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}
 

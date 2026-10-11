@@ -14,7 +14,8 @@ O que ele responde:
   - como o jogador reagiu (a confiança das leituras);
   - o que os itens e a Conta fizeram;
   - caçadas, capturas, visitas ao outro lado;
-  - o que não coube (seleção que falhou, falta de lugar).
+  - o que não coube (seleção que falhou, falta de lugar), e por quê: quantos lugares cada procura tentou e
+    em que exigência eles caíram.
 
 Só usa a biblioteca padrão do Python.
 """
@@ -74,6 +75,7 @@ PROBLEMAS = [
     ('seleção falhou', re.compile(r'^SELECAO falhou evento=(\S+)')),
     ('sem lugar para nada', re.compile(r'^SELECAO sem lugar')),
     ('vulto do Véu não coube', re.compile(r'^VEU vulto=nao_coube')),
+    ('aparição chamada pelo Olho não coube', re.compile(r'^OLHO aparicao=nao_coube')),
     ('vulto do outro lado não coube', re.compile(r'^AVESSO vulto=nao_coube')),
     ('boneco sem lugar', re.compile(r'^BONECO SEM_LUGAR')),
     ('carta adiada', re.compile(r'^BARALHO carta=(\S+) adiada')),
@@ -141,6 +143,26 @@ def percentil(valores, p):
         return 0
     ordenados = sorted(valores)
     return ordenados[min(len(ordenados) - 1, int(round(p * (len(ordenados) - 1))))]
+
+
+# Eventos que põem o corpo da criatura no mundo: quando a seleção de um deles falha, faltou lugar para ela.
+COM_CORPO = ('PRESENCA', 'ATRAS', 'VULTO', 'TUMULO', 'CACA', 'ESPERA', 'ESPREITA')
+
+# Uma construção inteira que acabou sem ninguém: a sequência de ameaça, uma cena, o vulto do Véu, o Olho.
+SEM_NINGUEM = [
+    ('sequência de ameaça', re.compile(r'^CENA id=\S+ FIM motivo=SEM_LUGAR')),
+    ('cena', re.compile(r'^CENA id=\S+ etapa=\S+ SEM_LUGAR')),
+    ('vulto do Véu', re.compile(r'^VEU vulto=nao_coube')),
+    ('Olho', re.compile(r'^OLHO aparicao=nao_coube')),
+]
+
+
+def falhas_de_lugar(texto):
+    """Lê uma linha "LUGAR falhou NORMAL[vezes=3 tentados=54 ...] DE_PERTO[...]": {procura: {motivo: n}}."""
+    achado = collections.OrderedDict()
+    for procura, dentro in re.findall(r'(\w+)\[([^\]]*)\]', texto):
+        achado[procura] = collections.OrderedDict((nome, int(valor)) for nome, valor in re.findall(r'(\w+)=(\d+)', dentro))
+    return achado
 
 
 def tabela(cabecalho, linhas):
@@ -300,6 +322,11 @@ def analisar(linhas, jogador, caminho):
         out.append('Como sumiu: ' + ', '.join('%s %d' % (mo, n) for mo, n in motivos.most_common()) + '.')
         out.append('')
         # 0.9.0-alpha17: a exceção ao relance. Quantas vezes, visto, ele foi embora andando em vez de sumir.
+        # 0.9.0-alpha19: quantas nasceram pela procura de lugar apertado, e quantas dessas abaixadas.
+        de_perto = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ criado .*motivoPosicao=DE_PERTO', texto))
+        abaixadas = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ criado .*postura=ABAIXADO', texto))
+        out.append('Nasceu de perto (lugar apertado, de 8 a 14 blocos): %d vez(es); abaixado: %d.' % (de_perto, abaixadas))
+        out.append('')
         recuou = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ saida=RECUA', texto))
         escondido = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ saida=RECUA .*escondido=sim', texto))
         out.append('Foi embora andando em vez de sumir: %d vez(es); em %d delas tinha onde sair da vista.' % (recuou, escondido))
@@ -390,7 +417,12 @@ def analisar(linhas, jogador, caminho):
         out.append('Como voltou: ' + ', '.join('%s depois de %ds' % v for v in voltas) + '.')
     out.append('')
     veus = sum(1 for _, texto in linhas if texto.startswith('VEU abriu'))
-    out.append('Véu: abriu %d vez(es).' % veus)
+    # 0.9.0-alpha19: o que cada Véu tinha dentro. "certo" é o vulto que vem por não haver porta nem vidro.
+    vultos = collections.Counter(m.group(1) for m in (re.match(r'^VEU abriu .*vulto=(\w+)', texto) for _, texto in linhas) if m)
+    vulto_veio = sum(1 for _, texto in linhas if texto.startswith('VEU vulto=sim'))
+    vazios = sum(1 for _, texto in linhas if re.match(r'^VEU abriu .*porta=nao vidro=nao vulto=nao', texto))
+    out.append('Véu: abriu %d vez(es)%s. O vulto veio em %d; sem porta, sem vidro e sem vulto (vazio): **%d**.' % (
+        veus, ' (vulto: ' + ', '.join('%s %d' % v for v in vultos.most_common()) + ')' if vultos else '', vulto_veio, vazios))
     out.append('')
 
     # ----- lugares e baralho -----
@@ -416,6 +448,29 @@ def analisar(linhas, jogador, caminho):
             out.append('- %s: %d%s' % (nome, len(casos), ' (' + ', '.join('%s %d' % d for d in detalhe.most_common(8)) + ')' if detalhe else ''))
     if not achou:
         out.append('Nada.')
+    out.append('')
+
+    # ----- por que não achou lugar (0.9.0-alpha19): as linhas "LUGAR falhou" -----
+    # Cada uma soma as procuras que falharam desde a anterior: quantas vezes rodou, quantos lugares tentou e em
+    # que exigência eles caíram. Até a alpha18 o log só dizia SEM_LUGAR, e o motivo tinha de ser refeito à mão.
+    soma_lugar = collections.OrderedDict()
+    for _, texto in linhas:
+        if texto.startswith('LUGAR falhou '):
+            for procura, motivos in falhas_de_lugar(texto).items():
+                destino = soma_lugar.setdefault(procura, collections.Counter())
+                for nome, valor in motivos.items():
+                    destino[nome] += valor
+    out.append('## Por que não achou lugar')
+    out.append('')
+    if soma_lugar:
+        out.append('Uma linha por procura. "vezes" é quantas vezes ela rodou sem achar nada; o resto é onde os lugares '
+                   'tentados caíram (sem chão, na tela, sem linha de visão, a céu aberto, na zona da vela...).')
+        out.append('')
+        out += tabela(['Procura', 'Vezes', 'Onde caiu'],
+                      [(procura, c.get('vezes', 0), ', '.join('%s %d' % (nome, n) for nome, n in c.most_common() if nome != 'vezes') or '—')
+                       for procura, c in soma_lugar.items()])
+    else:
+        out.append('Nenhuma linha `LUGAR falhou` (nenhuma procura falhou, ou o log é de antes da alpha19).')
     out.append('')
 
     # ----- a primeira hora: os critérios da análise de 09/10 (seção 6.7, corrigida pela seção 10) -----
@@ -447,6 +502,21 @@ def analisar(linhas, jogador, caminho):
         m = re.match(r'^CONTATO visto=sim .*manifestacao=(\S+)', texto)
         if m:
             na_mira.append((t, forma_de.get(m.group(1), '?') + ' (contato)'))
+    # 0.9.0-alpha19: "tentei" e "ele viu" são contas diferentes. Uma construção que acabou sem ninguém (a
+    # sequência de ameaça que esperou um minuto por um lugar, uma cena, o vulto do Véu) é uma tentativa perdida.
+    sem_ninguem = []    # (t, o quê, por quê)
+    ultimo_lugar = None
+    for t, texto in linhas:
+        if texto.startswith('LUGAR falhou '):
+            ultimo_lugar = (t, texto[len('LUGAR falhou '):])
+            continue
+        for nome, expr in SEM_NINGUEM:
+            if expr.match(texto):
+                motivo = ultimo_lugar[1] if ultimo_lugar is not None and 0 <= t - ultimo_lugar[0] <= 1 else ''
+                sem_ninguem.append((t, nome, motivo))
+                break
+    corpo_falhou = collections.Counter(m.group(1) for m in (re.match(r'^SELECAO falhou evento=(\S+)', texto) for _, texto in linhas)
+                                       if m and m.group(1) in COM_CORPO)
     tentativas = sum(1 for _, texto in linhas if texto.startswith('CONTATO tentativa='))
     contato_visto = next((t for t, texto in linhas if texto.startswith('CONTATO visto=sim')), None)
 
@@ -504,6 +574,8 @@ def analisar(linhas, jogador, caminho):
     criterios.append(('Primeira aparição na mira dele (fora as de comando)',
                       'aos %s (%s)' % (hms(na_mira[0][0] - inicio), na_mira[0][1]) if na_mira else '**nenhuma**'))
     criterios.append(('Aparições na mira / criadas pelo mod', '%d de %d' % (len(na_mira), do_mod)))
+    criterios.append(('Vezes em que quis mostrá-lo (criadas pelo mod + construções que acabaram sem ninguém)',
+                      '%d (%d + %d)' % (do_mod + len(sem_ninguem), do_mod, len(sem_ninguem))))
     criterios.append(('Formas diferentes entre as vistas', ', '.join(sorted(set(f for _, f in na_mira))) or '—'))
     criterios.append(('Sinais com lugar seguidos de algo ali em até 2 min', '%d de %d' % (seguidos, len(sinais))))
     criterios.append(('Saídas fortes (evento de 22 ou mais ou da sequência de ameaça, cena, contato visto, caçada, captura, Véu)', str(len(fortes_t))))
@@ -528,6 +600,18 @@ def analisar(linhas, jogador, caminho):
     if mundo_novo and jogado >= limite and not visto_cedo:
         alertas.append('**Mundo novo e nenhuma aparição na mira dele até os 30 minutos de jogo** (o prazo do primeiro contato é aos 25, '
                        'com cinco de folga). Houve %d tentativa(s).' % tentativas)
+    if sem_ninguem:
+        quais = collections.Counter(nome for _, nome, _ in sem_ninguem)
+        alertas.append('**%d construção(ões) acabaram sem ninguém (SEM_LUGAR): %s.** É o "cadê o bicho?". %s' % (
+            len(sem_ninguem), ', '.join('%s %d' % q for q in quais.most_common()),
+            'A última, aos %s: `%s`.' % (hms(sem_ninguem[-1][0] - inicio), sem_ninguem[-1][2]) if sem_ninguem[-1][2]
+            else 'O log não tem a linha `LUGAR falhou` junto delas (versão anterior à alpha19).'))
+    if do_mod + len(sem_ninguem) >= 4 and len(na_mira) * 2 < do_mod + len(sem_ninguem):
+        alertas.append('**Ele teve a criatura na mira em %d de %d vezes que o mod quis mostrá-la** (%d criadas, %d sem lugar). '
+                       'Referência: duas em cada três.' % (len(na_mira), do_mod + len(sem_ninguem), do_mod, len(sem_ninguem)))
+    if sum(corpo_falhou.values()) >= 6:
+        alertas.append('A seleção de um evento com corpo falhou %d vezes (%s): veja a seção "Por que não achou lugar".' % (
+            sum(corpo_falhou.values()), ', '.join('%s %d' % c for c in corpo_falhou.most_common())))
     if horas_sem_forte:
         alertas.append('**%d trecho(s) de uma hora (ou de 40 minutos, numa sessão curta), da fase 1 em diante, sem nenhuma saída forte.** É o "parado" que ele sentiu em 09/10.' % len(horas_sem_forte))
     if len(saidas) >= 9 and parte_conta > 1 / 3.0:

@@ -171,6 +171,7 @@ final class CenaAlgoNoTunel {
 					e.cenaTunelDesde = seg;
 				} else if (seg - e.cenaTunelDesde > 30) {
 					Depuracao.log(p, seg, "CENA id=" + e.cenaTunelId + " etapa=PRESENCA SEM_LUGAR");
+					Diretor.logarFaltaDeLugar(p, e, seg);
 					silencioCenaTunel(p, e, seg, rnd);
 				}
 			}

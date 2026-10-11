@@ -95,6 +95,7 @@ final class CenaLinhaDasArvores {
 					e.cenaCampoDesde = seg;
 				} else if (seg - e.cenaCampoDesde > 35) {
 					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=PRIMEIRA SEM_LUGAR");
+					Diretor.logarFaltaDeLugar(p, e, seg);
 					silencioCenaCampo(p, e, seg, rnd);
 				}
 			}
@@ -123,6 +124,7 @@ final class CenaLinhaDasArvores {
 					e.cenaCampoDesde = seg;
 				} else if (seg - e.cenaCampoDesde > 35) {
 					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=SEGUNDA SEM_LUGAR");
+					Diretor.logarFaltaDeLugar(p, e, seg);
 					silencioCenaCampo(p, e, seg, rnd);
 				}
 			}

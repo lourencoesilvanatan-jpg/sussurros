@@ -241,6 +241,23 @@ public final class ComandoSussurros {
 						: "[Sussurros] Não achei lugar para ele aparecer."), false);
 				return 1;
 			}));
+			// A aparição de perto, num lugar apertado (para as fotos do teste de cliente).
+			LiteralArgumentBuilder<CommandSourceStack> dePerto = Commands.literal("deperto");
+			for (boolean parado : new boolean[] {false, true}) {
+				com.mojang.brigadier.Command<CommandSourceStack> acao = ctx -> {
+					String achado = Diretor.dePertoParaTeste(ctx.getSource().getPlayerOrException(), parado);
+					ctx.getSource().sendSuccess(() -> Component.literal(achado != null
+							? "[Sussurros] Ele está perto, fora da tela (" + achado + ")."
+							: "[Sussurros] Não achei lugar apertado para ele aqui. O log diz o que faltou."), false);
+					return 1;
+				};
+				if (parado) {
+					dePerto.then(Commands.literal("parado").executes(acao));
+				} else {
+					dePerto.executes(acao);
+				}
+			}
+			teste.then(dePerto);
 			teste.then(Commands.literal("miragem")
 					.executes(ctx -> {
 						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), false);

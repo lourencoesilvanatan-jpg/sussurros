@@ -1,6 +1,11 @@
 """Desenha os blocos em volta de um ponto de um mundo salvo (SPOILERS: mostra a base do dono).
 
     python -I ferramentas/log/ler_mundo.py <cópia de r.X.Z.mca> x y z [raio]
+    python -I ferramentas/log/ler_mundo.py exportar <cópia de r.X.Z.mca> x0 y0 z0 x1 y1 z1 <saída.txt>
+
+O segundo jeito (0.9.0-alpha19) grava uma caixa de blocos num arquivo que um teste de servidor monta
+(src/gametest/resources/terrenos e Terreno.java): o que depende de terreno passa a ser testado no chão em que
+o dono jogou, e não num gramado raspado. O arquivo não leva as coordenadas de origem.
 
 Serve para conferir, contra o terreno em que o dono jogou de verdade, por que alguma coisa não achou lugar
 (foi assim que apareceu, em 11/10/2026, que capim e flor derrubavam toda a procura de lugar do mod).
@@ -167,7 +172,48 @@ def simbolo(nome):
     return '#'
 
 
+def exportar(caminho, x0, y0, z0, x1, y1, z1, saida):
+    """Grava uma caixa de blocos num arquivo de texto que um teste de servidor monta (ver Terreno.java).
+
+    Só os nomes dos blocos, em ordem (y, depois z, depois x), com repetições agrupadas. As coordenadas do mundo
+    de origem NÃO vão para o arquivo: o repositório é público, e o lugar da base do dono não é da conta de ninguém.
+    As propriedades dos blocos (lado da tocha, metade da porta) também não vão: o teste monta sem atualizar os
+    vizinhos, e para saber onde alguém cabe basta o bloco.
+    """
+    partes = caminho.replace('\\', '/').split('/')[-1].split('.')
+    reg = Regiao(caminho, int(partes[1]), int(partes[2]))
+    x0, x1 = min(x0, x1), max(x0, x1)
+    y0, y1 = min(y0, y1), max(y0, y1)
+    z0, z1 = min(z0, z1), max(z0, z1)
+    paleta = {}
+    corridas = []
+    for y in range(y0, y1 + 1):
+        for z in range(z0, z1 + 1):
+            for x in range(x0, x1 + 1):
+                nome = reg.bloco(x, y, z)
+                if nome == '?':
+                    raise SystemExit('a caixa sai do arquivo de região em x=%d z=%d: escolha uma caixa que caiba em %s' % (x, z, caminho))
+                indice = paleta.setdefault(nome, len(paleta))
+                if corridas and corridas[-1][0] == indice:
+                    corridas[-1][1] += 1
+                else:
+                    corridas.append([indice, 1])
+    with io.open(saida, 'w', encoding='utf-8', newline='\n') as arquivo:
+        arquivo.write('# Terreno de teste exportado por ferramentas/log/ler_mundo.py. Sem coordenadas do mundo de origem.\n')
+        arquivo.write('tamanho %d %d %d\n' % (x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1))
+        arquivo.write('paleta %d\n' % len(paleta))
+        for nome, indice in sorted(paleta.items(), key=lambda par: par[1]):
+            arquivo.write('%d %s\n' % (indice, nome))
+        arquivo.write('blocos %d\n' % len(corridas))
+        for i in range(0, len(corridas), 16):
+            arquivo.write(' '.join('%d*%d' % (indice, vezes) for indice, vezes in corridas[i:i + 16]) + '\n')
+    print('%d x %d x %d blocos, %d tipos, em %s' % (x1 - x0 + 1, y1 - y0 + 1, z1 - z0 + 1, len(paleta), saida))
+
+
 if __name__ == '__main__':
+    if sys.argv[1] == 'exportar':
+        exportar(sys.argv[2], *[int(v) for v in sys.argv[3:9]], sys.argv[9])
+        sys.exit(0)
     caminho = sys.argv[1]
     x0, y0, z0 = int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
     raio = int(sys.argv[5]) if len(sys.argv) > 5 else 12
