@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha17: a primeira parte do que você pediu depois da sessão de 10 e 11/10. Não tem coisa nova para achar: muda o jeito como uma parte do que já existe acontece. Vale o teste descrito abaixo, no **mesmo mundo**. Uma pergunta só para esta versão, para responder depois de jogar: **alguma coisa que você viu pareceu "de boneco", artificial no jeito de se mexer?**
+
 Versão 0.9.0-alpha16: consertos num momento das fases mais avançadas, que uma sessão de uma hora num mundo novo não alcança. Não muda nada no que você precisa fazer.
 
 Versão 0.9.0-alpha15: consertos em cima da alpha14, achados numa revisão antes de você jogar. Não muda nada no que você precisa fazer: vale o roteiro abaixo.

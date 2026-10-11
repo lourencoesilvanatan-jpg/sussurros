@@ -172,6 +172,14 @@ Três peças pequenas e uma média, todas em cima do que existe. Valem as regras
 
 ---
 
+### Respostas do dono (11/10/2026) e o que foi feito
+
+1. A base tem janela de vidro, "mas tem outros lugares com janela pois estou numa vila".
+2. "Fechei pra dormir": o fim da primeira parte não teve a ver com o contato.
+3. "Linha proteção? rádio pra acalmar a criatura? osso alguns formatos indicam algo da criatura? e o resto não lembro." Os três que ele usou, com a ideia certa (o "rádio" é a Caixa de Música); dos que só teve na mão, nada ficou.
+
+A etapa 1 (5.1 e 5.2) entrou na 0.9.0-alpha17. O que saiu diferente do escrito acima: a saída `FICA` com a cabeça inclinada ficou para depois (pede mexer no modelo e foto); no lugar dela, toda saída andando segura o olhar de 0,4 a 1 segundo antes de virar. A etapa 2 (5.3) não foi começada.
+
 ## 7. Limites
 
 - Uma sessão, um jogador, em duas partes. O que digo sobre o que ele sentiu é inferência do log, fora as frases dele.

@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha17
+
+Primeira parte do que foi pedido depois da sessão de 10 e 11/10: uma parte do que o mod já fazia passa a acontecer mais cedo e a terminar de um jeito menos previsível. Não entra coisa nova para achar.
+
 ## 0.9.0-alpha16
 
 Consertos na caçada: fecha maneiras de escapar dela sem esforço nenhum, e torna mais justo o modo como ele alcança o jogador. Fugir para longe continua valendo. Não entra nada novo.

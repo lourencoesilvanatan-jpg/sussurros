@@ -780,3 +780,15 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 - `atalho ... de=` menor que 16: é o atalho da zona morta (de 8 a 16 blocos, três segundos sem caminho). Antes o atalho só existia acima de 16.
 - Depois de `ATRAVESSOU_VAZIO` ele fica 30 ticks parado. Não há linha para isso: a captura por `TOCOU`, se vier, vem pelo menos um segundo e meio depois.
 - `CAPTURA deslocou ... para=-` num pilar alto é esperado: a mais de 10 blocos do chão a captura não acha para onde levar.
+
+## 0.9.0-alpha17 — a saída andando e a janela
+
+```
+[2294s][Jogador] HOSPEDE id=M021 saida=RECUA dist=17.5 para=(-268,64,656) escondido=nao
+[2298s][Jogador] HOSPEDE id=M021 sumiu motivo=FOI_EMBORA viveu=5s dist=20.9 vezesNaTela=1 reposicoes=0
+[3120s][Jogador] CENA tipo=DO_OUTRO_LADO_DO_VIDRO pulada motivo=SEM_JANELA
+```
+
+- `saida=RECUA`: visto, ele começou a ir embora andando. `para` é o lugar escolhido; `escondido=sim` quer dizer que dali o jogador não o vê (árvore, parede, fora do quadro da janela). Sem essa linha, a aparição acabou como sempre.
+- `sumiu motivo=FOI_EMBORA`: o fim de uma saída andando. Se ele ainda estava à vista (campo aberto, ao fim de oito segundos), dissolveu; senão, só deixou de estar lá.
+- `pulada motivo=SEM_JANELA`: era a hora de uma chance da cena da janela e não havia vidro a 12 blocos do jogador. Aparece no máximo uma vez a cada dois minutos em casa.

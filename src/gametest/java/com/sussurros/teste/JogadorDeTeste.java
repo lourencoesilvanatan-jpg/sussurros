@@ -47,9 +47,24 @@ public final class JogadorDeTeste {
 		return criar(helper, modo, relativo.x, relativo.y, relativo.z);
 	}
 
-	/** O primeiro bloco de ar acima do chão, numa coluna relativa à origem da estrutura do teste. */
+	/**
+	 * A origem de todas as colunas: a estrutura do primeiro teste que pediu um chão. Uma só para a execução
+	 * inteira, e não a de cada teste, porque o jogo espalha as estruturas numa grade (15 blocos de um teste ao
+	 * seguinte, 17 de uma fileira à outra) e com sessenta testes a grade tem mais de cem blocos de fundo: contado
+	 * a partir de cada estrutura, um teste em dz=-5000 ficava a quinze blocos de outro em dz=-5100, e a criatura
+	 * de um apagava o lampião do outro.
+	 */
+	private static BlockPos origemDasColunas;
+
+	/**
+	 * O primeiro bloco de ar acima do chão, numa coluna contada a partir da origem comum (ver acima). Dois
+	 * testes com dz diferentes em cem ficam a cem blocos um do outro, estejam onde estiverem na grade.
+	 */
 	public static BlockPos chao(GameTestHelper helper, int dx, int dz) {
-		BlockPos coluna = helper.absolutePos(new BlockPos(dx, 0, dz));
+		if (origemDasColunas == null) {
+			origemDasColunas = helper.absolutePos(BlockPos.ZERO);
+		}
+		BlockPos coluna = origemDasColunas.offset(dx, 0, dz);
 		// Carrega o chunk antes de perguntar a altura: num chunk ainda não carregado a resposta é o fundo do
 		// mundo, e o jogador nasceria dentro da rocha-mãe (acontecia às vezes, longe da estrutura do teste).
 		helper.getLevel().getChunk(coluna);

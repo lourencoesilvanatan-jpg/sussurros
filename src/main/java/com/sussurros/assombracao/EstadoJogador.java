@@ -325,6 +325,8 @@ final class EstadoJogador {
 	/** Segundo a partir do qual o contato pode ser tentado de novo. */
 	long contatoProximaTentativa;
 	// --- O que o jogador já teve na mão (0.9.0-alpha14, ver Ensino) ---
+	/** A última presença comum deste jogador foi das que vão embora andando: a seguinte não é. */
+	boolean ultimaPresencaRecuou;
 	/** Há uma página de item para entregar a partir deste segundo; -1 se não há. */
 	long paginaDeItemApos = -1;
 	/** Quantas páginas de item foram deixadas desde a última leitura dele: nunca mais do que as pedidas. */

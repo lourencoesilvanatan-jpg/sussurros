@@ -17,7 +17,13 @@ import com.sussurros.registro.ModSons;
 
 /**
  * Cena "Do outro lado do vidro" (0.5.0-alpha4): à noite, em casa, o Hóspede aparece do lado de fora
- * de uma janela real. Vê-lo o faz sumir; não vê-lo permite um estalo no vidro antes do fim.
+ * de uma janela real. Não vê-lo permite um estalo no vidro antes do fim.
+ *
+ * 0.9.0-alpha17: visto, ele não some: vai embora andando, de lado, para fora do quadro da janela (ver
+ * HospedeEntity.Saida; sem lugar para ir, some como antes). E a cena vale da fase 2 em diante, depois do
+ * primeiro contato, com a primeira chance aos 45 segundos em casa. Na sessão de 10 e 11/10/2026 o dono pediu
+ * exatamente esta cena sem saber que ela existia: a fase 3 veio aos 50 minutos, e ele nunca ficou os dois
+ * minutos seguidos em casa que a primeira chance pedia.
  *
  * O Diretor chama verificar/conduzir a cada segundo. O estado da cena fica em {@link EstadoJogador};
  * manifestação e sons ainda vêm dos helpers do Diretor.
@@ -29,7 +35,17 @@ final class CenaDoOutroLadoDoVidro {
 	private record JanelaAlvo(BlockPos vidro, BlockPos chao) {
 	}
 
-	static void verificarCenaJanela(ServerLevel level, ServerPlayer p, EstadoJogador e, int fase,
+	/** A cena vale da fase 3 em diante, ou da fase 2 para quem já teve o primeiro contato. */
+	static boolean faseServe(int fase, boolean contatoFeito) {
+		return fase >= 3 || (fase == 2 && contatoFeito);
+	}
+
+	/** As chances da cena: aos 45 segundos seguidos em casa, e depois a cada dois minutos. */
+	static boolean horaDaChance(long segundosEmCasa) {
+		return segundosEmCasa >= 45 && (segundosEmCasa - 45) % 120 == 0;
+	}
+
+	static void verificarCenaJanela(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase,
 			boolean noite, boolean calma, long seg, RandomSource rnd) {
 		if (e.cenaJanela != EstadoJogador.CenaJanela.NENHUMA
 				|| e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA
@@ -38,7 +54,7 @@ final class CenaDoOutroLadoDoVidro {
 				|| e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA) {
 			return;
 		}
-		if (fase < 3 || !noite || calma || e.contexto != ContextoMundo.Tipo.CASA
+		if (!faseServe(fase, PrimeiroContato.feito(m)) || !noite || calma || e.contexto != ContextoMundo.Tipo.CASA
 				|| e.estado == EstadoDiretor.AMEACANDO || e.estado == EstadoDiretor.RECUANDO
 				|| seg < e.cenaJanelaLiberadaEm) {
 			return;
@@ -46,16 +62,17 @@ final class CenaDoOutroLadoDoVidro {
 		if (e.criatura != null && !e.criatura.isRemoved()) {
 			return;
 		}
-		if (e.contextoDesde < 0 || seg - e.contextoDesde < 45) {
+		if (e.contextoDesde < 0 || !horaDaChance(seg - e.contextoDesde)) {
 			return;
 		}
 		Diretor.atualizarCacheAmbiente(level, p, e);
 		if (e.janelas.isEmpty()) {
+			// Só para o log: sem isto não dá para saber se a cena nunca veio por sorteio ou porque a casa não tem vidro.
+			Depuracao.log(p, seg, "CENA tipo=DO_OUTRO_LADO_DO_VIDRO pulada motivo=SEM_JANELA");
 			return;
 		}
 		double chance = e.cenasJanelaFeitas == 0 ? 0.48 : 0.18;
-		// Só uma oportunidade a cada ~2 minutos em casa, mesmo antes do cooldown longo.
-		if ((seg - e.contextoDesde) % 120 != 0 || rnd.nextDouble() >= chance) {
+		if (rnd.nextDouble() >= chance) {
 			return;
 		}
 		iniciarCenaJanela(p, e, seg, rnd, false);
@@ -107,6 +124,10 @@ final class CenaDoOutroLadoDoVidro {
 				pedido = pedido.comNota("JANELA vidro=" + alvo.vidro());
 				
 					Diretor.criar(level, p, e, alvo.chao(), HospedeEntity.Modo.OBSERVAR, 20 * 35, 1.0, 2.6, pedido);
+				// Visto pela janela, ele vai embora andando. Aqui vale também de perto: o vidro e a parede o enquadram.
+				if (e.criatura != null) {
+					e.criatura.definirSaida(HospedeEntity.Saida.RECUA, 0.0);
+				}
 
 				e.cenaJanelaPos = alvo.vidro();
 				e.cenaJanela = EstadoJogador.CenaJanela.OBSERVANDO;
@@ -119,6 +140,9 @@ final class CenaDoOutroLadoDoVidro {
 				if (!presente) {
 					silencioCenaJanela(p, e, seg, rnd);
 					return;
+				}
+				if (h.estaIndoEmbora()) {
+					return; // foi visto e está saindo andando: a cena espera ele sumir sozinho
 				}
 				boolean naDirecao = Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), Percepcao.conePercebeu(p));
 				if (naDirecao) {
@@ -152,6 +176,9 @@ final class CenaDoOutroLadoDoVidro {
 			case TOQUE -> {
 				if (!presente) {
 					silencioCenaJanela(p, e, seg, rnd);
+					return;
+				}
+				if (h.estaIndoEmbora()) {
 					return;
 				}
 				if (Diretor.pontoNaFrente(p, h.position().add(0, 1.4, 0), Percepcao.conePercebeu(p))) {
