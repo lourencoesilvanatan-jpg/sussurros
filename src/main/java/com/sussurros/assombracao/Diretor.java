@@ -730,7 +730,7 @@ public final class Diretor {
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
 			CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
 			CenaFoiAqui.verificarCenaMarco(p, e, fase, calma, seg, rnd);
-			CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, e, fase, noite, calma, seg, rnd);
+			CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, m, e, fase, noite, calma, seg, rnd);
 			String depois = cenaAtiva(e);
 			if (!depois.equals(antes)) {
 				Atencao.gastar(p, e, "cena:" + depois, Atencao.CENA, seg);
@@ -1531,6 +1531,7 @@ public final class Diretor {
 				}
 				if (ok) {
 					anunciar(level, p, e.criatura);
+					escolherSaida(m, e);
 				}
 			}
 			case ESPREITA -> ok = invocarEspreita(level, p, e, ousadia, seg, pedido);
@@ -2458,6 +2459,24 @@ public final class Diretor {
 		// TODO: a nota da estratégia já era uma reatribuição local sem efeito para o chamador; bug pré-existente.
 
 		return new double[] {min, max};
+	}
+
+	/**
+	 * A presença comum, às vezes, vai embora andando em vez de sumir (ver HospedeEntity.Saida): uma em três,
+	 * nunca duas seguidas, só depois do primeiro contato (ou da fase 3, quando nada mais espera por ele) e só
+	 * a mais de 14 blocos (de perto, andando, ele parece um boneco). O sorteio sai do ID da manifestação.
+	 * Forçada por comando, é sempre a de sempre.
+	 */
+	private static void escolherSaida(Memoria m, EstadoJogador e) {
+		HospedeEntity h = e.criatura;
+		if (h == null || e.forcando || !PrimeiroContato.liberado(m)) {
+			return;
+		}
+		boolean recua = !e.ultimaPresencaRecuou && h.numeroDoId() % 3 == 0;
+		e.ultimaPresencaRecuou = recua;
+		if (recua) {
+			h.definirSaida(HospedeEntity.Saida.RECUA, 14.0);
+		}
 	}
 
 	/**
@@ -3694,7 +3713,7 @@ public final class Diretor {
 			return;
 		}
 		boolean qualificou = confronto || (percebida && ("VISTO_DEMAIS".equals(motivo) || "SUMIU_NO_DESVIO".equals(motivo)
-				|| "CHEGOU_PERTO".equals(motivo) || "TEMPO_ESGOTADO".equals(motivo)));
+				|| "CHEGOU_PERTO".equals(motivo) || "TEMPO_ESGOTADO".equals(motivo) || "FOI_EMBORA".equals(motivo)));
 		if (!qualificou) {
 			return;
 		}

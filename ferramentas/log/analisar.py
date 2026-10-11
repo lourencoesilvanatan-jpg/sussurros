@@ -79,6 +79,7 @@ PROBLEMAS = [
     ('carta adiada', re.compile(r'^BARALHO carta=(\S+) adiada')),
     ('carta que não coube', re.compile(r'^BARALHO carta=(\S+) efeito=nao_coube')),
     ('captura sem destino', re.compile(r'^CAPTURA deslocou .* para=- ')),
+    ('cena da janela sem vidro por perto', re.compile(r'^CENA tipo=DO_OUTRO_LADO_DO_VIDRO pulada motivo=SEM_JANELA')),
 ]
 
 
@@ -297,6 +298,11 @@ def analisar(linhas, jogador, caminho):
         out.append('')
         motivos = collections.Counter(s[0] for s in sumicos)
         out.append('Como sumiu: ' + ', '.join('%s %d' % (mo, n) for mo, n in motivos.most_common()) + '.')
+        out.append('')
+        # 0.9.0-alpha17: a exceção ao relance. Quantas vezes, visto, ele foi embora andando em vez de sumir.
+        recuou = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ saida=RECUA', texto))
+        escondido = sum(1 for _, texto in linhas if re.match(r'^HOSPEDE id=\S+ saida=RECUA .*escondido=sim', texto))
+        out.append('Foi embora andando em vez de sumir: %d vez(es); em %d delas tinha onde sair da vista.' % (recuou, escondido))
         out.append('')
     exposicao = [re.match(r'^EXPOSICAO .*naTela=(\d+)t perto=(\d+)t', texto) for _, texto in linhas]
     exposicao = [m for m in exposicao if m]

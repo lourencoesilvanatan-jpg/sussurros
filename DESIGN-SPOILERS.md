@@ -1329,3 +1329,61 @@ Sem teste: a água funda (o mundo de teste é plano e raso; conferido só lendo)
 ## Medição
 
 Sessão sintética de uma hora, três jogadores de mentira: duas caçadas, as duas terminadas por toque, sem nada fora do lugar; ritmo na mesma faixa das medições anteriores (30, 39 e 49 saídas por hora). Jogador de mentira não usa truque nenhum: o que esta versão muda só aparece nos testes de servidor e, depois, numa caçada de verdade.
+
+---
+# Versão 0.9.0-alpha17 — ele nem sempre some
+
+É a etapa 1 de `pesquisa/2026-10-11-sessao-e-interacoes.md` (seções 5.1 e 5.2), pedida pelo dono com as palavras dele depois da sessão de 10 e 11/10: "ele realmente aparecer na janela do nada sem avisar, e sair indo pro lado e não sumindo". Naquela hora de jogo ele viu a criatura por dois segundos somados, em três relances.
+
+## A saída andando
+
+Toda aparição de observação acabava dissolvendo no instante em que era olhada. Isso continua sendo a regra (foi o que ele pediu em 08/10: "será que eu vi?"). A exceção nova, `HospedeEntity.Saida.RECUA`:
+
+1. visto o bastante para sumir, ele **não some**: segura o olhar de 0,4 a 1 segundo;
+2. vira e vai embora andando, a 3 blocos por segundo, **de lado** em relação ao jogador, para um lugar a 3,5 a 9 blocos, de preferência onde o jogador deixa de vê-lo (atrás de uma árvore, de uma parede, fora do quadro da janela);
+3. meio segundo depois de sair da vista, ele não está mais lá, sem dissolver;
+4. se chega ao lugar e continua à vista (campo aberto), anda mais dez blocos, de costas para o jogador; ao fim de oito segundos, ou travado, dissolve como antes;
+5. onde ele parou podem ficar o vestígio e a cinza, pela mesma regra de quem some visto.
+
+Quem escolhe o lugar é `assombracao/Retirada`: testa o caminho antes, não gasta o sorteio do mundo (o lado e o tempo de segurar o olhar saem do ID da manifestação) e, sem lugar, devolve nada: aí ele some como sempre. Correr para cima dele continua valendo o "chegou perto, ele não está mais lá".
+
+**Quem tem a saída andando:**
+
+- **a cena da janela**, sempre (ver abaixo);
+- **a presença comum** (`PRESENCA` sorteada pelo Diretor): uma em três, nunca duas seguidas, só depois do primeiro contato (ou da fase 3) e só com ele a mais de 14 blocos (de perto, andando, ele parece um boneco).
+
+Ficam como estavam: o primeiro contato, o vulto distante (que o dono aprovou), o "atrás de você", a espreita, as outras cenas e a caçada.
+
+## A janela, mais cedo
+
+A cena "Do outro lado do vidro" existe desde a 0.5 e não anuncia nada. O dono a pediu sem saber que existia, porque não chegou nela: pedia fase 3 (veio aos 50 minutos) e, na prática, dois minutos seguidos em casa, de noite; na fase 3 a estadia mais longa dele em casa foi de 86 segundos.
+
+| | Antes | Agora |
+|---|---|---|
+| Fase | 3 | 2, para quem já teve o primeiro contato; 3 para os outros |
+| Primeira chance numa estadia em casa | aos 120 s | aos 45 s; depois a cada 120 s |
+| Visto pelo vidro | dissolve | sai andando ao longo da parede, para fora do quadro |
+| Sem vidro a 12 blocos | nada, em silêncio | nada, com a linha `pulada motivo=SEM_JANELA` |
+
+De noite, em casa e com o descanso de 25 minutos entre uma e outra: como antes. O estalo no vidro para quem não olha: como antes.
+
+O dono mora numa vila: há vidro nas casas vizinhas, e a cena as usa quando ficam a até 12 blocos dele. Mas só com ele na casa dele (contexto `CASA`).
+
+## O que ele respondeu em 11/10 (pesquisa de 11/10, seção 6)
+
+- A base tem janela de vidro, e as casas em volta também.
+- Fechou o jogo em 10/10 "pra dormir", não por causa do contato.
+- Para que serve cada item: "linha proteção? rádio pra acalmar a criatura? osso alguns formatos indicam algo da criatura? e o resto não lembro". São os três que ele usou, e os três com a ideia certa. Da Vela e da Cinza, que ele teve na mão e leu a página, não ficou nada. **Usar ensina; a página sozinha, não.** (O "rádio" é a Caixa de Música.)
+
+## Os testes
+
+- JUnit: `CenaDoOutroLadoDoVidroTest` (a fase e a hora da chance).
+- Servidor, três novos em `TestesDasAparicoes` (59 no total): no campo aberto ele vai embora andando, continua existindo enquanto é olhado e some quando deixa de ser; sem a saída andando, o relance continua igual; e pela janela, com parede e vidro de verdade, ele sai de lado sem dissolver.
+
+Sem teste: o sorteio de uma em três na presença comum (está só lido), e a aparência do andar. O modelo tem animação de caminhada, que a caçada já usa, mas ninguém o viu andar devagar e de pé: **é a primeira coisa a perguntar ao dono**, e a primeira a rever se parecer um boneco deslizando.
+
+**Os testes ganharam uma origem só.** Com sessenta testes, a grade em que o jogo espalha as estruturas passou dos cem blocos de fundo, e dois testes em colunas "a cem blocos" uma da outra ficavam a quinze: a criatura de uma caçada de teste apagou o lampião da Casa do Vigia de outro teste (`aCasaMudaQuandoEleVaiEmbora`, uma falha em cinco execuções). `JogadorDeTeste.chao` passou a contar todas as colunas a partir da estrutura do primeiro teste. A regra de uma coluna por teste, escrita na alpha16, só vale de verdade com isto.
+
+## O que ficou para a etapa 2
+
+A `afronta` (seção 5.3 da pesquisa): o que o jogador faz com ele ter resposta na hora. E a inclinação de cabeça antes de sair, que pede mexer no modelo e foto.

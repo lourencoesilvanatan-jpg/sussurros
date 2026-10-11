@@ -22,6 +22,7 @@ import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Evento;
 import com.sussurros.assombracao.Percepcao;
+import com.sussurros.assombracao.Retirada;
 import com.sussurros.registro.ModSons;
 
 /**
@@ -97,6 +98,21 @@ public class HospedeEntity extends PathfinderMob {
 	private static final int LIMITE_VISTO_NO_CONTATO = 36;
 
 	/**
+	 * Como ele vai embora quando foi visto demais, no modo de observar.
+	 *
+	 * SOME é o relance de sempre: dissolve no instante em que é olhado. É a regra, e foi o que o dono pediu em
+	 * 08/10/2026 ("será que eu vi?"). RECUA é a exceção: em vez de dissolver, ele segura o olhar por meio
+	 * segundo, vira e vai embora andando, de lado, para onde o jogador deixa de vê-lo; só é retirado depois de
+	 * sair da vista. Sem lugar para ir, ou perto demais, ele some como sempre.
+	 */
+	public enum Saida {
+		SOME, RECUA
+	}
+
+	/** A retirada dura no máximo isto depois de ele virar (ticks). Ainda à vista quando acaba, ele dissolve. */
+	private static final int TETO_DA_RETIRADA = 160;
+
+	/**
 	 * Quantos ticks seguidos na mira do jogador, com luz para enxergá-lo, fazem o primeiro contato valer como
 	 * visto (0,3 s). Uma virada de câmera que passa por ele dá dois ou três; quem parou para olhar dá muito mais.
 	 */
@@ -142,6 +158,19 @@ public class HospedeEntity extends PathfinderMob {
 	private int contatoMira = 0;         // contato: ticks seguidos na mira dele, com luz (cai um por tick fora dela)
 	private boolean contatoVisto = false; // contato: já esteve na mira por tempo bastante para valer
 	private int ticksNaMira = 0;         // contato, só para o log: quantos ticks ao todo esteve na mira, com luz
+
+	// A saída (0.9.0-alpha17): isto é comportamento. Ver Saida.
+	private Saida saida = Saida.SOME;
+	private double distMinimaDaRetirada = 0.0; // mais perto do jogador que isto, ele some em vez de andar
+	private int retirada = -1;                 // ticks desde que começou a ir embora; -1: não começou
+	private int seguraAntes = 0;               // ticks em que ainda fica parado olhando antes de virar
+	private int trechosDaRetirada = 0;
+	private int semSerVistoNaRetirada = 0;
+	private int paradoNaRetirada = 0;
+	@Nullable
+	private Vec3 destinoDaRetirada;
+	@Nullable
+	private Vec3 ultimaPosNaRetirada;
 
 	// Espreita
 	private int reposicoes = 0;
@@ -267,6 +296,33 @@ public class HospedeEntity extends PathfinderMob {
 	/** Só para o log. */
 	public int getTicksNaMira() {
 		return this.ticksNaMira;
+	}
+
+	/** Escolhe a saída desta aparição. distMinima: a menos disto do jogador, andando, ele pareceria um boneco. */
+	public void definirSaida(Saida saida, double distMinima) {
+		this.saida = saida;
+		this.distMinimaDaRetirada = distMinima;
+	}
+
+	public Saida getSaida() {
+		return this.saida;
+	}
+
+	/** Foi visto e está indo embora andando. Quem conduz uma cena não deve fazê-lo sumir por cima disso. */
+	public boolean estaIndoEmbora() {
+		return this.retirada >= 0;
+	}
+
+	/** O número do ID da manifestação ("M013" dá 13). Serve de sorteio que não gasta o gerador do mundo. */
+	public int numeroDoId() {
+		int n = 0;
+		for (int i = 0; i < this.idManifestacao.length(); i++) {
+			char c = this.idManifestacao.charAt(i);
+			if (c >= '0' && c <= '9') {
+				n = n * 10 + (c - '0');
+			}
+		}
+		return n;
 	}
 
 	/** Já foi olhada direto alguma vez. */
@@ -659,13 +715,16 @@ public class HospedeEntity extends PathfinderMob {
 	}
 
 	private void tickObservar(ServerLevel level, boolean percebido, boolean encarado, double distSqr) {
-		this.ficarParadoOlhando();
-
-		// Se você chegar perto, ele não está mais lá.
+		// Se você chegar perto, ele não está mais lá. Vale também para quem corre atrás dele enquanto ele sai.
 		if (distSqr < this.distSumir * this.distSumir) {
 			this.sumir(level, true, "CHEGOU_PERTO");
 			return;
 		}
+		if (this.retirada >= 0) {
+			this.tickRetirada(level, percebido);
+			return;
+		}
+		this.ficarParadoOlhando();
 
 		// Enquanto ele é tímido, basta olhar direto e desviar: quando o jogador olha de novo, ele não está
 		// mais lá. Sumir fora da tela é o que deixa a dúvida ("será que eu vi?").
@@ -691,7 +750,75 @@ public class HospedeEntity extends PathfinderMob {
 			if (!this.contato || this.contatoVisto) {
 				Diretor.criaturaFoiVista(this.alvo, this);
 			}
+			// A exceção ao relance: em vez de dissolver, ele vai embora andando (ver Saida).
+			if (this.saida == Saida.RECUA && !this.contato && this.comecarRetirada(level, distSqr)) {
+				return;
+			}
 			this.sumir(level, true, "VISTO_DEMAIS");
+		}
+	}
+
+	private boolean comecarRetirada(ServerLevel level, double distSqr) {
+		if (distSqr < this.distMinimaDaRetirada * this.distMinimaDaRetirada) {
+			return false;
+		}
+		Vec3 destino = Retirada.escolher(level, this.alvo, this);
+		if (destino == null) {
+			return false;
+		}
+		this.destinoDaRetirada = destino;
+		this.retirada = 0;
+		// Segura o olhar de 0,4 a 1 s antes de virar. Sai do ID, não do gerador do mundo.
+		this.seguraAntes = 8 + this.numeroDoId() % 13;
+		this.trechosDaRetirada = 1;
+		this.semSerVistoNaRetirada = 0;
+		this.paradoNaRetirada = 0;
+		this.ultimaPosNaRetirada = this.position();
+		return true;
+	}
+
+	/**
+	 * Indo embora: parado olhando por um instante, depois de costas, andando até o lugar escolhido. Assim que o
+	 * jogador deixa de vê-lo por meio segundo, ele não está mais lá (sem dissolver: ninguém está olhando). Se
+	 * chega ao lugar e continua à vista, anda mais um trecho, para longe. Travado, ou no fim do tempo, dissolve.
+	 */
+	private void tickRetirada(ServerLevel level, boolean percebido) {
+		this.retirada++;
+		if (this.retirada <= this.seguraAntes) {
+			this.ficarParadoOlhando();
+			return;
+		}
+		Vec3 destino = this.destinoDaRetirada;
+		if (destino == null) {
+			this.sumir(level, false, "FOI_EMBORA");
+			return;
+		}
+		this.setObservando(false);
+		if (this.retirada == this.seguraAntes + 1 || (this.retirada % 10 == 0 && this.getNavigation().isDone())) {
+			this.getNavigation().moveTo(destino.x, destino.y, destino.z, Cacada.modificadorPara(Retirada.VELOCIDADE));
+		}
+		this.semSerVistoNaRetirada = percebido ? 0 : this.semSerVistoNaRetirada + 1;
+		if (this.semSerVistoNaRetirada >= 10) {
+			this.sumir(level, false, "FOI_EMBORA");
+			return;
+		}
+		if (this.retirada % 20 == 0) {
+			Vec3 antes = this.ultimaPosNaRetirada;
+			this.paradoNaRetirada = antes != null && this.position().distanceToSqr(antes) < 0.09 ? this.paradoNaRetirada + 1 : 0;
+			this.ultimaPosNaRetirada = this.position();
+		}
+		boolean chegou = this.position().distanceToSqr(destino) < 1.5 * 1.5;
+		if (chegou && this.trechosDaRetirada < 2) {
+			Vec3 adiante = Retirada.maisLonge(level, this.alvo, this);
+			if (adiante != null) {
+				this.destinoDaRetirada = adiante;
+				this.trechosDaRetirada++;
+				this.getNavigation().moveTo(adiante.x, adiante.y, adiante.z, Cacada.modificadorPara(Retirada.VELOCIDADE));
+				return;
+			}
+		}
+		if (chegou || this.paradoNaRetirada >= 2 || this.retirada > this.seguraAntes + TETO_DA_RETIRADA) {
+			this.sumir(level, false, "FOI_EMBORA");
 		}
 	}
 
