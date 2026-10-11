@@ -1523,7 +1523,7 @@ Ganchos de teste novos no `Diretor`: `ameacaParaTeste`, `fimDaAmeacaParaTeste`, 
 
 ## Não verificado por ninguém
 
-- Se, de perto e abaixado, ele assusta ou vira boneco. As fotos mostram a pose parada; o instante em que o jogador vira e ele some, só jogando.
+- Se, de perto e abaixado, ele assusta ou vira boneco. As fotos mostram a pose parada (ver "As fotos", no fim); o instante em que o jogador vira e ele some, só jogando.
 - Os números: de 8 a 14 blocos, cinco blocos para sumir, os pesos da nota, os quatro blocos de teto. São ponto de partida, sem sessão.
 - Se, debaixo da terra, ele passa a aparecer demais. A presença comum tem o mesmo peso de antes; o que muda é que agora ela acha lugar. O analisador conta as que nasceram de perto: é o primeiro número a ler na próxima sessão.
 - O som do anúncio (dois passos vindos dele) a dez blocos, num túnel.
@@ -1537,3 +1537,13 @@ Sessão sintética de uma hora, três jogadores de mentira, em campo aberto (11/
 Uma execução só, e os números variam bastante de uma para outra. A sessão sintética não tem caverna: o que esta versão muda debaixo da terra só aparece nos testes de servidor e, depois, na sessão do dono.
 
 O alerta novo do analisador ("ele teve a criatura na mira em N de M vezes") dispara sempre para jogador de mentira, que não mira em nada. Vale para sessão de gente.
+
+## As fotos (40 a 42)
+
+Tiradas no túnel de teste, com a procura de verdade e ele no modo que não some (`/sussurros teste deperto parado`). Abri as três.
+
+- **40, a dez blocos, à luz da tocha da curva** (é o que o jogador vê ao virar): uma figura fina e escura no fim do túnel, ocupando a altura toda dele, com as pernas, os braços e a cabeça distinguíveis contra a pedra iluminada. Lê-se bem. O que **não** se lê é "abaixado": de frente, o tronco dobrado some atrás da cabeça, e ele parece só uma figura de dois blocos de altura.
+- **41, a quatro blocos, e 42, a mesma com o teto trocado por vidro**: a cabeça e os ombros, com os dois pontos pálidos dos olhos (esta manifestação os tinha). Não vi nada atravessado na parede.
+- **A cabeça passa do teto.** Pela conta do modelo, com o tronco dobrado a 72 graus o pescoço fica a 1,72 bloco do chão e o topo da cabeça a uns 2,3: um terço de bloco dentro do teto de dois blocos. A foto 42 é compatível com a conta (a cabeça chega à linha do teto). Não é desta versão (é a pose da caça, desde que ela existe), e de frente o próprio teto esconde; parado, ele está sempre de frente para o alvo. Aparece de lado (um segundo jogador, ou a caça passando) e por um teto de vidro. **Não mexi no modelo:** é mudança no desenho da caça, às cegas quanto ao perfil. Para quem for mexer (a ideia 2.7 pede uma pose nova de qualquer jeito): dobrar o tronco a 90 graus e erguer a cabeça 45 dá um topo a 1,95 bloco, e uma foto de perfil precisa de uma criatura que não vire para o jogador (a de hoje vira sempre).
+
+A câmera das fotos 41 e 42 olha um pouco para cima (o comando `facing entity ... eyes` mede a partir dos pés do jogador), e por isso ele aparece na metade de baixo da imagem.
