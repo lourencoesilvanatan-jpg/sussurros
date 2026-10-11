@@ -800,3 +800,29 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 ```
 
 Ele tinha a saída andando, foi visto, e não achou para onde ir: some como sempre, e esta linha diz por quê. `comChao=0` é terreno (nenhum dos lugares tem três blocos livres sobre chão firme); `comChao` maior que zero com `comCaminho=0` é caminho (há chão, mas ele não chega lá); `noChao=nao` quer dizer que ele estava no ar, e sem pé no chão o jogo não calcula caminho.
+
+## 0.9.0-alpha19 — de perto, o Véu nunca vazio e o motivo da falta de lugar
+
+```
+[94s][Jogador] HOSPEDE id=M034 criado origem=DIRETOR evento=ESPREITA modo=ESPREITAR pos=(x,y,z) dist=10.0 motivoPosicao=DE_PERTO dist=10.0 luz=sim quina=sim abaixado=sim candidatos=3 cena=C003 postura=ABAIXADO
+[141s][Jogador] LUGAR falhou RASTRO[vezes=29 semPonto=29] NORMAL[vezes=61 tentados=1220 semVisao=1220] DE_PERTO[vezes=61 celulas=2013 naFaixa=305 tela=305]
+[141s][Jogador] CENA id=C004 FIM motivo=SEM_LUGAR obsessao=60->48
+[90s][Jogador] VEU abriu duracao=43s luzes=0 porta=nao vidro=nao vulto=certo teste=nao
+[113s][Jogador] VEU vulto=sim tentativas=1
+[133s][Jogador] VEU vulto=nao_coube tentativas=18
+[410s][Jogador] OLHO aparicao=nao_coube
+```
+
+- `motivoPosicao=DE_PERTO`: ele nasceu pela procura de lugar apertado (de 8 a 14 blocos, onde dois blocos de altura bastam). `luz` diz se ali há luz para ele ser visto; `quina`, se há ao lado uma célula que o jogador não enxerga; `candidatos`, quantos lugares serviam. O `dist=` que conta para o analisador é o primeiro da linha.
+- `postura=ABAIXADO` ou `DE_PE`, em toda linha `criado`: fora da caça ele se dobra onde o teto só deixa dois blocos. Na caça a linha diz sempre `DE_PE`; ali quem decide é o teto de cada instante.
+- `LUGAR falhou`: por que as procuras de lugar não acharam nada desde a linha `LUGAR falhou` anterior. Um bloco por procura; `vezes` é quantas vezes ela rodou sem achar; os zeros ficam de fora. Sai logo depois de `SELECAO falhou`, logo antes do `FIM` de uma sequência de ameaça e depois do `SEM_LUGAR` de uma cena, de `VEU vulto=nao_coube` e de `OLHO aparicao=nao_coube`; no primeiro contato, a cada doze procuras falhadas (um minuto).
+  - `NORMAL` e `COBERTURA` (a procura de sempre, sem e com exigência de cobertura): `tentados`, `semChao` (sem chão firme com três blocos livres, ou dois na caça), `zona` (zona da vela), `cinza` (colado numa Linha de Cinza), `tela`, `semCobertura`, `exposto` (de dia, a céu aberto, perto e sem nada na frente), `semVisao` (não daria para vê-lo dali, ou longe e sem luz).
+  - `COM_LUZ` (a do primeiro contato): `semLuz` é um lugar achado e recusado por estar no breu.
+  - `RASTRO`: `semPonto` (não há ponto do rastro na faixa pedida), `semChao`, `telaOuZona`, `exposto`, `desnivel` (mais de 12 blocos acima ou abaixo).
+  - `DE_PERTO`: `celulas` (quantas a procura visitou, andando a partir dos pés do jogador), `naFaixa` (quantas estavam de 8 a 14 blocos), e onde essas caíram: `zona`, `cinza`, `tela`, `semVisao`, `exposto`, `aberto` (não é lugar fechado). `semChaoDoJogador` quer dizer que nem se achou onde o jogador pisa (na água, no meio de um pulo).
+  - Para ler: `celulas` pequeno é um bolsão; `naFaixa=0` é um lugar com menos de oito blocos de espaço; `tela` igual a `naFaixa` é o jogador olhando para o único lado que tem espaço.
+- `VEU abriu ... vulto=certo`: não havia porta nem vidro para trocar, então o vulto vem mesmo com "não" no sorteio. `sim` e `nao` continuam sendo o sorteio (com porta ou vidro).
+- `VEU vulto=sim tentativas=N`: coube na N-ésima tentativa (uma por segundo, do meio do Véu em diante). `VEU vulto=nao_coube tentativas=N` só sai quando o Véu fecha sem ele ter cabido nenhuma vez.
+- `OLHO aparicao=nao_coube`: o Olho chamou uma aparição e não havia lugar. Antes isto não deixava linha.
+
+Para conferir depois de uma sessão: nenhum `FIM motivo=SEM_LUGAR`; `VEU abriu` nunca com `porta=nao vidro=nao vulto=nao`; e, das linhas `criado` com o contexto `SUBSOLO`, quantas têm `motivoPosicao=DE_PERTO`. O analisador (`ferramentas/log/analisar.py`) faz as três contas e põe a primeira nos alertas.

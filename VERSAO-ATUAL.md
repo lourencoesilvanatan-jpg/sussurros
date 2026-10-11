@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha19
+
+Primeira etapa do que foi combinado em 11/10: duas coisas que o mod já fazia passam a acontecer em lugares onde antes não conseguiam, e uma delas deixa de poder vir "vazia". Não entra coisa nova para achar. O log das sessões passa a dizer por que alguma coisa não aconteceu, e os testes automáticos passam a rodar também em cima de um pedaço de terreno de um mundo de verdade.
+
 ## 0.9.0-alpha18
 
 Corrige a alpha17, que não funcionava em terreno com capim e flores (ou seja, em quase todo lugar da superfície). O mesmo defeito impedia outras coisas de acontecer. Um efeito que se repetia demais, sobretudo em caverna, ficou bem mais raro.

@@ -124,6 +124,10 @@ public final class PrimeiroContato {
 		} else {
 			// Sem lugar agora (dentro de casa, num buraco, de frente para um paredão): tenta de novo em instantes.
 			e.contatoProximaTentativa = seg + 5;
+			// Só para o log: um minuto sem achar lugar, e ele diz o que foi tentado e por que caiu.
+			if (e.falhasDeLugar.vezes() >= 12) {
+				Diretor.logarFaltaDeLugar(p, e, seg);
+			}
 		}
 	}
 

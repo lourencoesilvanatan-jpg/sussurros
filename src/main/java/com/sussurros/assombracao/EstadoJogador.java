@@ -128,6 +128,8 @@ final class EstadoJogador {
 	String cenaMarcoId = "-";
 	String cenaJanelaId = "-";
 	String ameacaId = "-";
+	/** Como a última sequência de ameaça acabou ("-" se nenhuma acabou ainda). Para os testes. */
+	String ameacaUltimoFim = "-";
 	String silencioMotivo = "";
 	String silencioCena = "-";
 
@@ -146,6 +148,10 @@ final class EstadoJogador {
 	final EnumSet<Evento> falhasAgora = EnumSet.noneOf(Evento.class);
 	/** Depois de um segundo em que nada coube, ele só volta a tentar a partir daqui. */
 	long semLugarAte = -1;
+	/** Só para o log: por que as procuras de lugar falharam desde a última linha "LUGAR falhou". */
+	final Aparicao.Falhas falhasDeLugar = new Aparicao.Falhas();
+	/** O tick em que a procura de lugar apertado falhou por último: no mesmo tick ela daria a mesma resposta. */
+	long dePertoFalhouEm = -1;
 
 	// --- Ritmo e estados ---
 	double pressao;
@@ -276,6 +282,8 @@ final class EstadoJogador {
 	long veuAte;
 	long veuProximoEm;
 	long veuVultoEm = -1;
+	/** Quantas vezes o vulto deste Véu foi tentado sem caber. */
+	int veuVultoTentativas;
 	boolean veuFechou;
 	// --- O Avesso (0.9): a visita em curso. Não é salvo: o que sobrevive a fechar o jogo está na Memoria ---
 	@Nullable

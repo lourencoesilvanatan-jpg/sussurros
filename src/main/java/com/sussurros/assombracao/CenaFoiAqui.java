@@ -140,6 +140,7 @@ final class CenaFoiAqui {
 					e.cenaMarcoDesde = seg;
 				} else if (seg - e.cenaMarcoDesde > 30) {
 					Depuracao.log(p, seg, "CENA id=" + e.cenaMarcoId + " etapa=PRESENCA SEM_LUGAR");
+					Diretor.logarFaltaDeLugar(p, e, seg);
 					silencioCenaMarco(p, e, seg, rnd);
 				}
 			}

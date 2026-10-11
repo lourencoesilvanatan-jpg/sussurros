@@ -49,6 +49,9 @@ public class HospedeEntity extends PathfinderMob {
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
 	private static final EntityDataAccessor<Boolean> SUMINDO =
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+	/** Abaixado fora da caça: nasceu sob um teto de dois blocos (ver definirAbaixado). */
+	private static final EntityDataAccessor<Boolean> ABAIXADO =
+			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
 
 	/** Quando ele some na frente do jogador, dissolve por este tempo em vez de piscar para fora (ticks). */
 	public static final int TICKS_FADE = 4;
@@ -85,6 +88,9 @@ public class HospedeEntity extends PathfinderMob {
 	/**
 	 * Na caça ele se abaixa: a caixa de colisão cai de 3,0 para 1,9 blocos de altura. Com 3,0 ele não passava
 	 * por nenhuma porta nem entrava em nenhum túnel de dois blocos, ou seja, não entrava em casa nenhuma.
+	 *
+	 * 0.9.0-alpha19: o mesmo corpo vale parado, fora da caça, quando o teto obriga (ver definirAbaixado). Até a
+	 * alpha18 só a caça cabia em dois blocos, e numa mina ele não tinha onde aparecer para ser visto.
 	 */
 	private static final EntityDimensions CORPO_NA_CACA = EntityDimensions.scalable(0.7F, 1.9F);
 
@@ -157,6 +163,7 @@ public class HospedeEntity extends PathfinderMob {
 	private boolean contato = false;     // é a aparição do primeiro contato (ver PrimeiroContato)
 	private int contatoMira = 0;         // contato: ticks seguidos na mira dele, com luz (cai um por tick fora dela)
 	private boolean contatoVisto = false; // contato: já esteve na mira por tempo bastante para valer
+	private boolean dePerto = false;     // nasceu pela procura de lugar apertado, a poucos blocos (ver definirDePerto)
 	private int ticksNaMira = 0;         // contato, só para o log: quantos ticks ao todo esteve na mira, com luz
 
 	// A saída (0.9.0-alpha17): isto é comportamento. Ver Saida.
@@ -252,7 +259,36 @@ public class HospedeEntity extends PathfinderMob {
 		boolean cacando = this.level().isClientSide()
 				? this.entityData != null && this.entityData.get(MODO_VISUAL) == Modo.CACAR.ordinal()
 				: this.modo == Modo.CACAR;
-		return cacando ? CORPO_NA_CACA : super.getDefaultDimensions(pose);
+		boolean abaixado = this.entityData != null && this.entityData.get(ABAIXADO);
+		return cacando || abaixado ? CORPO_NA_CACA : super.getDefaultDimensions(pose);
+	}
+
+	/**
+	 * Abaixado fora da caça. Quem o põe no mundo decide, pelo teto do lugar: com dois blocos livres ele se dobra
+	 * para caber, com três fica de pé. Vale para a caixa de colisão e, pelo dado sincronizado, para o desenho.
+	 */
+	public void definirAbaixado(boolean abaixado) {
+		if (this.entityData.get(ABAIXADO) != abaixado) {
+			this.entityData.set(ABAIXADO, abaixado);
+			this.refreshDimensions();
+		}
+	}
+
+	public boolean isAbaixado() {
+		return this.entityData.get(ABAIXADO);
+	}
+
+	/**
+	 * Esta aparição nasceu a poucos blocos, num lugar apertado. De perto ele é só relance, em qualquer modo: a
+	 * espreita, que de longe aguenta três segundos de olhar, aqui some como a presença comum. Mais perto não pode
+	 * virar mais tempo de tela.
+	 */
+	public void definirDePerto() {
+		this.dePerto = true;
+	}
+
+	public boolean ehDePerto() {
+		return this.dePerto;
 	}
 
 	public void definirOrigem(Origem origem, @Nullable Evento evento) {
@@ -355,7 +391,7 @@ public class HospedeEntity extends PathfinderMob {
 		if (SUMINDO.equals(dado) && this.level().isClientSide() && this.isSumindo() && this.fadeInicioCliente < 0) {
 			this.fadeInicioCliente = this.tickCount;
 		}
-		if (MODO_VISUAL.equals(dado)) {
+		if (MODO_VISUAL.equals(dado) || ABAIXADO.equals(dado)) {
 			this.refreshDimensions();
 		}
 	}
@@ -454,6 +490,7 @@ public class HospedeEntity extends PathfinderMob {
 		builder.define(VARIANTE_VISUAL, 0);
 		builder.define(OLHOS_VISUAIS, false);
 		builder.define(SUMINDO, false);
+		builder.define(ABAIXADO, false);
 	}
 
 	public boolean isObservando() {
@@ -759,7 +796,8 @@ public class HospedeEntity extends PathfinderMob {
 	}
 
 	private boolean comecarRetirada(ServerLevel level, double distSqr) {
-		if (distSqr < this.distMinimaDaRetirada * this.distMinimaDaRetirada) {
+		// De perto ele é só relance (ver definirDePerto), seja qual for a saída que a cena pediu.
+		if (this.dePerto || distSqr < this.distMinimaDaRetirada * this.distMinimaDaRetirada) {
 			return false;
 		}
 		Vec3 destino = Retirada.escolher(level, this.alvo, this);
@@ -836,7 +874,7 @@ public class HospedeEntity extends PathfinderMob {
 
 		if (percebido) {
 			this.naoVistoTicks = 0;
-			if (this.contarVisto(true, encarado, 60 + this.ousadia * 6)) {
+			if (this.contarVisto(true, encarado, (this.dePerto ? 12 : 60) + this.ousadia * 6)) {
 				Diretor.criaturaFoiVista(this.alvo, this);
 				this.sumir(level, true, "VISTO_DEMAIS");
 			}

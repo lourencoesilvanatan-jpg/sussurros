@@ -4,6 +4,8 @@ Este arquivo **não tem spoiler**. Ele diz o que fazer, não o que vai acontecer
 
 ## O que entrou (em termos gerais)
 
+Versão 0.9.0-alpha19: **a primeira etapa do que combinamos em 11/10** (as duas coisas a que você respondeu "por favor"). Não tem coisa nova para achar: duas coisas que já existiam passam a conseguir acontecer em lugares onde antes o mod desistia. Para testar, continue no **mesmo mundo** e jogue como da última vez: um tempo em casa, um tempo fora e **um bom tempo debaixo da terra** (caverna ou mina). Duas perguntas só para esta versão, para responder depois de jogar: **alguma coisa pareceu "de boneco", artificial?** e **alguma coisa pareceu perto demais, a ponto de parecer injusta ou de perder a graça?**
+
 Versão 0.9.0-alpha18: **corrige a alpha17, que não funcionou na sua casa.** O que ela prometia dependia do terreno, e o terreno em volta da sua base (capim e flor por toda parte) fazia o mod desistir. O mesmo defeito escondia outras coisas, então você deve ver mais coisa acontecendo. Também diminuí bastante uma coisa que você achou repetitiva na caverna. Continua valendo o teste no **mesmo mundo**.
 
 Versão 0.9.0-alpha17: a primeira parte do que você pediu depois da sessão de 10 e 11/10. Não tem coisa nova para achar: muda o jeito como uma parte do que já existe acontece. Vale o teste descrito abaixo, no **mesmo mundo**. Uma pergunta só para esta versão, para responder depois de jogar: **alguma coisa que você viu pareceu "de boneco", artificial no jeito de se mexer?**
@@ -106,7 +108,8 @@ Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abr
 Você não precisa repetir isto. Fica registrado para quem programa.
 
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
-- O que mudou na primeira hora foi exercitado contra um jogador de mentira em seis situações, e o desfecho foi o esperado em todas.
+- O que mudou nesta versão foi exercitado contra um jogador de mentira em sete situações, e o desfecho foi o esperado em todas. Duas delas rodam em cima de um pedaço de caverna copiado do seu mundo (só pedra, ar e tochas, sem as coordenadas).
+- O que mudou na primeira hora (alpha14) continua passando nas suas seis situações.
 - Os itens e blocos continuam sendo usados por um jogador de mentira e fotografados dentro do jogo.
 - As receitas carregam e aparecem no livro na hora certa (que mudou nesta versão).
 - A caçada, o acontecimento raro, os lugares e a maior novidade da expansão continuam passando nos testes de antes.

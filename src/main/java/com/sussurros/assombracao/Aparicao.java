@@ -2,15 +2,20 @@ package com.sussurros.assombracao;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.bloco.CinzaEspalhadaBlock;
@@ -72,6 +77,67 @@ final class Aparicao {
 		}
 	}
 
+	/**
+	 * Por que as procuras de lugar não acharam nada (0.9.0-alpha19): quantas vezes cada uma rodou, quantos
+	 * lugares tentou e em que exigência eles caíram. Só contagem, para o log: não gasta sorteio e não muda nada.
+	 *
+	 * Até a alpha18 o log dizia "SEM_LUGAR" e mais nada. Para descobrir que o motivo, na casa do dono, era o
+	 * capim, foi preciso copiar o mundo dele e refazer a procura à mão.
+	 */
+	static final class Falhas {
+		private final Map<String, Map<String, Integer>> porProcura = new LinkedHashMap<>();
+
+		/** Soma uma procura que falhou. "pares" alterna nome e valor: "tentados", 18, "semChao", 11... */
+		void registrar(String procura, Object... pares) {
+			Map<String, Integer> contagem = this.porProcura.computeIfAbsent(procura, k -> new LinkedHashMap<>());
+			contagem.merge("vezes", 1, Integer::sum);
+			for (int i = 0; i + 1 < pares.length; i += 2) {
+				contagem.merge((String) pares[i], (Integer) pares[i + 1], Integer::sum);
+			}
+		}
+
+		boolean vazio() {
+			return this.porProcura.isEmpty();
+		}
+
+		/** Quantas procuras falharam desde a última vez que isto foi lido. */
+		int vezes() {
+			int n = 0;
+			for (Map<String, Integer> contagem : this.porProcura.values()) {
+				n += contagem.getOrDefault("vezes", 0);
+			}
+			return n;
+		}
+
+		void limpar() {
+			this.porProcura.clear();
+		}
+
+		/** "NORMAL[vezes=3 tentados=54 semChao=40 ...] DE_PERTO[vezes=1 celulas=41 ...]". Zeros ficam de fora. */
+		String resumo() {
+			StringBuilder sb = new StringBuilder();
+			for (Map.Entry<String, Map<String, Integer>> procura : this.porProcura.entrySet()) {
+				if (sb.length() > 0) {
+					sb.append(' ');
+				}
+				sb.append(procura.getKey()).append('[');
+				boolean primeiro = true;
+				for (Map.Entry<String, Integer> c : procura.getValue().entrySet()) {
+					if (c.getValue() == 0) {
+						continue;
+					}
+					if (!primeiro) {
+						sb.append(' ');
+					}
+					sb.append(c.getKey()).append('=').append(c.getValue());
+					primeiro = false;
+				}
+				sb.append(']');
+			}
+			return sb.toString();
+		}
+	}
+
 	/** Procura um ponto ao redor do jogador. Não retorna um ponto dentro do FOV seguro atual. */
 	@Nullable
 	static Candidato buscarAoRedor(ServerLevel level, ServerPlayer p, EstadoJogador e, Config cfg) {
@@ -90,6 +156,14 @@ final class Aparicao {
 		double melhorNota = Double.NEGATIVE_INFINITY;
 		int tentativas = Math.max(4, Math.min(36, cfg.tentativas()));
 		Set<Long> recentes = new HashSet<>(e.aparicoesRecentes);
+		// Só para o log (ver Falhas): em que exigência cada lugar tentado caiu.
+		int semChao = 0;
+		int naZona = 0;
+		int naCinza = 0;
+		int caiuNaTela = 0;
+		int semCobertura = 0;
+		int exposto = 0;
+		int semVisao = 0;
 
 		for (int i = 0; i < tentativas; i++) {
 			double sinal = cfg.alternarLado() ? (rnd.nextBoolean() ? 1.0 : -1.0) : (cfg.lado() < 0 ? -1.0 : 1.0);
@@ -97,23 +171,32 @@ final class Aparicao {
 			double distancia = cfg.distanciaMin() + rnd.nextDouble() * Math.max(0.001, cfg.distanciaMax() - cfg.distanciaMin());
 			Vec3 alvo = pontoRelativo(p, angulo, distancia);
 			BlockPos chao = acharChao(level, alvo.x, p.getY(), alvo.z, arLivre);
-			if (chao == null || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+			if (chao == null) {
+				semChao++;
+				continue;
+			}
+			if (Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+				naZona++;
 				continue;
 			}
 			// Ele não aparece colado numa Linha de Cinza que ainda segura.
 			if (CinzaEspalhadaBlock.linhaPerto(level, chao, 2) != null) {
+				naCinza++;
 				continue;
 			}
 
 			if (cfg.evitarTela() && naTela(p, chao)) {
+				caiuNaTela++;
 				continue;
 			}
 
 			boolean cobertura = temCobertura(level, p, chao);
 			if (cfg.exigirCobertura() && !cobertura) {
+				semCobertura++;
 				continue;
 			}
 			if (Diretor.expostoDemais(level, p, chao, cobertura)) {
+				exposto++;
 				continue;
 			}
 
@@ -122,6 +205,7 @@ final class Aparicao {
 			boolean visivelAoVirar = linhaLivre(level, p.getEyePosition(), Vec3.atCenterOf(chao).add(0, 1.2, 0));
 			boolean visivelPorLuz = distancia <= 20.0 || luz >= 4;
 			if (cfg.exigirVisivelAoVirar() && (!visivelAoVirar || !visivelPorLuz)) {
+				semVisao++;
 				continue;
 			}
 
@@ -153,7 +237,226 @@ final class Aparicao {
 				melhor = new Candidato(chao, angulo, distancia, cobertura, visivelAoVirar, penumbra, nota);
 			}
 		}
+		if (melhor == null) {
+			e.falhasDeLugar.registrar(cfg.exigirCobertura() ? "COBERTURA" : "NORMAL", "tentados", tentativas,
+					"semChao", semChao, "zona", naZona, "cinza", naCinza, "tela", caiuNaTela, "semCobertura", semCobertura,
+					"exposto", exposto, "semVisao", semVisao);
+		}
 		return melhor;
+	}
+
+	// =====================================================================
+	// De perto: a procura de lugar apertado (0.9.0-alpha19)
+	// =====================================================================
+
+	/** A faixa de distância de quem aparece de perto (blocos, do jogador até o lugar). */
+	static final double DE_PERTO_MIN = 8.0;
+	static final double DE_PERTO_MAX = 14.0;
+	/** Quantas células a procura visita, no máximo. Num túnel são dezenas; num salão de caverna, centenas. */
+	private static final int DE_PERTO_CELULAS = 1200;
+	private static final Direction[] LADOS = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
+
+	/** O que a procura de lugar apertado achou. */
+	record DePerto(BlockPos chao, double distancia, boolean luz, boolean quina, boolean abaixado, int candidatos) {
+		String resumo() {
+			return String.format(java.util.Locale.ROOT, "dist=%.1f luz=%s quina=%s abaixado=%s candidatos=%d",
+					distancia, luz ? "sim" : "nao", quina ? "sim" : "nao", abaixado ? "sim" : "nao", candidatos);
+		}
+	}
+
+	/**
+	 * A segunda procura, para lugar fechado: caverna, mina, corredor, dentro de casa.
+	 *
+	 * A procura de sempre sorteia um ângulo e uma distância (de 14 a 38 blocos) e pede três blocos de altura.
+	 * Num túnel de mina quase todo sorteio cai dentro da pedra, e onde não cai o teto tem dois blocos: em 11/10/2026
+	 * o Diretor quis mostrá-lo 8 vezes em 90 minutos e conseguiu 3, e uma sequência de ameaça no fundo de uma
+	 * caverna acabou sem ninguém. Esta não sorteia: anda, a partir dos pés do jogador, pelo espaço em que ele
+	 * está (cada célula com chão e dois blocos livres, subindo um degrau ou descendo até três) e fica com as
+	 * células de 8 a 14 blocos que:
+	 *  - estão fora da tela (a regra de sempre: ele nunca nasce na frente do jogador);
+	 *  - dá para ver de onde o jogador está, se ele virar o rosto;
+	 *  - são um lugar fechado (sem céu nenhum, ou com teto baixo): em campo aberto, de perto, ele é um boneco;
+	 *  - não estão na zona da vela nem coladas numa Linha de Cinza.
+	 * Entre elas prefere a que tem luz para ele ser visto e a que fica numa quina, de onde um passo o tiraria
+	 * da vista. Onde o teto só deixa dois blocos, ele nasce abaixado (ver HospedeEntity.definirAbaixado).
+	 *
+	 * Não usa o sorteio do mundo: o desempate sai da posição e da "semente" (o segundo do jogo), para que o
+	 * mesmo corredor não dê sempre o mesmo lugar.
+	 */
+	@Nullable
+	static DePerto buscarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente) {
+		BlockPos inicio = null;
+		for (int dy : new int[] {0, 1, -1, -2}) {
+			BlockPos c = p.blockPosition().above(dy);
+			if (cabe(level, c)) {
+				inicio = c;
+				break;
+			}
+		}
+		if (inicio == null) {
+			e.falhasDeLugar.registrar("DE_PERTO", "semChaoDoJogador", 1);
+			return null;
+		}
+		Vec3 olho = p.getEyePosition();
+		ArrayDeque<BlockPos> fila = new ArrayDeque<>();
+		Set<Long> vistas = new HashSet<>();
+		fila.add(inicio);
+		vistas.add(inicio.asLong());
+		int celulas = 0;
+		int naFaixa = 0;
+		int naZona = 0;
+		int naCinza = 0;
+		int caiuNaTela = 0;
+		int semVisao = 0;
+		int exposto = 0;
+		int aberto = 0;
+		int candidatos = 0;
+		DePerto melhor = null;
+		double melhorNota = Double.NEGATIVE_INFINITY;
+
+		while (!fila.isEmpty() && celulas < DE_PERTO_CELULAS) {
+			BlockPos c = fila.poll();
+			celulas++;
+			double distancia = Math.sqrt(p.distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5));
+			if (distancia > DE_PERTO_MAX) {
+				continue; // além da faixa não interessa, nem o que vem depois
+			}
+			for (Direction lado : LADOS) {
+				for (int dy : new int[] {0, 1, -1, -2, -3}) {
+					BlockPos n = c.relative(lado).above(dy);
+					if (!cabe(level, n) || !passa(level, c, lado, dy)) {
+						continue;
+					}
+					if (vistas.add(n.asLong())) {
+						fila.add(n);
+					}
+					break;
+				}
+			}
+			if (distancia < DE_PERTO_MIN) {
+				continue;
+			}
+			naFaixa++;
+			if (Diretor.emZonaCalma(p, c.getX(), c.getY(), c.getZ())) {
+				naZona++;
+				continue;
+			}
+			if (CinzaEspalhadaBlock.linhaPerto(level, c, 2) != null) {
+				naCinza++;
+				continue;
+			}
+			if (naTela(p, c)) {
+				caiuNaTela++;
+				continue;
+			}
+			boolean abaixado = !Diretor.livre(level, c.above(2));
+			double altura = abaixado ? 1.9 : 3.0;
+			if (!enxergaCorpo(level, olho, c, altura)) {
+				semVisao++;
+				continue;
+			}
+			if (Diretor.expostoDemais(level, p, c, temCobertura(level, p, c))) {
+				exposto++;
+				continue;
+			}
+			if (!fechado(level, c)) {
+				aberto++;
+				continue;
+			}
+			candidatos++;
+			boolean luz = Diretor.temLuzParaVer(level, c);
+			boolean quina = umPassoEsconde(level, olho, c);
+			double meio = (DE_PERTO_MIN + DE_PERTO_MAX) / 2.0;
+			double nota = (luz ? 2.0 : 0.0) + (quina ? 1.5 : 0.0)
+					+ 0.5 * (1.0 - Math.abs(distancia - meio) / (DE_PERTO_MAX - meio)) + 0.6 * ruido(c, semente);
+			if (nota > melhorNota) {
+				melhorNota = nota;
+				melhor = new DePerto(c, distancia, luz, quina, abaixado, 0);
+			}
+		}
+		if (melhor == null) {
+			e.falhasDeLugar.registrar("DE_PERTO", "celulas", celulas, "naFaixa", naFaixa, "zona", naZona, "cinza", naCinza,
+					"tela", caiuNaTela, "semVisao", semVisao, "exposto", exposto, "aberto", aberto);
+			return null;
+		}
+		return new DePerto(melhor.chao(), melhor.distancia(), melhor.luz(), melhor.quina(), melhor.abaixado(), candidatos);
+	}
+
+	/** Ele cabe aqui abaixado: chão firme e dois blocos livres. (De pé precisa de três; quem chama confere.) */
+	private static boolean cabe(ServerLevel level, BlockPos pos) {
+		BlockPos baixo = pos.below();
+		return Diretor.livre(level, pos) && Diretor.livre(level, pos.above())
+				&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty();
+	}
+
+	/**
+	 * Dá para ir de "c" à célula vizinha que fica "dy" blocos acima ou abaixo? Subindo, a cabeça precisa de
+	 * espaço em cima de onde se está; descendo, a coluna vizinha tem de estar livre da altura de onde se sai até
+	 * o chão de chegada. É a continuidade do espaço que importa (ele não anda este caminho; nasce no fim dele).
+	 */
+	private static boolean passa(ServerLevel level, BlockPos c, Direction lado, int dy) {
+		if (dy == 0) {
+			return true;
+		}
+		if (dy > 0) {
+			return Diretor.livre(level, c.above(2));
+		}
+		BlockPos coluna = c.relative(lado);
+		for (int y = dy + 2; y <= 1; y++) {
+			if (!Diretor.livre(level, coluna.above(y))) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Do olho do jogador dá para ver o corpo dele ali? Basta o peito ou a cabeça. */
+	private static boolean enxergaCorpo(ServerLevel level, Vec3 olho, BlockPos chao, double altura) {
+		Vec3 pe = new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
+		return linhaLivre(level, olho, pe.add(0, altura * 0.85, 0)) || linhaLivre(level, olho, pe.add(0, altura * 0.5, 0));
+	}
+
+	/** Uma quina: há uma célula vizinha, onde ele também caberia, que o jogador não enxerga de onde está. */
+	private static boolean umPassoEsconde(ServerLevel level, Vec3 olho, BlockPos c) {
+		for (Direction lado : LADOS) {
+			for (int dy : new int[] {0, 1, -1}) {
+				BlockPos n = c.relative(lado).above(dy);
+				if (cabe(level, n) && passa(level, c, lado, dy)) {
+					if (!enxergaCorpo(level, olho, n, 1.9)) {
+						return true;
+					}
+					break;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Lugar fechado: nenhuma luz do céu chega ali (caverna, mina, porão), ou há teto de verdade a até quatro
+	 * blocos do chão (um cômodo, um corredor, uma varanda). Copa de árvore não é teto.
+	 */
+	private static boolean fechado(ServerLevel level, BlockPos chao) {
+		if (level.getBrightness(LightLayer.SKY, chao) == 0) {
+			return true;
+		}
+		for (int dy = 2; dy <= 4; dy++) {
+			BlockPos cima = chao.above(dy);
+			BlockState s = level.getBlockState(cima);
+			if (!s.getCollisionShape(level, cima).isEmpty() && !s.is(BlockTags.LEAVES)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/** De 0 a 1, fixo para a mesma célula no mesmo segundo. Não é sorteio: não toca em gerador nenhum. */
+	private static double ruido(BlockPos pos, long semente) {
+		long h = pos.asLong() * 0x9E3779B97F4A7C15L ^ (semente + 1) * 0xC2B2AE3D27D4EB4FL;
+		h ^= h >>> 29;
+		h *= 0xBF58476D1CE4E5B9L;
+		h ^= h >>> 32;
+		return (h & 0xFFFFL) / 65535.0;
 	}
 
 	/** Registra o chunk da aparição para reduzir repetições locais sem proibir o lugar para sempre. */

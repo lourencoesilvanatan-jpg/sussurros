@@ -1429,3 +1429,111 @@ Sem teste: o que só o terreno dele tem (desnível, casa vizinha, telhado). Para
 ## Lição
 
 Teste em mundo plano e raspado não diz nada sobre o mundo onde se joga. Quando uma coisa depende do terreno, o teste precisa pôr o terreno: capim, flor, desnível, teto. E, havendo um mundo de verdade à mão, vale ler o mundo.
+
+---
+# Versão 0.9.0-alpha19 — de perto, e o Véu nunca vazio
+
+É a etapa 1 do cardápio de 11/10/2026, proposta ao dono com estas palavras: "Ele aparecer em lugar apertado (caverna, dentro de casa), e o 'tudo branco' nunca vir vazio. São as duas que respondem 'cadê o bicho?'". Ele respondeu "por favor".
+
+## O que faltava
+
+Na sessão de 11/10 à tarde (uma hora e meia, fases 3 e 4, boa parte numa caverna):
+
+- o Diretor quis mostrá-lo 8 vezes e conseguiu 3;
+- uma sequência de ameaça esperou um minuto por um lugar, no fundo de uma caverna, e acabou sem ninguém (`FIM motivo=SEM_LUGAR`); outra, com ele debaixo da própria casa, também;
+- o Véu abriu duas vezes, as duas sem porta, sem vidro e sem vulto: só a cor e a neblina.
+
+A alpha18 tirou o capim do caminho, mas a caverna tinha outro motivo. Fora da caça ele media 0,7 por 3,0 blocos e só nascia de 14 a 38 blocos do jogador. Num túnel de dois blocos de altura ele não cabia em lugar nenhum, e num salão de caverna de vinte blocos não há um ponto a 24 blocos com linha livre.
+
+## A forma de perto
+
+**A procura** (`Aparicao.buscarDePerto`). A de sempre sorteia um ângulo e uma distância e vê se ali há chão. Num túnel quase todo sorteio cai dentro da pedra. A nova não sorteia: anda, a partir dos pés do jogador, pelo espaço em que ele está (células com chão e dois blocos livres, subindo um degrau ou descendo até três), até 14 blocos, e fica com as células de 8 a 14 blocos que:
+
+- estão fora da tela (a regra de sempre: ele nunca nasce na frente do jogador);
+- dá para ver de onde o jogador está, se ele virar o rosto (o peito ou a cabeça);
+- são lugar fechado: nenhuma luz do céu chega ali, ou há teto de verdade a até quatro blocos do chão (copa de árvore não é teto);
+- não estão na zona da vela nem coladas numa Linha de Cinza;
+- não são o "exposto demais" de sempre (de dia, a céu aberto, sem nada na frente).
+
+Entre elas, a nota: luz para ele ser visto (`Diretor.temLuzParaVer`, +2,0), quina (uma célula vizinha onde ele caberia e que o jogador não enxerga: "um passo o tiraria da vista", +1,5), o meio da faixa (até +0,5) e um desempate que sai da posição e do segundo do jogo (até +0,6). **Não usa o sorteio do mundo**: quando ela acha lugar, os sorteios do Diretor ficam como estavam.
+
+**Quando ela roda** (`Diretor.invocar` e `Diretor.invocarDePerto`):
+
+- na presença comum, debaixo da terra (`ContextoMundo.Tipo.SUBSOLO`), ela vem **antes** de todas as outras, menos da isca (que é pedido do jogador). O rastro e a rota, numa mina, punham-no a trinta blocos, depois de duas curvas, onde ninguém via;
+- em qualquer `invocar` de quem observa (o "atrás de você", o vulto do Véu, o Olho, os Ossos), debaixo da terra, também antes;
+- nos outros lugares, e para a espreita (que começa longe para poder chegar perto), só quando a procura de sempre não acha nada. É o que cobre "dentro de casa" e a mina debaixo da base, onde o contexto é `CASA`.
+
+**O corpo.** O sinal de "abaixado" deixou de ser `modo == CACAR`: há um dado sincronizado próprio (`HospedeEntity.definirAbaixado`). `Diretor.criar` decide pelo teto do lugar, para qualquer modo que não seja a caça: com dois blocos livres ele nasce dobrado (caixa de 0,7 por 1,9, o `CORPO_NA_CACA`), com três fica de pé. Na espreita, quando ele muda de lugar, a postura é a do lugar novo. O desenho obedece (`HospedeRenderer`): na caça continua olhando o teto a cada quadro, porque ali ele anda.
+
+**O que não muda.**
+
+- De perto ele é só relance. O limite de "visto demais" é o da presença comum (0,3 s olhando direto, com ousadia zero) também na espreita, que de longe aguenta três segundos (`HospedeEntity.definirDePerto`). Mais perto não virou mais tempo.
+- Quem nasceu de perto nunca vai embora andando, seja qual for a saída que a cena pediu (`comecarRetirada` recusa).
+- Se o jogador chega a cinco blocos sem olhar, ele não está mais lá (`DIST_SUMIR_DE_PERTO`; o "atrás de você" mantém os seus quatro).
+- A caça e o outro lado não usam a procura nova. As proteções da casa (caçada nunca em casa nem a 24 blocos da cama) ficam como estavam. O primeiro contato também: ver "O que ficou de fora".
+
+## O Véu nunca vazio
+
+- **O vulto é certo quando não há porta nem vidro** (`Veu.abrir`). O sorteio continua sendo feito no mesmo lugar (a ordem dos sorteios seguintes do jogador não muda); depois de saber que não há o que trocar na casa, ele deixa de valer. O log diz `vulto=certo`.
+- **Ele tenta de novo.** Até a alpha18 o vulto tinha uma tentativa, no meio do Véu. Agora, se não coube (de frente para um paredão, no meio de um pulo), tenta a cada segundo enquanto sobrarem quatro segundos de Véu. `VEU vulto=nao_coube` só sai no fim, se não coube nenhuma vez, com a linha `LUGAR falhou` logo depois.
+- **De dia, em campo aberto, ele cabe.** `Diretor.expostoDemais` recusava qualquer lugar a menos de 25 blocos, de dia, a céu aberto e sem cobertura, e o vulto do Véu pede de 12 a 17: num campo, de dia, ele nunca vinha. Com o Véu aberto a neblina fecha a menos de trinta blocos e a cor é a do outro lado: a regra do "boneco" não vale ali, e só ali.
+- **Debaixo da terra** ele usa a procura de perto antes da outra (é um `invocar` de quem observa). Sem isso o log diria `nao_coube`, ou pior: `sim`, num bolsão de caverna que o jogador não vê (a procura de sempre não exige linha de visão para o vulto do Véu).
+
+## O log diz por quê
+
+Até a alpha18 o log dizia `SEM_LUGAR` e mais nada: para achar o capim foi preciso copiar o mundo do dono e refazer a procura à mão.
+
+- `HOSPEDE ... criado ... motivoPosicao=` diz qual procura achou o lugar (`APARICAO2`, `APARICAO2_COBERTURA`, `RASTRO`, e agora `DE_PERTO dist= luz= quina= abaixado= candidatos=`), e a linha termina em `postura=ABAIXADO` ou `DE_PE`.
+- `LUGAR falhou NORMAL[vezes=3 tentados=54 semChao=40 tela=6 semVisao=8] DE_PERTO[vezes=3 celulas=41 naFaixa=12 tela=8 semVisao=4]`: cada procura que falhou desde a linha anterior, quantas vezes rodou, quantos lugares tentou e em que exigência eles caíram. Sai junto de `SELECAO falhou`, do fim de uma sequência de ameaça, do `SEM_LUGAR` das cenas, de `VEU vulto=nao_coube`, de `OLHO aparicao=nao_coube` (linha nova) e, no primeiro contato, a cada minuto sem lugar. É só contagem (`Aparicao.Falhas`): não gasta sorteio.
+- O analisador ganhou: alerta para toda construção que acabou sem ninguém (com o motivo da última), alerta quando ele teve a criatura na mira em menos da metade das vezes em que o mod quis mostrá-la, a seção "Por que não achou lugar", quantas nasceram de perto e abaixadas, e o que cada Véu tinha dentro.
+
+Instrumentadas: a procura de sempre (`NORMAL`, `COBERTURA`, `COM_LUZ`), o rastro e a de perto. Não instrumentadas: a isca, a borda da vela, o marco, a rota, o túmulo e o vulto distante.
+
+## O terreno de verdade
+
+A lição da alpha18 era "havendo um mundo de verdade à mão, vale ler o mundo". Agora isso é teste.
+
+- `ferramentas/log/ler_mundo.py exportar <região> x0 y0 z0 x1 y1 z1 <saída>` grava uma caixa de blocos num arquivo de texto (só os nomes dos blocos; **sem as coordenadas de origem**). `Terreno.montar` (em `src/gametest`) monta esse arquivo no mundo de teste, dentro de uma casca de pedra.
+- `src/gametest/resources/terrenos/caverna.txt` é o salão de caverna em que a sequência de ameaça do dono acabou sem ninguém em 11/10: 47 por 16 por 43 blocos de ardósia, tufo, minério, cascalho, um pouco de água e as tochas dele. Não tem nada da base.
+- Nesse salão, de dois lugares junto das tochas, olhando para os quatro lados, a procura de perto acha lugar em **sete das oito vezes**: no salão, entre dezenas de candidatos (de pé ou abaixado, conforme o teto do lugar escolhido); no bolsão ao lado, abaixado, no único lugar que há. A oitava é esse bolsão com o jogador virado justamente para esse lugar: `DE_PERTO[vezes=1 celulas=46 naFaixa=21 tela=19 semVisao=2]`. Ele nunca nasce na tela, e ali não aparece.
+- A sequência de ameaça inteira, nesse salão, vai até `GOLPE_CONCLUIDO`, com duas aparições a nove blocos.
+- **O que o terreno de verdade ensinou.** A primeira versão desse teste falhou: num canto escuro do salão, com o jogador de mentira parado e de rosto fixo, a sequência acabou em `SEM_LUGAR` mesmo com a procura nova (`DE_PERTO[vezes=61 celulas=2013 naFaixa=305 tela=305]`: os cinco lugares de 8 a 14 blocos ficavam todos à frente dele, durante os sessenta segundos). O teste passou a virar o rosto do jogador um quarto de volta a cada dois segundos. Fica o limite, conhecido: **num bolsão pequeno, quem fica parado olhando para o único lado que tem espaço não vê ninguém aparecer.** A resposta a isso é a ideia 2.9 do cardápio (o plano B), não afrouxar "nunca na tela".
+
+## Os testes
+
+Sete novos, em `TestesDePerto` (69 no total). O túnel de teste é de pedra, um bloco de largura por dois de altura, com uma curva dez blocos atrás do jogador e uma tocha num nicho junto da curva, tudo dentro de um bloco maciço (lá dentro não chega luz do céu).
+
+- `noTunelEleApareceDePertoEAbaixado`: a presença, forçada, nasce na curva (iluminada, e quina), a dez blocos, abaixada, sem estar dentro da pedra; olhada, some em menos de um segundo e meio, sem sair andando.
+- `aAmeacaNoTunelNaoAcabaSemNinguem`: a sequência de ameaça vai até `GOLPE_CONCLUIDO`, com a espreita e o golpe na curva, abaixados.
+- `oVeuSemPortaNemVidroTrazOVulto`: num campo, com a semente do jogador escolhida para o sorteio dar "sem vulto", o vulto vem.
+- `noTunelOVeuTambemTrazOVulto`: o mesmo no túnel; o vulto nasce na curva, abaixado.
+- `aCeuAbertoEleNaoVemDePerto`: num gramado, a procura de perto não acha nada (`aberto=291`).
+- `naCavernaDeVerdadeEleAchaLugar` e `aAmeacaNaCavernaDeVerdadeNaoAcabaSemNinguem`: os dois de cima.
+
+Os três testes de terreno da alpha18 continuam passando.
+
+Ganchos de teste novos no `Diretor`: `ameacaParaTeste`, `fimDaAmeacaParaTeste`, `etapaDaAmeacaParaTeste`, `contextoParaTeste` e `dePertoParaTeste` (também como `/sussurros teste deperto`; com `parado` ele não some ao ser olhado, para as fotos).
+
+## O que ficou de fora, de propósito
+
+- **O primeiro contato** continua com a procura dele (`invocarOndeHaLuz`, de 18 a 36 blocos, de pé). Quem está numa mina aos vinte minutos de um mundo novo continua esperando sair dela. Usar a forma de perto ali muda a primeira impressão do mod inteiro; fica para quando o dono disser.
+- **A espreita não anda pelo túnel.** `reposicionarEspreita` continua pedindo três blocos de altura e pelo menos nove de distância: no túnel ela fica onde nasceu (`acao=FICAR motivo=SEM_LUGAR`) e some depois de duas ou três esperas.
+- **Passar por um bloco** (ideia 2.7) e **o plano B** (2.9).
+- **O quintal do dono como terreno de teste.** A caverna é pedra e tocha; o quintal é a casa dele, e o repositório é público. Pergunta para ele.
+
+## Não verificado por ninguém
+
+- Se, de perto e abaixado, ele assusta ou vira boneco. As fotos mostram a pose parada; o instante em que o jogador vira e ele some, só jogando.
+- Os números: de 8 a 14 blocos, cinco blocos para sumir, os pesos da nota, os quatro blocos de teto. São ponto de partida, sem sessão.
+- Se, debaixo da terra, ele passa a aparecer demais. A presença comum tem o mesmo peso de antes; o que muda é que agora ela acha lugar. O analisador conta as que nasceram de perto: é o primeiro número a ler na próxima sessão.
+- O som do anúncio (dois passos vindos dele) a dez blocos, num túnel.
+
+## Medição
+
+`./gradlew build` três vezes seguidas: 69 testes passaram nas três.
+
+Sessão sintética de uma hora, três jogadores de mentira, em campo aberto (11/10/2026): 26, 36 e 42 saídas por hora, na faixa das medições anteriores (30, 39 e 49 na alpha16); 9, 12 e 12 manifestações da criatura por hora; **nenhuma nasceu de perto** (em campo aberto não há lugar fechado, e é o que se queria: a mistura da superfície não mudou); nenhuma linha `LUGAR falhou`. O único Véu da sessão abriu com `vulto=certo`, e o vulto veio na primeira tentativa.
+
+Uma execução só, e os números variam bastante de uma para outra. A sessão sintética não tem caverna: o que esta versão muda debaixo da terra só aparece nos testes de servidor e, depois, na sessão do dono.
+
+O alerta novo do analisador ("ele teve a criatura na mira em N de M vezes") dispara sempre para jogador de mentira, que não mira em nada. Vale para sessão de gente.

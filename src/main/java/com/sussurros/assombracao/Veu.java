@@ -28,7 +28,8 @@ import com.sussurros.rede.Rede;
  *  - os bichos, os amigos e tudo o que é entidade deixam de aparecer para ele. Só o Hóspede aparece;
  *  - as luzes em volta estão apagadas, uma porta está aberta e um vidro falta. Tudo miragem: nada muda de
  *    verdade, e quem está ao lado não vê nada disso;
- *  - em metade das vezes, a partir do meio, ele está parado no limite da neblina.
+ *  - em metade das vezes, a partir do meio, ele está parado no limite da neblina. Sem porta e sem vidro por
+ *    perto (uma caverna, um campo), ele vem sempre: o Véu nunca abre sem nada dentro (0.9.0-alpha19).
  * Outra piscada e tudo voltou. É o "eu vi isso mesmo?" do mod: curto, raro, sem consequência nenhuma.
  *
  * Regras: nada novo começa enquanto o Véu dura (nem evento, nem cena, nem caçada); acender uma Vela Pálida
@@ -66,6 +67,7 @@ public final class Veu {
 		e.veuDesde = tick + PISCADA / 2;
 		e.veuAte = e.veuDesde + duracao;
 		e.veuVultoEm = sorte.nextBoolean() ? e.veuDesde + duracao / 2 : -1;
+		e.veuVultoTentativas = 0;
 		e.veuFechou = false;
 		// De 30 a 50 minutos até o próximo. É raro de propósito: repetido, vira efeito especial.
 		e.veuProximoEm = e.veuAte + 20L * 60 * (30 + sorte.nextInt(21));
@@ -86,9 +88,18 @@ public final class Veu {
 		int luzes = ApoioCaca.apagarLuzPerto(level, p, p.blockPosition(), 14, duracao + PISCADA, 16);
 		boolean porta = abrirUmaPorta(level, p, e, duracao + PISCADA, sorte);
 		boolean vidro = tirarUmVidro(level, p, e, duracao + PISCADA, sorte);
+		// 0.9.0-alpha19: o Véu nunca vem vazio. O vulto era sorteado lá em cima, antes de se saber se havia porta
+		// ou vidro para trocar; sem um nem outro e com "não" no sorteio, o Véu era só a cor e a neblina. Foi o que
+		// o dono teve nas duas vezes (11/10/2026), e ele pediu que acontecesse mais coisa. O sorteio continua
+		// sendo feito no mesmo lugar, para não mudar a ordem dos seguintes; aqui ele só deixa de valer.
+		boolean vultoCerto = !porta && !vidro && e.veuVultoEm < 0;
+		if (vultoCerto) {
+			e.veuVultoEm = e.veuDesde + duracao / 2;
+		}
 
 		String resumo = String.format(Locale.ROOT, "VEU abriu duracao=%ds luzes=%d porta=%s vidro=%s vulto=%s teste=%s",
-				duracao / 20, luzes, porta ? "sim" : "nao", vidro ? "sim" : "nao", e.veuVultoEm >= 0 ? "sim" : "nao", teste ? "sim" : "nao");
+				duracao / 20, luzes, porta ? "sim" : "nao", vidro ? "sim" : "nao",
+				vultoCerto ? "certo" : e.veuVultoEm >= 0 ? "sim" : "nao", teste ? "sim" : "nao");
 		Depuracao.log(p, tick / 20, resumo);
 		return resumo;
 	}
@@ -98,14 +109,22 @@ public final class Veu {
 		if (e.veuAte == 0) {
 			return;
 		}
-		if (ativo(e, tick) && e.veuVultoEm >= 0 && tick >= e.veuVultoEm) {
-			e.veuVultoEm = -1;
+		// Só enquanto ainda sobram uns segundos de Véu: o vulto que nasce na piscada da saída ninguém vê.
+		if (ativo(e, tick) && e.veuVultoEm >= 0 && tick >= e.veuVultoEm && e.veuAte - tick >= 80) {
 			// De lado, fora da tela (ele nunca nasce na frente do jogador), dentro do que a neblina deixa ver:
-			// o jogador o encontra quando vira o rosto. Fica até o Véu acabar.
+			// o jogador o encontra quando vira o rosto. Fica até o Véu acabar. Num lugar apertado, onde a procura
+			// de sempre não acha nada, vale a de perto (ver Diretor.invocar).
 			int resta = (int) Math.max(40, e.veuAte - tick);
 			boolean veio = (e.criatura == null || e.criatura.isRemoved()) && Diretor.invocar(level, p, e, HospedeEntity.Modo.OBSERVAR,
 					75, 130, 12, 17, resta, 1.0, false, PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null));
-			Depuracao.log(p, tick / 20, "VEU vulto=" + (veio ? "sim" : "nao_coube"));
+			if (veio) {
+				e.veuVultoEm = -1;
+				Depuracao.log(p, tick / 20, "VEU vulto=sim tentativas=" + (e.veuVultoTentativas + 1));
+			} else {
+				// 0.9.0-alpha19: não coube agora (de frente para um paredão, no meio de um pulo). Até a alpha18 a
+				// tentativa era uma só; agora ele tenta de novo a cada segundo, enquanto o Véu durar.
+				e.veuVultoTentativas++;
+			}
 		}
 		if (!e.veuFechou && tick >= e.veuAte - PISCADA / 2) {
 			fechar(level, p, e, tick, "TEMPO");
@@ -118,6 +137,11 @@ public final class Veu {
 			return;
 		}
 		e.veuFechou = true;
+		if (e.veuVultoEm >= 0 && e.veuVultoTentativas > 0) {
+			// Devia ter vindo e não coube em nenhuma tentativa: o log diz o que foi tentado e por que caiu.
+			Depuracao.log(p, tick / 20, "VEU vulto=nao_coube tentativas=" + e.veuVultoTentativas);
+			Diretor.logarFaltaDeLugar(p, e, tick / 20);
+		}
 		e.veuVultoEm = -1;
 		e.veuAte = Math.min(e.veuAte, tick + PISCADA / 2);
 		Rede.efeito(p, PacoteEfeito.Tipo.PISCAR, PISCADA, 1.0F);

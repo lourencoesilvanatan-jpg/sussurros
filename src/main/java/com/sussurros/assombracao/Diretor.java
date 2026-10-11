@@ -366,6 +366,58 @@ public final class Diretor {
 		return ok;
 	}
 
+	/**
+	 * Só para os testes: começa agora a sequência de ameaça, sem esperar a obsessão nem o bom momento. Dali em
+	 * diante ela anda sozinha, como no jogo (presença que espreita, pausa, golpe).
+	 */
+	public static void ameacaParaTeste(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		long seg = p.level().getGameTime() / 20;
+		e.ameacaUltimoFim = "-";
+		mudarEstado(p, e, EstadoDiretor.AMEACANDO, seg, p.level().getRandom());
+	}
+
+	/** Só para os testes: como a última sequência de ameaça deste jogador acabou ("-" enquanto não acabou). */
+	public static String fimDaAmeacaParaTeste(ServerPlayer p) {
+		return estado(p).ameacaUltimoFim;
+	}
+
+	/** Só para os testes: em que etapa a sequência de ameaça está (NENHUMA, PRESENCA, ESPREITANDO, PAUSA, GOLPE). */
+	public static String etapaDaAmeacaParaTeste(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		return e.estado == EstadoDiretor.AMEACANDO ? e.cena.name() : "FORA";
+	}
+
+	/**
+	 * Só para os testes e para o comando de teste: ele aparece agora de perto, pela procura de lugar apertado
+	 * (não conta para nada). Devolve o resumo do lugar achado, ou null se não há lugar; aí o log diz o que faltou.
+	 *
+	 * paraFoto: em vez de sumir ao ser olhado, ele fica (é o modo do outro lado, que desenha igual: parado,
+	 * olhando). Sem isto a foto teria de acertar os sete ticks entre o jogador virar e ele dissolver.
+	 */
+	@Nullable
+	public static String dePertoParaTeste(ServerPlayer p, boolean paraFoto) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		if (e.criatura != null && !e.criatura.isRemoved()) {
+			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
+		}
+		e.dePertoFalhouEm = -1;
+		if (!invocarDePerto(level, p, e, paraFoto ? HospedeEntity.Modo.AVESSO : HospedeEntity.Modo.OBSERVAR,
+				paraFoto ? 20 * 90 : 20 * 30, HospedeEntity.DIST_SUMIR_PADRAO, PedidoManifestacao.deComando(Evento.PRESENCA))) {
+			logarFaltaDeLugar(p, e, level.getGameTime() / 20);
+			return null;
+		}
+		HospedeEntity h = e.criatura;
+		return h == null ? null : String.format(Locale.ROOT, "dist=%.1f postura=%s", Math.sqrt(h.distanceToSqr(p)),
+				h.isAbaixado() ? "ABAIXADO" : "DE_PE");
+	}
+
+	/** Só para os testes: o tipo de lugar em que o Diretor acha que este jogador está (CASA, SUBSOLO...). */
+	public static String contextoParaTeste(ServerPlayer p) {
+		return estado(p).contexto.name();
+	}
+
 	/** Teste: joga os Ossos de Agouro com o desfecho escolhido. */
 	public static String testarOssos(ServerPlayer p, String desfecho) {
 		Ossos.Desfecho d;
@@ -1103,6 +1155,7 @@ public final class Diretor {
 			}
 			e.falhasAgora.add(ev);
 			Depuracao.log(p, seg, "SELECAO falhou evento=" + ev + " tentativa=" + tentativa + "/" + MAX_TENTATIVAS_POR_SEGUNDO);
+			logarFaltaDeLugar(p, e, seg);
 			ev = tentativa < MAX_TENTATIVAS_POR_SEGUNDO
 					? escolher(level, p, m, e, fase, escuro, inq, calma, v, modo, seg, rnd)
 					: null;
@@ -1506,6 +1559,11 @@ public final class Diretor {
 					} else {
 						Depuracao.log(p, seg, String.format(Locale.ROOT, "ISCA ignorada aprendida=sim atendidas=%d chance=%.2f", atendidas, chanceIgnorar));
 					}
+				}
+				// 0.9.0-alpha19: debaixo da terra ele vem para perto antes de tudo (menos da isca, que é pedido do
+				// jogador). O rastro e a rota, numa mina, põem-no a trinta blocos, depois de duas curvas.
+				if (!ok && e.contexto == ContextoMundo.Tipo.SUBSOLO) {
+					ok = invocarDePerto(level, p, e, HospedeEntity.Modo.OBSERVAR, duracao, HospedeEntity.DIST_SUMIR_PADRAO, pedido);
 				}
 				// Só tenta a rota se a isca não foi atendida: sem o !ok, um segundo Hóspede nascia
 				// por cima do primeiro, que ficava órfão (vivo, mas fora de e.criatura).
@@ -2470,7 +2528,8 @@ public final class Diretor {
 	 */
 	private static void escolherSaida(Memoria m, EstadoJogador e) {
 		HospedeEntity h = e.criatura;
-		if (h == null || e.forcando || !PrimeiroContato.liberado(m)) {
+		// Quem nasceu de perto nunca sai andando: de perto, andando, ele parece um boneco.
+		if (h == null || e.forcando || h.ehDePerto() || !PrimeiroContato.liberado(m)) {
 			return;
 		}
 		boolean recua = !e.ultimaPresencaRecuou && h.numeroDoId() % 3 == 0;
@@ -2506,6 +2565,16 @@ public final class Diretor {
 	static boolean invocar(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			double angMin, double angMax, double distMin, double distMax,
 			int duracao, double velocidade, boolean preferirEscuro, double distSumir, boolean exigirVisivel, PedidoManifestacao pedido) {
+		// 0.9.0-alpha19: quem observa ou espreita também pode nascer de perto, num lugar apertado (ver
+		// Aparicao.buscarDePerto). Debaixo da terra a presença tenta isso primeiro: a procura de sempre, quando
+		// acha lugar numa caverna, costuma achá-lo longe e no breu, onde ninguém o vê. Nos outros lugares, e para
+		// a espreita (que começa longe para poder chegar perto), só quando a procura de sempre não acha nada.
+		// A caça e o outro lado ficam como estavam.
+		boolean aceitaDePerto = modo == HospedeEntity.Modo.OBSERVAR || modo == HospedeEntity.Modo.ESPREITAR;
+		boolean dePertoPrimeiro = modo == HospedeEntity.Modo.OBSERVAR && e.contexto == ContextoMundo.Tipo.SUBSOLO;
+		if (dePertoPrimeiro && invocarDePerto(level, p, e, modo, duracao, distSumir, pedido)) {
+			return true;
+		}
 		Aparicao.Config cfg = new Aparicao.Config(
 				angMin, angMax, distMin, distMax, exigirVisivel ? 20 : 18,
 				exigirVisivel, false, preferirEscuro, true, true, 1,
@@ -2513,7 +2582,7 @@ public final class Diretor {
 		// Na caça ele se abaixa e cabe em dois blocos de altura; nos outros modos, de pé, precisa de três.
 		Aparicao.Candidato candidato = Aparicao.buscarAoRedor(level, p, e, cfg, modo == HospedeEntity.Modo.CACAR ? 2 : 3);
 		if (candidato == null) {
-			return false;
+			return aceitaDePerto && !dePertoPrimeiro && invocarDePerto(level, p, e, modo, duracao, distSumir, pedido);
 		}
 		pedido = pedido.comNota("APARICAO2 " + candidato.resumo());
 		criar(level, p, e, candidato.chao(), modo, duracao, velocidade, distSumir, pedido);
@@ -2521,6 +2590,45 @@ public final class Diretor {
 			Aparicao.registrar(e, candidato);
 		}
 		return true;
+	}
+
+	/** A menos disto do jogador, quem nasceu de perto não está mais lá (blocos). A regra de sempre usa 12. */
+	static final double DIST_SUMIR_DE_PERTO = 5.0;
+
+	/**
+	 * Ele aparece de perto, num lugar apertado: de 8 a 14 blocos, onde dois blocos de altura bastam (ver
+	 * Aparicao.buscarDePerto). De perto ele é só relance: some ao ser olhado como sempre, nunca vai embora
+	 * andando, e some também se o jogador chegar a cinco blocos sem olhar.
+	 */
+	static boolean invocarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
+			int duracao, double distSumir, PedidoManifestacao pedido) {
+		long tick = level.getGameTime();
+		if (e.dePertoFalhouEm == tick) {
+			return false; // a procura não sorteia nada: no mesmo tick daria a mesma resposta
+		}
+		Aparicao.DePerto achado = Aparicao.buscarDePerto(level, p, e, tick / 20);
+		if (achado == null) {
+			e.dePertoFalhouEm = tick;
+			return false;
+		}
+		pedido = pedido.comNota("DE_PERTO " + achado.resumo());
+		criar(level, p, e, achado.chao(), modo, duracao, 1.0, Math.min(distSumir, DIST_SUMIR_DE_PERTO), pedido);
+		if (e.criatura != null) {
+			e.criatura.definirDePerto();
+		}
+		return true;
+	}
+
+	/**
+	 * Escreve no log por que as procuras de lugar falharam desde a última vez (ver Aparicao.Falhas), e zera a
+	 * contagem. Chamado onde o log já dizia "não coube": SELECAO falhou, SEM_LUGAR, vulto=nao_coube.
+	 */
+	static void logarFaltaDeLugar(ServerPlayer p, EstadoJogador e, long seg) {
+		if (e.falhasDeLugar.vazio()) {
+			return;
+		}
+		Depuracao.log(p, seg, "LUGAR falhou " + e.falhasDeLugar.resumo());
+		e.falhasDeLugar.limpar();
 	}
 
 	/**
@@ -2540,6 +2648,8 @@ public final class Diretor {
 			Aparicao.Candidato achado = Aparicao.buscarAoRedor(level, p, e, cfg);
 			if (achado != null && temLuzParaVer(level, achado.chao())) {
 				candidato = achado;
+			} else if (achado != null) {
+				e.falhasDeLugar.registrar("COM_LUZ", "semLuz", 1);
 			}
 		}
 		if (candidato == null) {
@@ -2658,6 +2768,13 @@ public final class Diretor {
 		HospedeEntity h = new HospedeEntity(ModEntidades.HOSPEDE, level);
 		h.setPos(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
 		h.configurar(p, modo, duracao, ousadia, velocidade);
+		// Fora da caça (que tem o seu corpo baixo), ele fica de pé onde há três blocos livres e se dobra onde o
+		// teto só deixa dois. Até a alpha18 nenhuma procura devolvia um lugar assim; a de perto devolve.
+		if (modo != HospedeEntity.Modo.CACAR) {
+			h.definirAbaixado(!livre(level, chao.above(2)));
+		}
+		// Achou lugar: o que falhou antes, na mesma tentativa, deixa de interessar.
+		e.falhasDeLugar.limpar();
 		h.definirDistanciaSumir(distSumir);
 		h.definirOrigem(pedido.origem(), pedido.evento()); // de comando: nada do que acontece com ele fica na memória
 		h.definirId(novoIdManifestacao());
@@ -2683,9 +2800,9 @@ public final class Diretor {
 				motivo = "CENA_JANELA+" + motivo;
 			}
 			Depuracao.log(p, level.getGameTime() / 20, String.format(Locale.ROOT,
-					"HOSPEDE id=%s criado origem=%s evento=%s modo=%s pos=%s dist=%.1f motivoPosicao=%s cena=%s",
+					"HOSPEDE id=%s criado origem=%s evento=%s modo=%s pos=%s dist=%.1f motivoPosicao=%s cena=%s postura=%s",
 					h.getIdManifestacao(), pedido.origem(), pedido.evento(), modo, pos(h.getX(), h.getY(), h.getZ()),
-					Math.sqrt(h.distanceToSqr(p)), motivo, cenaAtiva(e)));
+					Math.sqrt(h.distanceToSqr(p)), motivo, cenaAtiva(e), h.isAbaixado() ? "ABAIXADO" : "DE_PE"));
 		}
 	}
 
@@ -2766,22 +2883,36 @@ public final class Diretor {
 	/** O Hóspede aparece num lugar por onde você passou: "ele veio atrás de mim". */
 	static boolean invocarNoRastro(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			long seg, int idadeMin, int idadeMax, double distMin, double distMax, int duracao, double distSumir, PedidoManifestacao pedido) {
+		// Só para o log (ver Aparicao.Falhas).
+		int semChao = 0;
+		int telaOuZona = 0;
+		int exposto = 0;
+		int desnivel = 0;
 		for (int tentativa = 0; tentativa < 6; tentativa++) {
 			Rastro.Ponto pt = pontoDoRastro(p, e, seg, idadeMin, idadeMax, distMin, distMax, true);
 			if (pt == null) {
+				e.falhasDeLugar.registrar("RASTRO", "tentados", tentativa, "semPonto", 1, "semChao", semChao,
+						"telaOuZona", telaOuZona, "exposto", exposto, "desnivel", desnivel);
 				return false;
 			}
 			// Procura o chão a partir da altura dos seus pés naquele momento.
 			BlockPos chao = acharChao(level, pt.x(), pt.y() - 5, pt.z());
-			if (chao == null || naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+			if (chao == null) {
+				semChao++;
+				continue;
+			}
+			if (naTela(p, chao) || emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+				telaOuZona++;
 				continue;
 			}
 			if (expostoDemais(level, p, chao, temCobertura(level, p, chao))) {
+				exposto++;
 				continue;
 			}
 			// O Rastro guarda por onde ele andou, inclusive a caverna embaixo dos pés dele. Um ponto assim fica
 			// "perto" no mapa, mas a aparição nasce onde não dá para ver (um log real mostrou duas a 30 blocos abaixo).
 			if (Math.abs(chao.getY() - p.getY()) > DESNIVEL_MAX_APARICAO) {
+				desnivel++;
 				continue;
 			}
 			pedido = pedido.comNota(String.format(Locale.ROOT, "RASTRO idadeRastro=%ds distRastro=%.0f", seg - pt.seg(),
@@ -2789,6 +2920,8 @@ public final class Diretor {
 			criar(level, p, e, chao, modo, duracao, 1.0, distSumir, pedido);
 			return true;
 		}
+		e.falhasDeLugar.registrar("RASTRO", "tentados", 6, "semChao", semChao, "telaOuZona", telaOuZona,
+				"exposto", exposto, "desnivel", desnivel);
 		return false;
 	}
 
@@ -2798,6 +2931,13 @@ public final class Diretor {
 	 */
 	static boolean expostoDemais(ServerLevel level, ServerPlayer p, BlockPos chao, boolean cobertura) {
 		if (cobertura || ehNoite(level)) {
+			return false;
+		}
+		// 0.9.0-alpha19: com o Véu aberto a neblina fecha a menos de trinta blocos e a cor é a do outro lado. O
+		// que de dia pareceria um boneco é ali um contorno na neblina, e sem isto o vulto do Véu nunca cabia de
+		// dia em campo aberto.
+		EstadoJogador veu = ESTADOS.get(p.getUUID());
+		if (veu != null && Veu.ativo(veu, level.getGameTime())) {
 			return false;
 		}
 		if (distanciaSqr(p, chao.getX() + 0.5, chao.getZ() + 0.5) >= DIST_MIN_EXPOSTO * DIST_MIN_EXPOSTO) {
@@ -2981,6 +3121,8 @@ public final class Diretor {
 			return true;
 		}
 		h.setPos(melhor.getX() + 0.5, melhor.getY(), melhor.getZ() + 0.5);
+		// A postura é a do lugar novo: quem nasceu abaixado num túnel fica de pé onde há espaço.
+		h.definirAbaixado(!livre(level, melhor.above(2)));
 		h.olharPara(p);
 		double novaDist = Math.sqrt(h.distanceToSqr(p));
 		if (rnd.nextFloat() < 0.3F) {
@@ -3192,6 +3334,9 @@ public final class Diretor {
 
 	private static void fimAmeaca(ServerPlayer p, EstadoJogador e, long seg, RandomSource rnd, String motivo, double fatorObsessao) {
 		double antes = e.obsessao;
+		e.ameacaUltimoFim = motivo;
+		// Sessenta segundos de procura sem achar onde pôr o corpo: o log diz o que foi tentado e por que caiu.
+		logarFaltaDeLugar(p, e, seg);
 		e.obsessao *= fatorObsessao;
 		e.cena = EstadoJogador.Cena.NENHUMA;
 		e.golpeDado = false;
@@ -4103,9 +4248,9 @@ public final class Diretor {
 			agendar(level, 60 + level.getRandom().nextInt(80), () -> {
 				if (!p.isRemoved() && (e.criatura == null || e.criatura.isRemoved())) {
 					PedidoManifestacao pedido = PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null);
-					try {
-						invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true, pedido);
-					} finally {
+					if (!invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true, pedido)) {
+						Depuracao.log(p, level.getGameTime() / 20, "OLHO aparicao=nao_coube");
+						logarFaltaDeLugar(p, e, level.getGameTime() / 20);
 					}
 				}
 			});
@@ -4227,9 +4372,10 @@ public final class Diretor {
 		if (ok) {
 			return null;
 		}
+		logarFaltaDeLugar(p, e, tick / 20);
 		// O motivo depende do tipo de evento: só os que usam a criatura precisam de chão livre para ela.
 		return usaCriatura(ev)
-				? "não achei um lugar livre para ele (chão firme com 3 blocos de ar em cima, fora da sua tela). Tente num lugar mais aberto."
+				? "não achei um lugar livre para ele (chão firme, fora da sua tela). Tente em outro lugar; o log diz o que faltou."
 				: "não encontrou condições agora (sem ponto do seu caminho por perto, sem ação recente ao alcance ou sem lugar livre). Ande um pouco e tente de novo.";
 	}
 
