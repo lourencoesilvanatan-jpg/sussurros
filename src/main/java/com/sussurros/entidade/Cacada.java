@@ -681,7 +681,7 @@ final class Cacada {
 		double melhor = Double.MAX_VALUE;
 		for (Direction d : Direction.values()) {
 			BlockPos c = bloco.relative(d);
-			if (level.getBlockState(c).isAir() && level.getBlockState(c.above()).isAir() && solido(level, c.below())) {
+			if (Diretor.livre(level, c) && Diretor.livre(level, c.above()) && solido(level, c.below())) {
 				double dd = c.distSqr(alvo.blockPosition());
 				if (dd < melhor) {
 					melhor = dd;

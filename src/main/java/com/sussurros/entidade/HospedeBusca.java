@@ -399,7 +399,7 @@ final class HospedeBusca {
         if (d < 20 && alvo.getViewVector(1.0F).dot(ponto.subtract(alvo.getEyePosition()).normalize()) > Percepcao.coneSeguro(alvo)) {
             return false;
         }
-        return level.getBlockState(chao).isAir();
+        return Diretor.livre(level, chao);
     }
 
     /** Chão firme com dois blocos de ar em cima: na caça ele se abaixa e cabe onde o jogador cabe. */
@@ -408,9 +408,7 @@ final class HospedeBusca {
         for (int dy = 7; dy >= -14; dy--) {
             BlockPos pos = BlockPos.containing(x, yBase + dy, z);
             BlockPos baixo = pos.below();
-            BlockState s0 = level.getBlockState(pos);
-            BlockState s1 = level.getBlockState(pos.above());
-            if (s0.isAir() && s1.isAir()
+            if (Diretor.livre(level, pos) && Diretor.livre(level, pos.above())
                     && !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
                 return pos;
             }

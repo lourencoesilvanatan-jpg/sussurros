@@ -198,9 +198,9 @@ final class Aparicao {
 		for (int dy = 6; dy >= -12; dy--) {
 			BlockPos pos = BlockPos.containing(x, yBase + dy, z);
 			BlockPos baixo = pos.below();
-			if (level.getBlockState(pos).isAir()
-					&& level.getBlockState(pos.above()).isAir()
-					&& (arLivre < 3 || level.getBlockState(pos.above(2)).isAir())
+			if (Diretor.livre(level, pos)
+					&& Diretor.livre(level, pos.above())
+					&& (arLivre < 3 || Diretor.livre(level, pos.above(2)))
 					&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
 				return pos;
 			}

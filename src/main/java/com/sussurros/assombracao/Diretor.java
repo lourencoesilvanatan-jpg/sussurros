@@ -35,6 +35,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -2834,7 +2835,7 @@ public final class Diretor {
 			int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, coluna.getX(), coluna.getZ());
 			BlockPos chao = new BlockPos(coluna.getX(), y, coluna.getZ());
 			BlockPos baixo = chao.below();
-			if (!level.getBlockState(chao).isAir() || !level.getBlockState(chao.above()).isAir() || !level.getBlockState(chao.above(2)).isAir()
+			if (!livre(level, chao) || !livre(level, chao.above()) || !livre(level, chao.above(2))
 					|| level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty() || !level.getFluidState(baixo).isEmpty()) {
 				continue;
 			}
@@ -4621,15 +4622,33 @@ public final class Diretor {
 		return new Vec3(p.getX() + rx * dist, p.getY(), p.getZ() + rz * dist);
 	}
 
-	/** Procura um chão firme com 3 blocos de ar em cima (a criatura é alta). */
+	/**
+	 * Dá para alguém ocupar este bloco? Ar, ou qualquer coisa sem corpo: capim, flor, plantação, neve rasa.
+	 * Não vale líquido, fogo, teia nem o que dá luz (ele não nasce com uma tocha atravessada nos pés).
+	 *
+	 * Até a alpha17 a pergunta era "é ar?". Num campo, quase toda coluna tem capim ou flor em cima do chão: o
+	 * capim não era ar (não cabia) e também não era chão (não tem corpo), e a coluna inteira era descartada.
+	 * Na vila do dono, em 11/10/2026, não havia UMA coluna válida em volta da casa dele: a cena da janela
+	 * não tinha para onde mandá-lo andando, e duas sequências de ameaça acabaram sem aparição ("SEM_LUGAR").
+	 */
+	public static boolean livre(ServerLevel level, BlockPos pos) {
+		BlockState s = level.getBlockState(pos);
+		if (s.isAir()) {
+			return true;
+		}
+		return s.getCollisionShape(level, pos).isEmpty() && s.getFluidState().isEmpty() && s.getLightEmission() == 0
+				&& !s.is(BlockTags.FIRE) && !s.is(Blocks.COBWEB) && !s.is(Blocks.POWDER_SNOW);
+	}
+
+	/** Procura um chão firme com 3 blocos livres em cima (a criatura é alta). Ver livre(): capim não atrapalha. */
 	@Nullable
 	static BlockPos acharChao(ServerLevel level, double x, double yBase, double z) {
 		for (int dy = 6; dy >= -12; dy--) {
 			BlockPos pos = BlockPos.containing(x, yBase + dy, z);
 			BlockPos baixo = pos.below();
-			if (level.getBlockState(pos).isAir()
-					&& level.getBlockState(pos.above()).isAir()
-					&& level.getBlockState(pos.above(2)).isAir()
+			if (livre(level, pos)
+					&& livre(level, pos.above())
+					&& livre(level, pos.above(2))
 					&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
 				return pos;
 			}

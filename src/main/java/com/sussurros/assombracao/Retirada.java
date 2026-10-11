@@ -28,8 +28,13 @@ import com.sussurros.entidade.HospedeEntity;
  *
  * O lugar é escolhido uma vez, quando ele começa a sair: de lado em relação ao jogador (o lado sai do ID da
  * manifestação, sem sorteio do mundo), a poucos blocos, de preferência onde o jogador deixa de enxergá-lo
- * (atrás de uma árvore, de uma parede, fora do quadro da janela), e só onde há caminho. Sem lugar, ele some
- * como sempre.
+ * (atrás de uma árvore, de uma parede, fora do quadro da janela), e só onde há caminho. Sem lugar de lado, ele
+ * recua de costas para longe. Sem lugar nenhum, some como sempre, e o log diz por quê.
+ *
+ * 0.9.0-alpha18: na casa de verdade do dono isto não funcionou nenhuma vez. A procura de chão vinha de cima
+ * (achava o telhado antes do quintal) e pedia ar puro (o quintal dele é todo capim), e só os seis lugares
+ * mais escondidos tinham o caminho testado (dentro da casa do vizinho, por exemplo). Agora o chão é procurado
+ * na altura dele, capim não atrapalha (Diretor.livre), e todos os lugares são tentados.
  */
 public final class Retirada {
 	/** Blocos por segundo de quem vai embora sem pressa. O jogador anda a 4,3. */
@@ -41,7 +46,7 @@ public final class Retirada {
 	private record Candidato(Vec3 ponto, double nota, boolean escondido) {
 	}
 
-	/** O primeiro trecho: de lado, para fora da vista. Null se não há para onde ir. */
+	/** O primeiro trecho: de lado, para fora da vista; ou, sem isso, de costas para longe. Null se não há para onde ir. */
 	@Nullable
 	public static Vec3 escolher(ServerLevel level, ServerPlayer p, HospedeEntity h) {
 		Vec3 eixo = new Vec3(h.getX() - p.getX(), 0, h.getZ() - p.getZ());
@@ -52,26 +57,31 @@ public final class Retirada {
 		Vec3 lado = new Vec3(-eixo.z, 0, eixo.x);
 		int sinal = h.numeroDoId() % 2 == 0 ? 1 : -1;
 		List<Candidato> candidatos = new ArrayList<>();
+		int tentados = 0;
 		for (int s : new int[] {sinal, -sinal}) {
 			for (double d : new double[] {5.0, 7.0, 9.0, 3.5}) {
 				for (double recuo : new double[] {1.5, 3.5, 0.0}) {
-					Vec3 alvo = h.position().add(lado.scale(s * d)).add(eixo.scale(recuo));
-					BlockPos chao = Diretor.acharChao(level, alvo.x, h.getY() + 1, alvo.z);
-					if (chao == null || Math.abs(chao.getY() - h.getY()) > 2
-							|| Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
-						continue;
+					tentados++;
+					Candidato c = candidato(level, p, h, h.position().add(lado.scale(s * d)).add(eixo.scale(recuo)),
+							(s == sinal ? 0.3 : 0.0) + (d >= 5.0 && d <= 7.0 ? 0.2 : 0.0));
+					if (c != null) {
+						candidatos.add(c);
 					}
-					Vec3 ponto = new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
-					boolean escondido = !enxerga(level, p, ponto.add(0, 0.6, 0)) && !enxerga(level, p, ponto.add(0, 2.4, 0));
-					double nota = (escondido ? 3.0 : 0.0) + (s == sinal ? 0.3 : 0.0) + (d >= 5.0 && d <= 7.0 ? 0.2 : 0.0);
-					candidatos.add(new Candidato(ponto, nota, escondido));
+				}
+			}
+		}
+		// De costas para longe: só se nenhum lugar de lado servir (a nota é a mais baixa).
+		for (double recuo : new double[] {6.0, 9.0, 4.0}) {
+			for (double desvio : new double[] {0.0, 2.5, -2.5}) {
+				tentados++;
+				Candidato c = candidato(level, p, h, h.position().add(eixo.scale(recuo)).add(lado.scale(desvio)), -1.0);
+				if (c != null) {
+					candidatos.add(c);
 				}
 			}
 		}
 		candidatos.sort(Comparator.comparingDouble(Candidato::nota).reversed());
-		// Calcular caminho custa: só para os seis melhores.
-		for (int i = 0; i < Math.min(6, candidatos.size()); i++) {
-			Candidato c = candidatos.get(i);
+		for (Candidato c : candidatos) {
 			if (chega(h, c.ponto())) {
 				Depuracao.log(p, level.getGameTime() / 20, String.format(Locale.ROOT,
 						"HOSPEDE id=%s saida=RECUA dist=%.1f para=%s escondido=%s",
@@ -80,7 +90,22 @@ public final class Retirada {
 				return c.ponto();
 			}
 		}
+		// Só para o log: sem isto não dá para saber, lendo uma sessão, por que ele sumiu em vez de sair andando.
+		Depuracao.log(p, level.getGameTime() / 20, String.format(Locale.ROOT,
+				"HOSPEDE id=%s saida=RECUA falhou lugares=%d comChao=%d comCaminho=0 noChao=%s",
+				h.getIdManifestacao(), tentados, candidatos.size(), h.onGround() ? "sim" : "nao"));
 		return null;
+	}
+
+	@Nullable
+	private static Candidato candidato(ServerLevel level, ServerPlayer p, HospedeEntity h, Vec3 alvo, double bonus) {
+		BlockPos chao = chaoPerto(level, alvo.x, h.getY(), alvo.z, 2);
+		if (chao == null || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+			return null;
+		}
+		Vec3 ponto = new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
+		boolean escondido = !enxerga(level, p, ponto.add(0, 0.6, 0)) && !enxerga(level, p, ponto.add(0, 2.4, 0));
+		return new Candidato(ponto, (escondido ? 3.0 : 0.0) + bonus, escondido);
 	}
 
 	/** O segundo trecho, para quem chegou ao lugar e continua à vista: de costas para o jogador, para longe. */
@@ -95,13 +120,32 @@ public final class Retirada {
 			double a = Math.toRadians(graus);
 			Vec3 direcao = new Vec3(eixo.x * Math.cos(a) - eixo.z * Math.sin(a), 0, eixo.x * Math.sin(a) + eixo.z * Math.cos(a));
 			Vec3 alvo = h.position().add(direcao.scale(10.0));
-			BlockPos chao = Diretor.acharChao(level, alvo.x, h.getY() + 1, alvo.z);
-			if (chao == null || Math.abs(chao.getY() - h.getY()) > 3) {
+			BlockPos chao = chaoPerto(level, alvo.x, h.getY(), alvo.z, 3);
+			if (chao == null) {
 				continue;
 			}
 			Vec3 ponto = new Vec3(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5);
 			if (chega(h, ponto)) {
 				return ponto;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Chão para ele, de pé, perto da altura em que ele já está: três blocos livres sobre um bloco firme, no
+	 * máximo "desnivel" blocos acima ou abaixo. Procura a partir da altura dele e não de cima para baixo:
+	 * ao lado de uma casa, de cima para baixo, o primeiro chão que aparece é o telhado.
+	 */
+	@Nullable
+	static BlockPos chaoPerto(ServerLevel level, double x, double y, double z, int desnivel) {
+		for (int i = 0; i <= desnivel * 2; i++) {
+			int dy = i == 0 ? 0 : (i % 2 == 1 ? (i + 1) / 2 : -i / 2);
+			BlockPos pos = BlockPos.containing(x, y + dy, z);
+			BlockPos baixo = pos.below();
+			if (Diretor.livre(level, pos) && Diretor.livre(level, pos.above()) && Diretor.livre(level, pos.above(2))
+					&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()) {
+				return pos;
 			}
 		}
 		return null;
@@ -133,8 +177,8 @@ public final class Retirada {
 		}
 		for (double angulo : new double[] {130, -130, 150, -150, 110, -110}) {
 			Vec3 ponto = Diretor.pontoRelativo(p, angulo, 18.0);
-			BlockPos chao = Diretor.acharChao(level, ponto.x, p.getY() + 1, ponto.z);
-			if (chao == null || Math.abs(chao.getY() - p.getY()) > 3 || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+			BlockPos chao = chaoPerto(level, ponto.x, p.getY(), ponto.z, 3);
+			if (chao == null || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
 				continue;
 			}
 			Diretor.criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * 30, 1.0, HospedeEntity.DIST_SUMIR_PADRAO,

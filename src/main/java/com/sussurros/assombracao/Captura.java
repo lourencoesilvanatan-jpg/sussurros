@@ -205,7 +205,7 @@ public final class Captura {
 		for (int dy = 4; dy >= -8; dy--) {
 			BlockPos pos = BlockPos.containing(x, yBase + dy, z);
 			BlockPos baixo = pos.below();
-			if (level.getBlockState(pos).isAir() && level.getBlockState(pos.above()).isAir()
+			if (Diretor.livre(level, pos) && Diretor.livre(level, pos.above())
 					&& !level.getBlockState(baixo).getCollisionShape(level, baixo).isEmpty()
 					&& level.getFluidState(baixo).isEmpty() && level.getFluidState(pos).isEmpty()) {
 				return pos;

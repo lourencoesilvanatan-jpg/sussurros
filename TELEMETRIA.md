@@ -792,3 +792,11 @@ HOSPEDE id=M016 sumiu motivo=PARADA_NO_TEMPO modo=VULTO dist=71.0
 - `saida=RECUA`: visto, ele começou a ir embora andando. `para` é o lugar escolhido; `escondido=sim` quer dizer que dali o jogador não o vê (árvore, parede, fora do quadro da janela). Sem essa linha, a aparição acabou como sempre.
 - `sumiu motivo=FOI_EMBORA`: o fim de uma saída andando. Se ele ainda estava à vista (campo aberto, ao fim de oito segundos), dissolveu; senão, só deixou de estar lá.
 - `pulada motivo=SEM_JANELA`: era a hora de uma chance da cena da janela e não havia vidro a 12 blocos do jogador. Aparece no máximo uma vez a cada dois minutos em casa.
+
+## 0.9.0-alpha18
+
+```
+[9332s][Jogador] HOSPEDE id=M007 saida=RECUA falhou lugares=33 comChao=0 comCaminho=0 noChao=sim
+```
+
+Ele tinha a saída andando, foi visto, e não achou para onde ir: some como sempre, e esta linha diz por quê. `comChao=0` é terreno (nenhum dos lugares tem três blocos livres sobre chão firme); `comChao` maior que zero com `comCaminho=0` é caminho (há chão, mas ele não chega lá); `noChao=nao` quer dizer que ele estava no ar, e sem pé no chão o jogo não calcula caminho.

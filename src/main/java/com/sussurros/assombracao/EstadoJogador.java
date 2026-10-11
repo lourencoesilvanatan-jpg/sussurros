@@ -299,6 +299,8 @@ final class EstadoJogador {
 	int atencaoFase;
 	/** Uma carta do baralho deixou mais tochas empalidecerem até este segundo. */
 	long chamasExtraAteSeg;
+	/** A próxima tocha só empalidece a partir deste segundo (ver ChamasPalidas). */
+	long chamaPalidaLiberadaEm;
 	/** Vigia da criatura parada no tempo: o tickCount dela na última olhada, e há quantos segundos não muda. */
 	int criaturaTickVisto = -1;
 	int criaturaParadaSeg;

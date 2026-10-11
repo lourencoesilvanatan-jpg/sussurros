@@ -1387,3 +1387,45 @@ Sem teste: o sorteio de uma em três na presença comum (está só lido), e a ap
 ## O que ficou para a etapa 2
 
 A `afronta` (seção 5.3 da pesquisa): o que o jogador faz com ele ter resposta na hora. E a inclinação de cabeça antes de sair, que pede mexer no modelo e foto.
+
+---
+# Versão 0.9.0-alpha18 — o terreno de verdade
+
+## O que deu errado na alpha17
+
+O dono jogou a alpha17 por uma hora e meia e, no fim, forçou a cena da janela por comando, duas vezes, na casa dele. Nas duas o Hóspede apareceu no vidro e **sumiu do jeito antigo** (`sumiu motivo=VISTO_DEMAIS`, sem a linha `saida=RECUA`). A saída andando não aconteceu nenhuma vez no jogo de verdade.
+
+Li uma cópia do mundo salvo (`ferramentas/log/ler_mundo.py`) e refiz a escolha de lugar em cima do terreno real em volta da casa: **dos 24 lugares para onde ele poderia ir, nenhum tinha "chão"**. O quintal é todo capim e flor. A procura de chão pedia três blocos de **ar**: um pé de capim não é ar (ele "não cabia") e também não é chão (não tem corpo), então a coluna inteira era descartada. Com a regra nova, 21 dos 24 servem.
+
+Os meus testes não pegaram porque o mundo de teste é um gramado raspado, sem uma planta.
+
+## O defeito era maior do que a janela
+
+A mesma exigência de ar estava em toda a procura de lugar do mod: onde ele nasce (`Aparicao`, `Diretor.acharChao`), o vulto distante, os pontos de busca e o atalho da caçada, o lugar para onde a captura leva. Num campo ou numa vila, quase toda coluna tem capim. Na mesma sessão:
+
+- duas das quatro sequências de ameaça acabaram com `FIM motivo=SEM_LUGAR`, sem aparição (uma delas com ele em casa, na vila);
+- a única `PRESENCA` sorteada falhou (`SELECAO falhou`);
+- a espreita não achou para onde se mexer duas vezes.
+
+É boa parte do "cadê o bicho?" que a irmã dele perguntou. Não é a explicação inteira: uma das sequências sem lugar foi no fundo de uma caverna, onde não há capim (ver a pesquisa de 11/10, segunda parte).
+
+## O conserto
+
+- **`Diretor.livre(level, pos)`**: dá para ocupar o bloco? Ar, ou qualquer coisa sem corpo (capim, flor, plantação, neve rasa); nunca líquido, fogo, teia, neve fofa nem o que dá luz. Substitui o `isAir()` em `Diretor.acharChao`, `Aparicao.acharChao`, no vulto, em `HospedeBusca.acharChao` e `valido`, na saída do atravessar e em `Captura.chaoParaJogador`.
+- **`Retirada`**: o chão é procurado na altura em que ele está (de cima para baixo, ao lado de uma casa, o primeiro chão é o telhado); todos os lugares têm o caminho testado, não só os seis melhores; se nenhum de lado serve, ele recua de costas para longe; e quando nada serve fica a linha `saida=RECUA falhou ...`.
+
+## As chamas pálidas, uma de cada vez
+
+O dono, da caverna: "os eventos e coisas ficaram muito focados em mudar a tocha de cor". O log: **90 tochas empalidecidas em 90 minutos**. A cota (duas ou três ao mesmo tempo na fase 4) era reposta a cada vinte segundos; numa caverna iluminada por tochas, é o que mais se vê.
+
+Agora passam pelo menos três minutos entre uma tocha que empalidece e a seguinte. A cota continua a mesma, mas na prática fica uma, às vezes duas. O acréscimo que a carta do baralho dá por dez minutos não espera.
+
+## Os testes
+
+Três novos (62 no total): a cena da janela com capim e flor em todas as colunas (`noQuintalComCapimEleTambemSaiAndando`), a caçada que acha onde começar num campo de capim (`noCapimEleAchaOndeAparecer`) e as chamas uma de cada vez (`asChamasVemUmaDeCadaVez`). Os dois primeiros falham com a regra antiga.
+
+Sem teste: o que só o terreno dele tem (desnível, casa vizinha, telhado). Para isso serve o replay no mundo salvo, que não é automático.
+
+## Lição
+
+Teste em mundo plano e raspado não diz nada sobre o mundo onde se joga. Quando uma coisa depende do terreno, o teste precisa pôr o terreno: capim, flor, desnível, teto. E, havendo um mundo de verdade à mão, vale ler o mundo.
