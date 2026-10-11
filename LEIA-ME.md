@@ -139,6 +139,7 @@ Principais mudanças:
 - `/sussurros cena caminho` força uma pequena alteração física temporária fora da tela.
 - `/sussurros cena curral` força comportamento animal de rastreamento.
 - `/sussurros estrutura marco|posto|nicho` gera uma estrutura narrativa fora da tela para teste.
+- `/sussurros teste saida` põe uma presença fora da tela que, vista, vai embora andando em vez de sumir (teste).
 - `/sussurros memoria` mostra o que o mod sabe sobre você (spoiler)
 - `/sussurros esquecer` zera tudo. **Use antes de começar um teste novo** se o mundo já foi
   bagunçado com comandos.

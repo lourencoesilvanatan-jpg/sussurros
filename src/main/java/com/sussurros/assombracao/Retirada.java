@@ -120,20 +120,33 @@ public final class Retirada {
 		return r.getType() == HitResult.Type.MISS;
 	}
 
-	/** Só para os testes: uma presença comum perto do jogador, fora da tela, com a saída escolhida. */
+	/**
+	 * Só para os testes e para o comando de teste: uma presença a 18 blocos do jogador, fora da tela (atrás e
+	 * de lado), com a saída escolhida. O lugar é fixo, sem a busca de sempre: de dia e em campo aberto a busca
+	 * recusa pôr alguém tão perto (ver Diretor.expostoDemais), e as fotos precisam justamente da luz do dia.
+	 */
 	public static boolean presencaParaTeste(ServerPlayer p, boolean saiAndando) {
 		ServerLevel level = p.level();
 		EstadoJogador e = Diretor.estadoParaTeste(p);
 		if (e.criatura != null && !e.criatura.isRemoved()) {
 			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
 		}
-		if (!Diretor.invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 165, 16, 22, 20 * 30, 1.0, true,
-				HospedeEntity.DIST_SUMIR_PADRAO, true, PedidoManifestacao.deComando(Evento.PRESENCA)) || e.criatura == null) {
-			return false;
+		for (double angulo : new double[] {130, -130, 150, -150, 110, -110}) {
+			Vec3 ponto = Diretor.pontoRelativo(p, angulo, 18.0);
+			BlockPos chao = Diretor.acharChao(level, ponto.x, p.getY() + 1, ponto.z);
+			if (chao == null || Math.abs(chao.getY() - p.getY()) > 3 || Diretor.emZonaCalma(p, chao.getX(), chao.getY(), chao.getZ())) {
+				continue;
+			}
+			Diretor.criar(level, p, e, chao, HospedeEntity.Modo.OBSERVAR, 20 * 30, 1.0, HospedeEntity.DIST_SUMIR_PADRAO,
+					PedidoManifestacao.deComando(Evento.PRESENCA).comNota("TESTE_DE_SAIDA"));
+			if (e.criatura == null) {
+				return false;
+			}
+			if (saiAndando) {
+				e.criatura.definirSaida(HospedeEntity.Saida.RECUA, 0.0);
+			}
+			return true;
 		}
-		if (saiAndando) {
-			e.criatura.definirSaida(HospedeEntity.Saida.RECUA, 0.0);
-		}
-		return true;
+		return false;
 	}
 }

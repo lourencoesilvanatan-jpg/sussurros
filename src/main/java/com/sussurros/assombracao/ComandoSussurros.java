@@ -233,6 +233,14 @@ public final class ComandoSussurros {
 				}));
 			}
 			teste.then(testeSussurro);
+			// Uma presença comum que, vista, vai embora andando em vez de sumir (para as fotos do teste de cliente).
+			teste.then(Commands.literal("saida").executes(ctx -> {
+				boolean ok = Retirada.presencaParaTeste(ctx.getSource().getPlayerOrException(), true);
+				ctx.getSource().sendSuccess(() -> Component.literal(ok
+						? "[Sussurros] Ele está por perto, fora da tela. Olhe para ele: em vez de sumir, vai embora andando."
+						: "[Sussurros] Não achei lugar para ele aparecer."), false);
+				return 1;
+			}));
 			teste.then(Commands.literal("miragem")
 					.executes(ctx -> {
 						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), false);

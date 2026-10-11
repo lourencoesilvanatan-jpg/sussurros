@@ -27,6 +27,7 @@ import com.sussurros.assombracao.Avesso;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
 import com.sussurros.bloco.CinzaEspalhadaBlock;
+import com.sussurros.entidade.HospedeEntity;
 import com.sussurros.bloco.LampiaoPalidoBlock;
 import com.sussurros.bloco.TigelaBlockEntity;
 import com.sussurros.bloco.TigelaOferendaBlock;
@@ -60,6 +61,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			lugares(context, mundo);
 			avesso(context, mundo);
 			sentidos(context, mundo);
+			saidaAndando(context, mundo);
 			cacada(context, mundo);
 			capturaQueLeva(context, mundo);
 		}
@@ -570,6 +572,40 @@ public class TestesDeCliente implements FabricClientGameTest {
 	private static void camera(TestSingleplayerContext mundo, BlockPos partida, int dx, int dz, int inclinacao) {
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 %d",
 				partida.getX() + dx + 0.5, partida.getY(), partida.getZ() + dz + 0.5, inclinacao));
+	}
+
+	/**
+	 * A saída andando (0.9.0-alpha17), de dia para dar para ver: ele aparece fora da tela, o jogador se vira,
+	 * e em vez de dissolver ele segura o olhar, vira e vai embora de lado. As fotos são o único jeito de saber
+	 * se o andar dele, de pé e devagar, parece alguém andando ou um boneco deslizando.
+	 */
+	private static void saidaAndando(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		String virar = "execute as @p at @s facing entity @e[type=sussurros:hospede,limit=1,sort=nearest] eyes run tp @s ~ ~ ~ ~ ~";
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		context.waitTicks(20);
+		mundo.getServer().runCommand("execute as @p run sussurros teste saida");
+		context.waitTicks(5);
+		boolean nasceu = mundo.getServer().computeOnServer(server -> Diretor.criatura(server.getPlayerList().getPlayers().get(0)) != null);
+		conferir(nasceu, "a presença de teste deveria ter nascido");
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(12);
+		context.takeScreenshot("37-saida-segura-o-olhar");
+		context.waitTicks(26);
+		boolean indoEmbora = mundo.getServer().computeOnServer(server -> {
+			HospedeEntity h = Diretor.criatura(server.getPlayerList().getPlayers().get(0));
+			return h != null && h.estaIndoEmbora() && !h.isSumindo();
+		});
+		conferir(indoEmbora, "visto, ele deveria estar indo embora andando, sem dissolver");
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(4);
+		context.takeScreenshot("38-saida-andando");
+		context.waitTicks(24);
+		mundo.getServer().runCommand(virar);
+		context.waitTicks(4);
+		context.takeScreenshot("39-saida-andando-mais-longe");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		context.waitTicks(20);
 	}
 
 	/** A caçada vista pelo jogador: o aviso, ele parado ao longe, e o que sobra na tela quando ele chega. */
