@@ -1788,6 +1788,14 @@ Os dois últimos são perturbações da Atmosfera (`PEDRINHA`, `MORCEGOS`): entr
   - `naSuperficieARegraDasFamiliasNaoVale` e `oMorcegoQueSobrouETirado`.
 - **Cliente** (`TestesDeCliente.caverna`, fotos 46 a 49): a rachadura, a pedrinha em dois toques e os morcegos, no mesmo túnel.
 
+## As fotos (46 a 49)
+
+Abertas e conferidas, do job `fotos` do PR #43.
+
+- **47, a rachadura.** Desenha: o risco de quebra do jogo aparece no bloco do fundo, na metade. Era a dúvida que só a foto tirava (nenhum código aberto lido manda esse pacote só para um jogador, com um número que não é de entidade). Com a luz de uma tocha a dois blocos, lê-se bem.
+- **48, a pedrinha (dois toques).** As lascas aparecem nos dois toques, do tamanho das de um bloco sendo quebrado. Na foto são marrons porque o chão do túnel de teste é o gramado do mundo plano; numa caverna de verdade saem da cor da pedra. Se parecerem grandes demais para "uma pedrinha", é o número de lascas (4, 5 e 2) que se mexe.
+- **49, os morcegos (vindo e passando).** Vêm juntos pelo meio do túnel, escuros contra a luz da curva, e crescem na tela de uma foto para a outra. Num túnel de um bloco eles ficam empilhados; em lugar largo se espalham para os lados (isso nenhuma foto mostra).
+
 ## O analisador
 
 - Seção nova, "As famílias do que saiu, por lugar": a tabela de famílias por tipo de lugar, a família que mais saiu no subsolo com o que mais pesou nela, o maior tempo de subsolo sem nada que se toque, as dívidas pagas, quantas vezes a regra barrou e cedeu, e as três coisas da caverna. Num log de antes da alpha22 a família é estimada pelo nome das linhas (é assim que saiu o número de 11/10).
