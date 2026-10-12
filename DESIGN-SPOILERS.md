@@ -1733,3 +1733,82 @@ O relatório acrescenta à 6.1 a ideia de **marco vivido**: a primeira ida passa
 - Se três noites é o número certo. É o do cardápio, sem sessão.
 - Se a primeira visita, vindo cedo e com data marcada, parece um acontecimento ou parece "é só isso?".
 - O caso em que ele joga sem nunca dormir: a garantia depende de deitar. O analisador diz quando não há nenhuma linha `AVESSO deitou`.
+
+---
+# Versão 0.9.0-alpha22 — a caverna com corpo (pacote 3, primeira parte)
+
+Terceiro pacote do plano de 11/10/2026: as ideias 3.1, 3.2, 3.3 e 3.8 do cardápio. O fato a que responde, nas palavras do dono: "na caverna achei que os eventos e coisas ficaram muito focados em mudar a tocha de cor, e sons, poderiam ter mais interações físicas".
+
+## O que o log dele dizia
+
+O analisador ganhou a conta das famílias e eu a rodei no log da sessão de 11/10 (alpha17, duas horas e meia). Do que saiu com ele **debaixo da terra**: 40 coisas, **21 de luz (52%)**, 8 de som, 5 "de cabeça" (a borda escura, o texto, o Véu), 3 marcas, 1 objeto e 2 aparições. Das 21 de luz, **18 eram chamas pálidas**. A queixa era literal. Em casa foi parecido (30 de 52 foram chamas), mas a casa fica para o pacote 6.
+
+Um segundo achado, que mudou o desenho: nessa sessão inteira houve **14 presságios e 1 perturbação** da Atmosfera. O saldo do ambiente volta devagar, o presságio custa 14 e a perturbação custa 20: o presságio leva o saldo assim que ele chega a 14, e a perturbação quase nunca tem a vez. É o erro da alpha12 ("o mais barato ganha sempre") dentro do saldo do ambiente. Não mexi nisso (é número de ritmo, vale em todo lugar e pede sessão sintética própria), mas é por isso que a segunda regra abaixo não espera saldo: como perturbação comum, a pedrinha e os morcegos quase nunca sairiam.
+
+## As famílias (`Familias`)
+
+Tudo o que o mod empurra para o jogador cai numa de seis famílias: as cinco do cardápio (luz, som, marca, objeto, corpo) e mais uma, **cabeça**, para o que não acontece no mundo (`VIGIA`, `SUSSURRO`, `VEU`, `NEBLINA`, `ECO_CHAT`, `VISTO`). Sem a sexta, essas coisas teriam de entrar em "som" ou "luz" e falseariam a conta. Quem faz a saída chama `Familias.registrar`: os eventos (em `posEvento`), toda aparição (em `Diretor.criar`, uma vez só: o evento que a pediu não registra de novo), os presságios e perturbações, as chamas pálidas, o plano B, a rachadura e o começo da cena do marco (as outras cenas registram os seus passos pelos eventos que já chamavam). O que vem de comando não entra.
+
+As regras valem **só com o contexto `SUBSOLO`**:
+
+1. **Nenhuma família passa de duas nas últimas cinco saídas.** O cardápio dizia "nunca três seguidas". Com essa regra uma família ainda podia ser dois terços do que sai (luz, luz, outra, luz, luz, outra), e a prova que a pesquisa pede é ninguém acima de 40%. Com duas em cinco o teto é um terço, e o "nunca três seguidas" vem junto. É desvio do cardápio, e é o número que eu mudaria primeiro se a caverna ficar calada.
+   - **Objeto e corpo nunca são barrados.** A regra existe para tirar luz e som de cima; segurar o que faltava seria o contrário do pacote.
+   - Quem pergunta é quem ia fazer a saída. O **sorteio do Diretor** tira do sorteio os eventos da família barrada, e **cede** quando só sobram eles (variedade não pode virar silêncio: o Diretor nunca fica mais quieto do que ficaria). Os **presságios e perturbações** pulam a opção barrada. As **chamas pálidas não cedem**: a tocha espera até outra família ter a vez. É a peça que mais pesa, pelo log. Só o acréscimo de uma carta do baralho (várias tochas de uma vez) passa por cima.
+   - Elos de cadeia, a sequência de ameaça, as cenas, o primeiro contato, a cota e o plano B não são barrados (são composições ou regras); só registram.
+2. **A dívida do subsolo.** A cada quinze minutos de subsolo sem nada de objeto nem de corpo (`subsoloSemFisico`, que só anda no subsolo e não zera ao sair), a próxima coisa do ambiente é uma das que se tocam: os morcegos e a pedrinha se revezam, e quando as cotas deles acabam (ou não há lugar) vale a pedra que aparece no caminho por onde ele veio (`O_CAMINHO_MUDOU`, que já existia). É regra, como a cota de corpo: não espera o saldo do ambiente, só o respiro, a trégua, o Véu e o Diretor recuando; gasta o saldo depois. Sem lugar, tenta de novo em um minuto. Uma aparição dele também paga (é corpo).
+
+Por que só no subsolo: na superfície quase tudo o que o Diretor sorteia é som, e barrar ali mudaria a mistura inteira. A sessão sintética é em campo aberto e não muda por construção (ver "Medição").
+
+## A caverna (`Caverna`)
+
+- **A rachadura (marca, 3.1).** Ele minera; no bloco ao lado do que acabou de quebrar, rachaduras crescem em um segundo até a metade e param, com duas batidas surdas (`PANCADA`, volume 0,6) vindas do bloco. Somem em quatorze segundos. Se ele quebra o bloco: pedra, e nada atrás (a marca sai junto, e o log diz `QUEBROU_O_BLOCO`).
+  - É o `ClientboundBlockDestructionPacket` do jogo mandado só pela conexão dele, com um número negativo (os de entidade são positivos): o mundo não muda e quem está ao lado não vê. Etapas 0 a 4 de 9.
+  - Só em pedra natural (a tag `base_stone_overworld`: pedra, granito, diorito, andesito, tufo, ardósia): nunca num bloco que ele possa ter posto, num baú ou num minério. De preferência um vizinho de lado (o de trás é o próximo que ele vai quebrar), com a face nova virada para ele.
+  - Quando: contexto `SUBSOLO`, fase 2 ou mais, noventa segundos de descida, minerando (três quebras em meio minuto), na quarta à oitava quebra que conta (sai do segundo em que a descida começou, não de sorteio). **Uma por descida**, e dez minutos no mínimo entre duas. O que cala os outros sistemas cala este: respiro, Diretor recuando ou ameaçando, cena, criatura presente, trégua, Véu, vela.
+  - É resposta a uma ação dele: não gasta atenção, só impõe o respiro.
+- **A pedrinha (objeto, 3.2).** Alguma coisa pequena quica no chão: a 3,4 blocos, a 1,7 e um resto de rolar, com lascas do chão do lugar (partícula de bloco) e um estalo em cada toque, cada um mais agudo e mais fraco. Só para ele: partículas e som pela conexão dele. Sem item, sem entidade, sem dano. Vem do lado em que o espaço continua mais fundo e termina mais escuro, de preferência à frente dele (onde ele vê as lascas). **Duas por sessão**, vinte minutos entre uma e outra.
+  - **O som é o `ESTALO` que o mod já tinha, mais agudo** (tom de 1,5 a 1,95). O cardápio pede "um estalo seco" e avisa que não pode parecer goteira nem cascalho do jogo. Não gerei um som novo: ninguém aqui ouve, e o ambiente de gerar sons não está montado nesta pasta. Se ele disser que pareceu galho, o conserto é um som próprio em `ferramentas/sons`.
+  - Não usei o `item_display` opcional do cardápio: seria uma entidade de verdade, que todos veem.
+- **Os morcegos (corpo, 3.3).** Um baque surdo (`GRAVE`, só para ele) numa boca de túnel fora da tela, e meio segundo depois de três a cinco morcegos saem de lá, passam pela cabeça dele e seguem. A boca é o lugar que a procura de perto daria à criatura (`Aparicao.bocaDeTunel`: de 8 a 14 blocos, fora da tela, lugar fechado, com linha livre até os olhos dele), sem contar como falta de lugar quando não acha.
+  - **São morcegos de verdade: todos veem e ouvem.** É a única coisa do pacote que não é só do alvo. Não fazem mal. O voo é conduzido por três segundos e meio (o morcego do jogo voa para pontos sorteados; aqui a velocidade é reposta a cada tick) e depois é um morcego qualquer.
+  - Etiquetados (`sussurros_morcego`) e tirados em dez a quinze segundos: depois dos dez, assim que o jogador não os vê; aos quinze, de qualquer jeito. Ao fechar o mundo saem todos. Um que tenha ficado salvo (queda do jogo) é tirado quando o chunk carrega.
+  - **Três revoadas por sessão**, vinte minutos entre uma e outra.
+  - **"A próxima coisa com lugar acontece naquele túnel."** Por dez minutos, a procura de perto dá cinco pontos a mais (mais do que todo o resto somado) aos lugares a até três blocos e meio da boca. Ninguém é chamado por causa dos morcegos: se uma aparição de perto vier nesse tempo, vem dali.
+
+Os dois últimos são perturbações da Atmosfera (`PEDRINHA`, `MORCEGOS`): entram no sorteio dela quando o contexto é `SUBSOLO` e são o que paga a dívida. Comandos de teste: `/sussurros cena rachadura` (racha o bloco para onde ele olha), `cena pedrinha`, `cena morcegos`.
+
+## Os testes
+
+- **JUnit** (`FamiliasTest`, seis testes): duas nas últimas cinco barram; o que saiu há mais de cinco não conta; objeto e corpo nunca são barrados; quem tenta a mesma família sempre que pode fica com um terço do que sai; tudo o que o mod faz tem família; os números da rachadura e dos morcegos ficam na faixa.
+- **Servidor** (`TestesDaCaverna`, seis testes; 85 no total), todos num túnel de pedra montado pelo teste:
+  - `minerandoOBlocoAoLadoRacha`: na fase 0 nada racha; na fase 2, minerando, o vizinho de lado racha na quebra prevista; as cinco etapas e as duas batidas chegam ao alvo e **não chegam ao amigo colado nele**; o bloco continua pedra; nenhuma segunda rachadura na mesma descida; quebrado o bloco, a marca sai.
+  - `aDividaDoSubsoloTrazOQueSeToca`: com o relógio em quinze minutos, os morcegos vêm em três segundos, de três a cinco, da curva do túnel; passam a menos de três blocos dele; não sobra nenhum em quinze segundos. Com a dívida aberta de novo, a pedrinha vem quando o respiro deixa: partículas e três estalos à frente do alvo, nada para o amigo, o chão igual.
+  - `aProximaAparicaoPrefereOTunelDosMorcegos`: sem morcegos ele nasce na curva; com os morcegos tendo saído de outro trecho (o teste tampa a curva enquanto eles saem), a aparição seguinte nasce junto desse trecho e não na curva.
+  - `debaixoDaTerraALuzEsperaAVez`: com duas de luz registradas, vinte e dois segundos sem nenhuma chama pálida, com três tochas às costas dele; destravada, a chama vem.
+  - `naSuperficieARegraDasFamiliasNaoVale` e `oMorcegoQueSobrouETirado`.
+- **Cliente** (`TestesDeCliente.caverna`, fotos 46 a 49): a rachadura, a pedrinha em dois toques e os morcegos, no mesmo túnel.
+
+## O analisador
+
+- Seção nova, "As famílias do que saiu, por lugar": a tabela de famílias por tipo de lugar, a família que mais saiu no subsolo com o que mais pesou nela, o maior tempo de subsolo sem nada que se toque, as dívidas pagas, quantas vezes a regra barrou e cedeu, e as três coisas da caverna. Num log de antes da alpha22 a família é estimada pelo nome das linhas (é assim que saiu o número de 11/10).
+- Dois alertas: uma família acima de 40% do que saiu no subsolo (com dez saídas ou mais), e mais de vinte minutos de subsolo sem nada que se toque.
+
+## Consertos de passagem
+
+- `TestesDeServidor.oSomDaAssombracaoESoDoAlvo` contava qualquer som que chegasse ao amigo em três segundos, e no gramado do mundo de teste há cavalos e vacas andando: falhou uma vez em cinco execuções locais, sem nada do mod ter tocado. Agora conta só o que não é som de bicho (`JogadorDeTeste.sonsQueNaoSaoDeBicho`).
+- Dois achados sobre os testes de som, que estão no `CLAUDE.md`: um morcego do mundo guincha para todos (contar pelo nome do som), e a posição de um som chega arredondada quando o jogo põe as estruturas de teste muito longe da origem (dar folga ao lugar).
+
+## O que ficou de fora, de propósito
+
+- **3.4, a passagem que de longe parece fechada.** É miragem sólida: se ele encostar antes de ela se desfazer, o jogo o puxa de volta e parece travamento. É a de maior risco do pacote e pede terreno de teste próprio.
+- **3.5, a tampa do baú.** Continua sem código conferido; e o baú do acampamento é coisa dele (encosta no pacote 6).
+- **"Alguém esteve aqui antes"** (tochas e sinais de outra pessoa na caverna). Põe bloco de verdade em caverna natural: é decisão do dono, e a pergunta ainda não foi respondida. Sem resposta, nenhum bloco de verdade.
+- O saldo do ambiente (presságio contra perturbação), a regra das famílias em casa, e a definição de subsolo (hoje: sem céu **e abaixo do Y 50**; uma mina de encosta no Y 55 não é subsolo para o mod). São três achados desta versão que ficam anotados.
+
+## Não verificado por ninguém
+
+- Se a rachadura se lê como "alguma coisa bateu do outro lado" ou como defeito do jogo. As fotos dizem se desenha; o resto é com ele.
+- Como soam as batidas e o estalo da pedrinha.
+- Se os morcegos passam "bonito" num túnel largo e numa caverna aberta: o teste é num túnel de um bloco, onde eles se espremem no teto.
+- Se duas em cinco é apertado demais numa caverna sem tochas, nas fases 1 e 2, em que quase tudo o que existe é som (o Diretor cede, mas as outras fontes não).
+- Os quinze minutos da dívida e os dez do túnel dos morcegos: palpites do cardápio, sem sessão.

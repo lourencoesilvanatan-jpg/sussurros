@@ -8,5 +8,8 @@ enum Perturbacao {
 	O_CAMINHO_MUDOU,
 	HA_ALGO_NO_CURRAL,
 	NAO_FOI_VOCE,
-	MARCA_IMPOSSIVEL
+	MARCA_IMPOSSIVEL,
+	// 0.9.0-alpha22: só debaixo da terra (ver Caverna).
+	PEDRINHA,
+	MORCEGOS
 }

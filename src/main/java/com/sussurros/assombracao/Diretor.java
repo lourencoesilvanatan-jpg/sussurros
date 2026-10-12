@@ -178,6 +178,10 @@ public final class Diretor {
 					e.quebrasRecentes.removeFirst();
 				}
 				avisarCacador(e, Vec3.atCenterOf(pos), "QUEBRA");
+				// 0.9.0-alpha22: debaixo da terra, de vez em quando, o bloco ao lado responde (ver Caverna).
+				if (level instanceof ServerLevel nivel && nivel == nivel.getServer().getLevel(Level.OVERWORLD)) {
+					Caverna.aoQuebrar(nivel, jogador, e, pos);
+				}
 			}
 		});
 
@@ -256,6 +260,9 @@ public final class Diretor {
 		// Antes de o mundo ser salvo: desfaz o que era temporário (tocha apagada, marca no caminho).
 		// No SERVER_STOPPED já é tarde: o mundo já foi gravado com a alteração.
 		ServerLifecycleEvents.SERVER_STOPPING.register(AlteracoesTemporarias::restaurarTudo);
+		// E tira os morcegos que o mod soltou: nenhum fica gravado no mundo.
+		ServerLifecycleEvents.SERVER_STOPPING.register(Caverna::aoParar);
+		Caverna.inicializar();
 
 		ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
 			ESTADOS.clear();
@@ -263,6 +270,7 @@ public final class Diretor {
 			LampiaoPalidoBlock.limpar();
 			Agenda.limpar();
 			Atmosfera.limpar();
+			Caverna.limpar();
 			contadorManifestacao = 0;
 			contadorCena = 0;
 		});
@@ -457,6 +465,60 @@ public final class Diretor {
 		return estado(p).contexto.name();
 	}
 
+	// ----- A caverna com corpo (0.9.0-alpha22): ganchos dos testes -----
+
+	/** Só para os testes: a última coisa que a Caverna fez com este jogador (RACHADURA, PEDRINHA, MORCEGOS; "-" se nada). */
+	public static String cavernaParaTeste(ServerPlayer p) {
+		return estado(p).caverna.resumo;
+	}
+
+	/** Só para os testes: o bloco que está rachado para este jogador, ou null. */
+	@Nullable
+	public static BlockPos rachaduraParaTeste(ServerPlayer p) {
+		return estado(p).caverna.rachaduraPos;
+	}
+
+	/** Só para os testes: em que quebra desta descida a rachadura vem (ver Caverna.quebrasAteRachar). */
+	public static int quebrasAteRacharParaTeste(ServerPlayer p) {
+		return Caverna.quebrasAteRachar(estado(p).subsoloDesde);
+	}
+
+	/** Só para os testes: há quantos segundos este jogador está debaixo da terra (-1 se não está). */
+	public static long descidaParaTeste(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		return e.subsoloDesde < 0 ? -1 : p.level().getGameTime() / 20 - e.subsoloDesde;
+	}
+
+	/** Só para os testes: o túnel de onde os morcegos saíram, enquanto valer, ou null. */
+	@Nullable
+	public static BlockPos bocaDosMorcegosParaTeste(ServerPlayer p) {
+		return Caverna.bocaValida(estado(p), p.level().getGameTime() / 20);
+	}
+
+	/** Só para os testes: quantos morcegos do mod estão voando agora, no servidor inteiro. */
+	public static int morcegosVoandoParaTeste() {
+		return Caverna.morcegosVoando();
+	}
+
+	/** Só para os testes: registra uma saída desta família, como um sistema do mod faria. */
+	public static void registrarFamiliaParaTeste(ServerPlayer p, String familia) {
+		Familias.registrar(p, estado(p), Familias.Familia.valueOf(familia), "TESTE", p.level().getGameTime() / 20);
+	}
+
+	/** Só para os testes: esta família está barrada agora para este jogador? */
+	public static boolean familiaBarradaParaTeste(ServerPlayer p, String familia) {
+		return Familias.barrada(estado(p), Familias.Familia.valueOf(familia));
+	}
+
+	/** Só para os testes: adianta o relógio do subsolo sem nada que se toque (segundos). */
+	public static void definirSubsoloSemFisicoParaTeste(ServerPlayer p, int segundos) {
+		estado(p).familias.subsoloSemFisico = segundos;
+	}
+
+	public static int subsoloSemFisicoParaTeste(ServerPlayer p) {
+		return estado(p).familias.subsoloSemFisico;
+	}
+
 	/** Teste: joga os Ossos de Agouro com o desfecho escolhido. */
 	public static String testarOssos(ServerPlayer p, String desfecho) {
 		Ossos.Desfecho d;
@@ -515,6 +577,7 @@ public final class Diretor {
 		long tick = level.getGameTime();
 		// Atualizações curtas da Atmosfera: restaura blocos temporários e mantém animais olhando.
 		Atmosfera.tickRapido(level, tick);
+		Caverna.tick(level, tick);
 
 		Agenda.tick(level);
 
@@ -635,6 +698,7 @@ public final class Diretor {
 		} else {
 			e.subsoloDesde = -1;
 			e.tentouCenaTunel = false;
+			Caverna.aoSairDoSubsolo(e);
 		}
 		boolean calma = emZonaCalma(p, p.getX(), p.getY(), p.getZ());
 		boolean perto24DaCama = m.get(Memoria.TEM_CAMA) == 1 && distanciaSqr(p, m.get(Memoria.CAMA_X), m.get(Memoria.CAMA_Z)) < 24 * 24;
@@ -658,6 +722,8 @@ public final class Diretor {
 				e.contextoCandidatoDesde = -1;
 			}
 		}
+		// 0.9.0-alpha22: o relógio do subsolo sem nada que se toque (ver Familias).
+		Familias.segundo(e);
 		if (e.contexto == ContextoMundo.Tipo.ABERTO && !calma && !ContextoMundo.pertoDaCasa(p, m, 40)) {
 			if (e.abertoDesde < 0) {
 				e.abertoDesde = seg;
@@ -835,6 +901,11 @@ public final class Diretor {
 			String depois = cenaAtiva(e);
 			if (!depois.equals(antes)) {
 				Atencao.gastar(p, e, "cena:" + depois, Atencao.CENA, seg);
+				// A cena do marco abre com um eco que não passa por posEvento: a família dele entra aqui. As outras
+				// registram os seus passos por posEvento, e o corpo, quando vem, registra-se sozinho (ver criar).
+				if (e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA) {
+					Familias.registrar(p, e, Familias.Familia.SOM, "CENA_MARCO", seg);
+				}
 			}
 		}
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
@@ -1269,6 +1340,10 @@ public final class Diretor {
 
 		List<Evento> candidatos = new ArrayList<>();
 		List<Double> pesos = new ArrayList<>();
+		// 0.9.0-alpha22: debaixo da terra, a família que já saiu duas vezes nas últimas cinco fica fora do sorteio
+		// (ver Familias). Os barrados ficam de reserva: se não sobrar mais nada, valem eles.
+		List<Evento> barrados = new ArrayList<>();
+		List<Double> pesosBarrados = new ArrayList<>();
 		for (Evento ev : Evento.values()) {
 			if (ev.faseMinima > fase || ev.intensidade > maxInt) {
 				continue;
@@ -1310,8 +1385,24 @@ public final class Diretor {
 			if ((ev == Evento.BATIDA || ev == Evento.PORTA) && Oferenda.emDesfeita(e, level.getGameTime())) {
 				peso *= 4.0;
 			}
+			if (Familias.barrada(e, Familias.de(ev))) {
+				barrados.add(ev);
+				pesosBarrados.add(peso);
+				continue;
+			}
 			candidatos.add(ev);
 			pesos.add(peso);
+		}
+		if (!barrados.isEmpty()) {
+			boolean cedeu = candidatos.isEmpty();
+			if (cedeu) {
+				// Variedade não pode virar silêncio: só há coisa da família barrada, então sai ela.
+				candidatos.addAll(barrados);
+				pesos.addAll(pesosBarrados);
+			}
+			if (Depuracao.ativo) {
+				Depuracao.log(p, seg, "FAMILIA barrou=" + barrados + " cedeu=" + (cedeu ? "sim" : "nao"));
+			}
 		}
 		if (candidatos.isEmpty()) {
 			return null;
@@ -1724,6 +1815,10 @@ public final class Diretor {
 
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "EVENTO %s (estado=%s, obs=%.2f, pressao=%.0f)", ev, e.estado, obs, e.pressao));
 		Atencao.gastar(p, e, "evento:" + ev, Atencao.custo(ev.intensidade), seg);
+		// A família do que saiu (ver Familias). O que põe a criatura no mundo já se registrou, em criar.
+		if (!usaCriatura(ev)) {
+			Familias.registrar(p, e, Familias.de(ev), ev.name(), seg);
+		}
 		if (obs >= 0.15) {
 			if (!e.leitura.pendente()) {
 				e.leitura.iniciar(ev, fonte, obs, tick, "direto");
@@ -2847,6 +2942,10 @@ public final class Diretor {
 		h.definirId(novoIdManifestacao());
 		level.addFreshEntity(h);
 		e.criatura = h;
+		// Toda aparição é uma saída de corpo, venha de um evento, de uma cena ou de uma regra (ver Familias).
+		if (!pedido.ehTeste()) {
+			Familias.registrar(p, e, Familias.Familia.CORPO, "HOSPEDE_" + modo, level.getGameTime() / 20);
+		}
 		// Ele nasce fora da tela, e na maioria das vezes o mundo emudece antes de o jogador virar e ver.
 		// O vulto distante é mais frequente e mais discreto: emudece na metade das vezes das outras aparições.
 		float chanceSilencio = modo == HospedeEntity.Modo.VULTO ? CHANCE_SILENCIO_APARICAO / 2 : CHANCE_SILENCIO_APARICAO;
@@ -4464,6 +4563,23 @@ public final class Diretor {
 		return Atmosfera.testarPerturbacao(p.level(), p, tipo);
 	}
 
+	/** O mesmo, pelo nome: os testes ficam noutro pacote e não enxergam o tipo. Devolve se aconteceu. */
+	public static boolean testarPerturbacaoPeloNome(ServerPlayer p, String nome) {
+		return Atmosfera.testarPerturbacao(p.level(), p, Perturbacao.valueOf(nome)).startsWith("Cena ambiental");
+	}
+
+	/** Teste: racha o bloco para onde o jogador olha (ver Caverna). Não conta para nada. */
+	public static String testarRachadura(ServerPlayer p) {
+		EstadoJogador e = estado(p);
+		boolean antigo = e.forcando;
+		e.forcando = true;
+		try {
+			return Caverna.racharOlhado(p.level(), p, e) ? "Rachadura no bloco para onde você olha." : "Olhe para um bloco a até seis blocos.";
+		} finally {
+			e.forcando = antigo;
+		}
+	}
+
 	public static String testarEstrutura(ServerPlayer p, String tipo) {
 		return EstruturasSussurros.testar(p.level(), p, tipo);
 	}
@@ -4657,7 +4773,7 @@ public final class Diretor {
 	}
 
 	/** Cena em andamento: casa, tunel, campo ou sequencia de ameaca. "-" se nenhuma. */
-	private static String cenaAtiva(EstadoJogador e) {
+	static String cenaAtiva(EstadoJogador e) {
 		if (e.cenaCasa != EstadoJogador.CenaCasa.NENHUMA) {
 			return e.cenaCasaId;
 		}

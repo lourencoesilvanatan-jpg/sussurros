@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha22
+
+Terceiro pacote do plano de conteúdo, primeira parte. É sobre o tempo que você passa debaixo da terra: entram coisas novas por lá, de tipos que faltavam, e o que já existia e se repetia demais passa a dar a vez. Na superfície e em casa nada muda nesta versão.
+
 ## 0.9.0-alpha21
 
 Segundo pacote do plano de conteúdo. Uma parte grande do mod, que já existia e que até aqui dependia só de sorte para acontecer pela primeira vez, passa a ter um prazo. Não entra nada novo.

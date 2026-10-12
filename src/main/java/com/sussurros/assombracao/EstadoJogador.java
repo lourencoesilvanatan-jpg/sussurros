@@ -169,6 +169,12 @@ final class EstadoJogador {
 	/** Segundo a partir do qual a cota pode tentar por conta própria de novo. */
 	long cotaProximaTentativa;
 
+	// --- A caverna com corpo (0.9.0-alpha22) ---
+	/** As famílias do que saiu com ele debaixo da terra, e o relógio do subsolo sem nada que se toque (ver Familias). */
+	final Familias.Estado familias = new Familias.Estado();
+	/** A rachadura, a pedrinha e os morcegos (ver Caverna). */
+	final Caverna.Estado caverna = new Caverna.Estado();
+
 	// --- Ritmo e estados ---
 	double pressao;
 	EstadoDiretor estado = EstadoDiretor.CALMO;

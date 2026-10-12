@@ -103,16 +103,20 @@ public class TestesDeServidor {
 		Diretor.esquecer(amigo);
 		Diretor.definirFase(alvo, 2);
 		helper.runAfterDelay(20, () -> {
-			JogadorDeTeste.sonsRecebidos(alvo);
-			JogadorDeTeste.sonsRecebidos(amigo);
+			JogadorDeTeste.esquecerSons(alvo);
+			JogadorDeTeste.esquecerSons(amigo);
 			helper.assertTrue(Diretor.forcarEvento(alvo, Evento.PASSO_UNICO) == null, "o passo atrás dele deveria acontecer");
 			helper.assertTrue(Diretor.forcarEvento(alvo, Evento.BATIDA) == null || true, "a batida pode não ter porta; não importa");
 		});
 		helper.runAfterDelay(80, () -> {
-			int doAlvo = JogadorDeTeste.sonsRecebidos(alvo);
-			int doAmigo = JogadorDeTeste.sonsRecebidos(amigo);
-			helper.assertTrue(doAlvo >= 1, "o alvo deveria ter ouvido o passo atrás dele");
-			helper.assertTrue(doAmigo == 0, "o amigo ao lado não deveria ouvir a assombração do outro: ouviu " + doAmigo + " som(ns)");
+			// O que não é som de bicho: no gramado há cavalos e vacas, e o passo deles chega aos dois. Até a
+			// alpha21 este teste contava qualquer som, e falhava quando um animal passava por perto nesses três segundos.
+			JogadorDeTeste.recebidos(alvo);
+			JogadorDeTeste.recebidos(amigo);
+			int doAlvo = JogadorDeTeste.sonsQueNaoSaoDeBicho(alvo);
+			int doAmigo = JogadorDeTeste.sonsQueNaoSaoDeBicho(amigo);
+			helper.assertTrue(doAlvo >= 1, "o alvo deveria ter ouvido o passo atrás dele; ouviu " + JogadorDeTeste.ultimosSons(alvo));
+			helper.assertTrue(doAmigo == 0, "o amigo ao lado não deveria ouvir a assombração do outro: ouviu " + JogadorDeTeste.ultimosSons(amigo));
 			// A caixa de música é um objeto de verdade tocando: os dois ouvem.
 			alvo.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(ModItems.CAIXA_DE_MUSICA));
 			alvo.gameMode.useItem(alvo, helper.getLevel(), alvo.getMainHandItem(), InteractionHand.MAIN_HAND);

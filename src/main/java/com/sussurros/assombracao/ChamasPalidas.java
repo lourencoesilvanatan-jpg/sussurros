@@ -48,6 +48,12 @@ final class ChamasPalidas {
 		if (Miragem.ativas(p, MOTIVO) >= cota || (!extra && seg < e.chamaPalidaLiberadaEm)) {
 			return;
 		}
+		// 0.9.0-alpha22: debaixo da terra, luz não passa de duas nas últimas cinco coisas que saíram (ver
+		// Familias). Aqui a regra não cede: a tocha espera até outra família ter a vez. Só o acréscimo de uma
+		// carta do baralho passa por cima: várias tochas de uma vez é o acontecimento que a carta pediu.
+		if (!extra && Familias.barrada(e, Familias.Familia.LUZ)) {
+			return;
+		}
 		// A lista de tochas por perto só é refeita quando alguém pede (e no máximo a cada dez segundos).
 		Diretor.atualizarCacheAmbiente(level, p, e);
 		List<BlockPos> candidatas = new ArrayList<>();
@@ -75,6 +81,7 @@ final class ChamasPalidas {
 			e.chamaPalidaLiberadaEm = seg + INTERVALO;
 			Depuracao.log(p, seg, String.format(Locale.ROOT, "CHAMA_PALIDA pos=(%d,%d,%d) duracao=%ds ativas=%d cota=%d",
 					pos.getX(), pos.getY(), pos.getZ(), duracao / 20, Miragem.ativas(p, MOTIVO), cota));
+			Familias.registrar(p, e, Familias.Familia.LUZ, MOTIVO, seg);
 		}
 	}
 }
