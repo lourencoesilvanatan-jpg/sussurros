@@ -431,6 +431,19 @@ def analisar(linhas, jogador, caminho):
         out.append('')
         out.append('Como voltou: ' + ', '.join('%s depois de %ds' % v for v in voltas) + '.')
     out.append('')
+    # 0.9.0-alpha21: a primeira ida é garantida na terceira noite em que ele deita (da fase 3 em diante). Enquanto
+    # ele nunca foi, cada vez que deita deixa uma linha com a noite e a decisão.
+    deitou = [(t, int(m.group(1)), m.group(2)) for t, m in ((t, re.match(r'^AVESSO deitou noite=(\d+)/\d+ decisao=(\S+)', texto)) for t, texto in linhas) if m]
+    adiadas = sum(1 for _, texto in linhas if texto.startswith('AVESSO garantia adiada'))
+    if deitou:
+        out.append('Antes da primeira ida: deitou %d vez(es) e chegou à noite %d de 3 (%s)%s.' % (
+            len(deitou), max(n for _, n, _ in deitou),
+            ', '.join('%s %d' % d for d in collections.Counter(d for _, _, d in deitou).most_common()),
+            '; a garantia foi adiada %d vez(es) por haver caçada' % adiadas if adiadas else ''))
+    else:
+        out.append('Nenhuma linha `AVESSO deitou`: ou ele não deitou nenhuma vez nesta sessão (da fase 3 em diante), ou já tinha ido antes, '
+                   'ou o log é de antes da alpha21.')
+    out.append('')
     veus = sum(1 for _, texto in linhas if texto.startswith('VEU abriu'))
     # 0.9.0-alpha19: o que cada Véu tinha dentro. "certo" é o vulto que vem por não haver porta nem vidro.
     vultos = collections.Counter(m.group(1) for m in (re.match(r'^VEU abriu .*vulto=(\w+)', texto) for _, texto in linhas) if m)
@@ -690,6 +703,11 @@ def analisar(linhas, jogador, caminho):
     if maior_sem_ver is not None and maior_sem_ver > 40 * 60:
         alertas.append('**%s de jogo, da fase 3 em diante, sem ele ver a criatura de verdade.** A cota de corpo deveria ter resolvido aos 30 minutos: '
                        'veja as linhas `COTA` (não achou lugar com luz? ele ficou em casa, na vela ou em trégua?).' % hms(maior_sem_ver))
+    garantidas = [t for t, _, d in deitou if d == 'GARANTIDA']
+    if garantidas and not any(t >= garantidas[0] and texto.startswith('AVESSO chegou') for t, texto in linhas):
+        alertas.append('**A primeira ida garantida foi decidida %d vez(es) e ele não chegou lá.** Saiu da cama antes dos dois segundos, '
+                       'estava sendo caçado (`AVESSO garantia adiada`), ou a travessia falhou: procure `AVESSO levado` depois dos %s.' % (
+                           len(garantidas), hms(garantidas[0] - inicio)))
     if tempo_fase.get(3, 0) + tempo_fase.get(4, 0) >= 60 * 60 and not any(n for _, n in escolhidos):
         alertas.append('Nenhum vazio por escolha (falso aviso, vigia falsa) em mais de uma hora de fase 3 ou 4: o mod está entregando '
                        'tudo o que prepara, e é a espera sem entrega que mantém o alerta. Veja se algum peso zerou.')

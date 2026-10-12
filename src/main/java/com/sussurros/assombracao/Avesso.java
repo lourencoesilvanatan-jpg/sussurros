@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -50,6 +52,9 @@ import com.sussurros.rede.Rede;
  * coordenadas: é a casa dele, vazia e apagada. Luzes somem, portas ficam abertas, baús vêm vazios, nada de
  * entidade é copiado. A cada visita a cópia tem mais coisa errada: blocos de parede faltando.
  *
+ * A PRIMEIRA IDA É GARANTIDA (0.9.0-alpha21): da fase 3 em diante, se o sorteio não o levou antes, a terceira
+ * noite em que ele deita leva. Só a primeira visita; as seguintes continuam sendo sorteio, carta ou captura.
+ *
  * LÁ DENTRO não se quebra nem se põe bloco e não se abre baú (senão a cópia viraria fábrica de itens). Portas
  * funcionam. A primeira visita é só o lugar. Da segunda em diante, depois de uns vinte segundos, ele está lá.
  *
@@ -69,6 +74,15 @@ public final class Avesso {
 	static final String VISITAS = "avesso_visitas";
 	static final String ULTIMO_DIA = "avesso_dia";
 	static final String MARCADO = "avesso_marcado";   // uma carta do baralho: na próxima vez que deitar, ele é levado
+	static final String NOITES = "avesso_noites";     // noites em que deitou, da fase 3 em diante, sem nunca ter ido
+	static final String NOITE_DIA = "avesso_noite_dia"; // o dia de jogo (mais um) da última noite contada
+
+	/** Se o sorteio não o levou antes, a noite de número tal em que ele deita leva. Só a primeira visita. */
+	static final int NOITES_ATE_A_PRIMEIRA = 3;
+	private static final float CHANCE_PRIMEIRA = 0.15F;
+	private static final float CHANCE_SEGUINTES = 0.08F;
+	/** Dias de jogo, no mínimo, entre uma visita pelo sono e a seguinte. */
+	private static final int DIAS_ENTRE_VISITAS = 3;
 
 	static final int RAIO = 14;
 	static final int ABAIXO = 5;
@@ -125,7 +139,60 @@ public final class Avesso {
 	// Ir
 	// =====================================================================
 
-	/** Ele deitou. Raramente, da fase 3 em diante, em vez de dormir ele é levado. */
+	/** O que acontece quando ele deita: nada, ou ele é levado, e por quê. */
+	enum AoDeitar {
+		NADA, SORTEIO, CARTA, GARANTIDA
+	}
+
+	/**
+	 * A decisão de quando ele deita. Função pura, para ser testada sem mundo.
+	 *
+	 * A carta do baralho passa por cima de tudo, uma vez. Quem nunca foi e já deitou três noites vai (a primeira
+	 * ida garantida). Depois de uma visita, pelo menos três dias de jogo até a seguinte. No resto é sorteio, e a
+	 * primeira é mais provável que as seguintes. "noites" já conta a noite de agora.
+	 */
+	static AoDeitar decidir(int visitas, boolean marcado, int diasDesdeAUltima, int noites, float sorteio) {
+		if (marcado) {
+			return AoDeitar.CARTA;
+		}
+		if (visitas == 0 && noites >= NOITES_ATE_A_PRIMEIRA) {
+			return AoDeitar.GARANTIDA;
+		}
+		if (visitas > 0 && diasDesdeAUltima < DIAS_ENTRE_VISITAS) {
+			return AoDeitar.NADA;
+		}
+		return sorteio < (visitas == 0 ? CHANCE_PRIMEIRA : CHANCE_SEGUINTES) ? AoDeitar.SORTEIO : AoDeitar.NADA;
+	}
+
+	/** A decisão acima chega a olhar o sorteio? (Para só gastar um número do jogador quando ele vale.) */
+	static boolean dependeDoSorteio(int visitas, boolean marcado, int diasDesdeAUltima, int noites) {
+		return decidir(visitas, marcado, diasDesdeAUltima, noites, 0.0F) == AoDeitar.SORTEIO;
+	}
+
+	/**
+	 * Conta a noite e decide. Enquanto ele nunca foi, cada dia de jogo em que deita conta uma noite (deitar duas
+	 * vezes na mesma noite conta uma só), e o log diz em que noite está. Mexe na Memoria que recebe; quem chama salva.
+	 * sorteioFixo: só para os testes; no jogo o número vem do gerador do jogador, e só quando a decisão depende dele.
+	 */
+	private static AoDeitar avaliar(ServerPlayer p, Memoria m, int dia, long seg, @Nullable Float sorteioFixo) {
+		int visitas = m.get(VISITAS);
+		boolean marcado = m.get(MARCADO) == 1;
+		if (visitas == 0 && m.get(NOITE_DIA) != dia + 1) {
+			m.set(NOITE_DIA, dia + 1);
+			m.add(NOITES, 1);
+		}
+		int noites = m.get(NOITES);
+		int dias = dia - m.get(ULTIMO_DIA);
+		float sorteio = sorteioFixo != null ? sorteioFixo
+				: dependeDoSorteio(visitas, marcado, dias, noites) ? p.getRandom().nextFloat() : 1.0F;
+		AoDeitar decisao = decidir(visitas, marcado, dias, noites, sorteio);
+		if (visitas == 0) {
+			Depuracao.log(p, seg, "AVESSO deitou noite=" + noites + "/" + NOITES_ATE_A_PRIMEIRA + " decisao=" + decisao);
+		}
+		return decisao;
+	}
+
+	/** Ele deitou. Da fase 3 em diante, em vez de dormir ele pode ser levado; a primeira ida é garantida. */
 	static void aoDeitar(ServerPlayer p) {
 		ServerLevel mundo = p.level();
 		Memoria m = Memoria.de(p);
@@ -134,27 +201,44 @@ public final class Avesso {
 			return;
 		}
 		int dia = (int) (mundo.getDefaultClockTime() / 24000L);
-		int visitas = m.get(VISITAS);
-		boolean marcado = m.get(MARCADO) == 1;
-		// Pelo menos três dias de jogo entre uma visita e outra. A primeira é mais provável que as seguintes.
-		// A carta do baralho passa por cima das duas coisas, uma vez.
-		if (!marcado && visitas > 0 && dia - m.get(ULTIMO_DIA) < 3) {
-			return;
+		long seg = mundo.getGameTime() / 20;
+		AoDeitar decisao = avaliar(p, m, dia, seg, null);
+		// A garantia não é saída de graça de uma caçada: com ele sendo caçado, fica para a próxima vez que deitar.
+		// (O sorteio e a carta continuam como eram; deitar no meio da caçada é decisão de desenho ainda aberta.)
+		EstadoJogador e = Diretor.estadoParaTeste(p);
+		if (decisao == AoDeitar.GARANTIDA && e.criatura != null && !e.criatura.isRemoved()
+				&& e.criatura.getModo() == HospedeEntity.Modo.CACAR) {
+			Depuracao.log(p, seg, "AVESSO garantia adiada motivo=CACADA");
+			decisao = AoDeitar.NADA;
 		}
-		float chance = visitas == 0 ? 0.15F : 0.08F;
-		if (!marcado && p.getRandom().nextFloat() >= chance) {
-			return;
-		}
-		if (marcado) {
+		if (decisao == AoDeitar.CARTA) {
 			m.set(MARCADO, 0);
-			m.salvar();
 		}
+		m.salvar();
+		if (decisao == AoDeitar.NADA) {
+			return;
+		}
+		String origem = decisao == AoDeitar.GARANTIDA ? "SONO_GARANTIDO" : "SONO";
 		// Dois segundos de olhos fechados na cama, e então não é sono.
 		Diretor.agendar(mundo, 40, () -> {
 			if (!p.isRemoved() && p.isSleeping() && p.level() == mundo) {
-				levar(p, "SONO", false);
+				levar(p, origem, false);
 			}
 		});
+	}
+
+	/**
+	 * Só para os testes: conta a noite e decide como aoDeitar, sem levar ninguém e sem precisar da dimensão
+	 * (que o servidor de teste não carrega). Devolve "FORA" antes da fase 3, ou a decisão e a noite: "NADA noite=2".
+	 */
+	public static String aoDeitarParaTeste(ServerPlayer p, int dia, float sorteio) {
+		Memoria m = Memoria.de(p);
+		if (m.get(Memoria.FASE) < 3 || m.get(DENTRO) == 1) {
+			return "FORA";
+		}
+		AoDeitar decisao = avaliar(p, m, dia, p.level().getGameTime() / 20, sorteio);
+		m.salvar();
+		return decisao + " noite=" + m.get(NOITES);
 	}
 
 	/** Só para os testes: a próxima captura leva para lá, sem sorteio (e sem exigir uma visita anterior). */
@@ -492,10 +576,14 @@ public final class Avesso {
 		return e.avessoAte == 0 ? 0 : e.avessoVisita;
 	}
 
-	/** Só para os testes: finge que este jogador já esteve lá tantas vezes. */
+	/** Só para os testes: finge que este jogador já esteve lá tantas vezes. Com zero, também nunca deitou. */
 	public static void definirVisitas(ServerPlayer p, int visitas) {
 		Memoria m = Memoria.de(p);
 		m.set(VISITAS, visitas);
+		if (visitas == 0) {
+			m.set(NOITES, 0);
+			m.set(NOITE_DIA, 0);
+		}
 		m.salvar();
 	}
 }

@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha21
+
+Segundo pacote do plano de conteúdo. Uma parte grande do mod, que já existia e que até aqui dependia só de sorte para acontecer pela primeira vez, passa a ter um prazo. Não entra nada novo.
+
 ## 0.9.0-alpha20
 
 Primeiro pacote do plano de conteúdo combinado em 11/10. São duas garantias por baixo do que já existia: quando o mod prepara alguma coisa e ela não cabe no lugar em que você está, a preparação deixa de terminar em nada; e, nas fases avançadas, o mod passa a conferir se a parte principal dele chegou mesmo até você, em vez de só contar que tentou. Não entra item nem lugar novo.

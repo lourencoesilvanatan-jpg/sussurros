@@ -8,13 +8,17 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.LanternBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 
@@ -322,6 +326,8 @@ public class TestesDeCliente implements FabricClientGameTest {
 		BlockPos porta = partida.offset(0, 0, -5);
 		mundo.getServer().runCommand("time set noon");
 		mundo.getServer().runCommand("execute as @p run sussurros fase 3");
+		// Antes de montar a casa das fotos: a volta de lá apaga, por uns minutos, as luzes que houver por perto.
+		primeiraIdaGarantida(context, mundo, partida);
 		camera(mundo, partida, 0, 0, 10);
 		mundo.getServer().runOnServer(server -> {
 			ServerLevel level = server.overworld();
@@ -438,6 +444,79 @@ public class TestesDeCliente implements FabricClientGameTest {
 		});
 		mundo.getServer().runCommand("kill @e[type=item]");
 		mundo.getServer().runCommand("execute as @p run sussurros fase 0");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/** Uma semente com que o próximo sorteio do jogador dá "sem sorte" (acima de qualquer chance de ser levado). */
+	private static long sementeSemSorte() {
+		for (long semente = 1; ; semente++) {
+			if (RandomSource.create(semente).nextFloat() >= 0.5F) {
+				return semente;
+			}
+		}
+	}
+
+	/**
+	 * A primeira ida garantida (0.9.0-alpha21): quem nunca foi e deita três noites, sem sorte nenhuma no sorteio,
+	 * é levado na terceira. É o caminho de verdade, do evento de deitar até chegar do outro lado, que o servidor
+	 * de teste não alcança (ele não carrega a dimensão). Sem foto: não há nada novo na tela.
+	 */
+	private static void primeiraIdaGarantida(ClientGameTestContext context, TestSingleplayerContext mundo, BlockPos partida) {
+		BlockPos pe = partida.offset(3, 0, 2);
+		BlockPos cabeca = pe.east();
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.overworld();
+			BlockState cama = Blocks.BED.pick(DyeColor.RED).defaultBlockState().setValue(BedBlock.FACING, Direction.EAST);
+			level.setBlock(pe, cama.setValue(BedBlock.PART, BedPart.FOOT), 3);
+			level.setBlock(cabeca, cama.setValue(BedBlock.PART, BedPart.HEAD), 3);
+			Avesso.definirVisitas(server.getPlayerList().getPlayers().get(0), 0);
+		});
+		// Noite (quem dorme de dia é acordado pelo próprio jogo). Cada volta do laço é outro dia de jogo.
+		mundo.getServer().runCommand("time set 14000");
+		for (int noite = 1; noite <= 3; noite++) {
+			int n = noite;
+			mundo.getServer().runOnServer(server -> {
+				ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+				p.getRandom().setSeed(sementeSemSorte());
+				p.startSleeping(cabeca);
+			});
+			// Dois segundos de olhos fechados, o apagão, a travessia.
+			context.waitTicks(90);
+			String onde = mundo.getServer().computeOnServer(server -> {
+				ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+				return (p.level().dimension() == Avesso.DIMENSAO ? "LA" : "AQUI") + " visita=" + Avesso.visitaAtual(p)
+						+ " dormindo=" + p.isSleeping();
+			});
+			Sussurros.LOGGER.info("[primeira ida garantida] noite {}: {}", n, onde);
+			if (n < 3) {
+				conferir(onde.startsWith("AQUI"), "na noite " + n + ", sem sorte, ele ainda não deveria ter sido levado: " + onde);
+				mundo.getServer().runOnServer(server -> {
+					ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+					if (p.isSleeping()) {
+						p.stopSleepInBed(true, true);
+					}
+				});
+				mundo.getServer().runCommand("time add 24000");
+				context.waitTicks(10);
+			} else {
+				conferir(onde.startsWith("LA visita=1"), "na terceira noite deitado ele deveria ter sido levado, na primeira visita: " + onde);
+			}
+		}
+		mundo.getServer().runCommand("execute as @p run sussurros teste avesso voltar");
+		context.waitTicks(100);
+		mundo.getServer().runOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			conferir(p.level() == server.overworld(), "deveria ter voltado ao mundo normal");
+			conferir(Memoria.de(p).get("avesso_visitas") == 1, "a ida garantida conta como a primeira visita: " + Memoria.de(p).get("avesso_visitas"));
+			// As fotos a seguir começam do zero, como se ele nunca tivesse ido.
+			Avesso.definirVisitas(p, 0);
+			ServerLevel level = server.overworld();
+			level.setBlock(cabeca, Blocks.AIR.defaultBlockState(), 2 | 16);
+			level.setBlock(pe, Blocks.AIR.defaultBlockState(), 2 | 16);
+		});
+		mundo.getServer().runCommand("kill @e[type=item]");
+		mundo.getServer().runCommand("time set noon");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}

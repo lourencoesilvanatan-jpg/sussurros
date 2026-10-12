@@ -99,6 +99,38 @@ public class TestesDoAvesso {
 		});
 	}
 
+	/**
+	 * A primeira ida é garantida (0.9.0-alpha21): da fase 3 em diante, quem nunca foi vai na terceira noite em que
+	 * deita, mesmo sem sorte nenhuma. A contagem é por dia de jogo (deitar duas vezes na mesma noite conta uma), só
+	 * vale da fase 3 em diante e só para a primeira visita. A ida em si precisa da dimensão, e quem a confere é o
+	 * teste de cliente; aqui ficam a contagem e a decisão, com a Memoria de um jogador de verdade.
+	 */
+	@GameTest(maxTicks = 100)
+	public void aPrimeiraIdaFicaGarantidaNaTerceiraNoite(GameTestHelper helper) {
+		ServerPlayer jogador = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 4, -7300, 0);
+		Diretor.esquecer(jogador);
+		float semSorte = 0.99F;
+		helper.runAfterDelay(5, () -> {
+			Diretor.definirFase(jogador, 2);
+			helper.assertTrue("FORA".equals(Avesso.aoDeitarParaTeste(jogador, 10, semSorte)), "antes da fase 3 a noite não conta");
+			Diretor.definirFase(jogador, 3);
+			String[] esperado = {"NADA noite=1", "NADA noite=1", "NADA noite=2", "GARANTIDA noite=3", "GARANTIDA noite=3"};
+			int[] dias = {11, 11, 12, 15, 15};
+			for (int i = 0; i < dias.length; i++) {
+				String veio = Avesso.aoDeitarParaTeste(jogador, dias[i], semSorte);
+				helper.assertTrue(esperado[i].equals(veio), "ao deitar no dia " + dias[i] + " (vez " + (i + 1) + "): esperava " + esperado[i] + ", veio " + veio);
+			}
+			// Depois da primeira visita a garantia acabou: sem sorte, nada; e a contagem de noites para.
+			Avesso.definirVisitas(jogador, 1);
+			String depois = Avesso.aoDeitarParaTeste(jogador, 40, semSorte);
+			helper.assertTrue(depois.startsWith("NADA"), "depois da primeira visita não há garantia: " + depois);
+			helper.assertTrue(Avesso.aoDeitarParaTeste(jogador, 60, 0.01F).startsWith("SORTEIO"), "com sorte, o sorteio de sempre continua levando");
+			helper.assertTrue(jogador.level().dimension() == Level.OVERWORLD, "o gancho de teste não leva ninguém");
+			JogadorDeTeste.remover(jogador);
+			helper.succeed();
+		});
+	}
+
 	/** Num mundo sem a dimensão, ninguém é levado e ninguém fica marcado como "lá dentro". */
 	@GameTest(maxTicks = 100)
 	public void semADimensaoNinguemFicaPreso(GameTestHelper helper) {
