@@ -159,6 +159,8 @@ final class CenaAlgoNoTunel {
 					e.cenaTunelDesde = seg;
 					e.cenaTunelAte = seg + 5 + rnd.nextInt(7);
 				} else {
+					// Antes da fase 3 a cena não mostra ninguém, de propósito: é vazio por escolha, e o log diz.
+					Depuracao.log(p, seg, "CENA id=" + e.cenaTunelId + " etapa=PRESENCA PULADA motivo=FASE_2");
 					silencioCenaTunel(p, e, seg, rnd);
 				}
 			}
@@ -170,8 +172,10 @@ final class CenaAlgoNoTunel {
 					e.cenaTunel = EstadoJogador.CenaTunel.ESPREITANDO;
 					e.cenaTunelDesde = seg;
 				} else if (seg - e.cenaTunelDesde > 30) {
-					Depuracao.log(p, seg, "CENA id=" + e.cenaTunelId + " etapa=PRESENCA SEM_LUGAR");
+					// 0.9.0-alpha20: a cena que não achou onde pô-lo não acaba em silêncio (ver PlanoB).
 					Diretor.logarFaltaDeLugar(p, e, seg);
+					Depuracao.log(p, seg, "CENA id=" + e.cenaTunelId + " etapa=PRESENCA SEM_LUGAR planoB="
+							+ PlanoB.executar(level, p, e, "CENA_TUNEL", seg, tick));
 					silencioCenaTunel(p, e, seg, rnd);
 				}
 			}

@@ -139,8 +139,10 @@ final class CenaFoiAqui {
 					e.cenaMarco = EstadoJogador.CenaMarco.OBSERVANDO;
 					e.cenaMarcoDesde = seg;
 				} else if (seg - e.cenaMarcoDesde > 30) {
-					Depuracao.log(p, seg, "CENA id=" + e.cenaMarcoId + " etapa=PRESENCA SEM_LUGAR");
+					// 0.9.0-alpha20: a cena que não achou onde pô-lo não acaba em silêncio (ver PlanoB).
 					Diretor.logarFaltaDeLugar(p, e, seg);
+					Depuracao.log(p, seg, "CENA id=" + e.cenaMarcoId + " etapa=PRESENCA SEM_LUGAR planoB="
+							+ PlanoB.executar(level, p, e, "CENA_MARCO", seg, tick));
 					silencioCenaMarco(p, e, seg, rnd);
 				}
 			}

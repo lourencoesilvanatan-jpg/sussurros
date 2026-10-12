@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha20
+
+Primeiro pacote do plano de conteúdo combinado em 11/10. São duas garantias por baixo do que já existia: quando o mod prepara alguma coisa e ela não cabe no lugar em que você está, a preparação deixa de terminar em nada; e, nas fases avançadas, o mod passa a conferir se a parte principal dele chegou mesmo até você, em vez de só contar que tentou. Não entra item nem lugar novo.
+
 ## 0.9.0-alpha19
 
 Primeira etapa do que foi combinado em 11/10: duas coisas que o mod já fazia passam a acontecer em lugares onde antes não conseguiam, e uma delas deixa de poder vir "vazia". Não entra coisa nova para achar. O log das sessões passa a dizer por que alguma coisa não aconteceu, e os testes automáticos passam a rodar também em cima de um pedaço de terreno de um mundo de verdade.

@@ -68,6 +68,7 @@ public final class Veu {
 		e.veuAte = e.veuDesde + duracao;
 		e.veuVultoEm = sorte.nextBoolean() ? e.veuDesde + duracao / 2 : -1;
 		e.veuVultoTentativas = 0;
+		e.veuPlanoB = false;
 		e.veuFechou = false;
 		// De 30 a 50 minutos até o próximo. É raro de propósito: repetido, vira efeito especial.
 		e.veuProximoEm = e.veuAte + 20L * 60 * (30 + sorte.nextInt(21));
@@ -115,8 +116,11 @@ public final class Veu {
 			// o jogador o encontra quando vira o rosto. Fica até o Véu acabar. Num lugar apertado, onde a procura
 			// de sempre não acha nada, vale a de perto (ver Diretor.invocar).
 			int resta = (int) Math.max(40, e.veuAte - tick);
+			// 0.9.0-alpha20: só onde ele o enxerga ao virar. Sem essa exigência a procura de sempre o punha, numa
+			// caverna, no bolsão ao lado: o log dizia "vulto=sim" e o jogador não via ninguém.
 			boolean veio = (e.criatura == null || e.criatura.isRemoved()) && Diretor.invocar(level, p, e, HospedeEntity.Modo.OBSERVAR,
-					75, 130, 12, 17, resta, 1.0, false, PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null));
+					75, 130, 12, 17, resta, 1.0, false, HospedeEntity.DIST_SUMIR_PADRAO, true,
+					PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null));
 			if (veio) {
 				e.veuVultoEm = -1;
 				Depuracao.log(p, tick / 20, "VEU vulto=sim tentativas=" + (e.veuVultoTentativas + 1));
@@ -124,6 +128,12 @@ public final class Veu {
 				// 0.9.0-alpha19: não coube agora (de frente para um paredão, no meio de um pulo). Até a alpha18 a
 				// tentativa era uma só; agora ele tenta de novo a cada segundo, enquanto o Véu durar.
 				e.veuVultoTentativas++;
+				// 0.9.0-alpha20: esta foi a última tentativa que cabia no tempo e ele não veio. O Véu não fecha sem
+				// nada dentro: o sinal do plano B acontece agora, com uns segundos de Véu pela frente.
+				if (!e.veuPlanoB && e.veuAte - (tick + 20) < 80) {
+					e.veuPlanoB = true;
+					PlanoB.executar(level, p, e, "VEU", tick / 20, tick);
+				}
 			}
 		}
 		if (!e.veuFechou && tick >= e.veuAte - PISCADA / 2) {
@@ -139,8 +149,9 @@ public final class Veu {
 		e.veuFechou = true;
 		if (e.veuVultoEm >= 0 && e.veuVultoTentativas > 0) {
 			// Devia ter vindo e não coube em nenhuma tentativa: o log diz o que foi tentado e por que caiu.
-			Depuracao.log(p, tick / 20, "VEU vulto=nao_coube tentativas=" + e.veuVultoTentativas);
 			Diretor.logarFaltaDeLugar(p, e, tick / 20);
+			Depuracao.log(p, tick / 20, "VEU vulto=nao_coube tentativas=" + e.veuVultoTentativas
+					+ " planoB=" + (e.veuPlanoB ? e.planoBResumo : "-"));
 		}
 		e.veuVultoEm = -1;
 		e.veuAte = Math.min(e.veuAte, tick + PISCADA / 2);

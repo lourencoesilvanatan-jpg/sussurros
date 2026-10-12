@@ -161,8 +161,10 @@ final class CenaVoltouComVoce {
 					e.cenaCasa = EstadoJogador.CenaCasa.ESPREITANDO;
 					e.cenaCasaDesde = seg;
 				} else if (seg - e.cenaCasaDesde > 30) {
-					Depuracao.log(p, seg, "CENA id=" + e.cenaCasaId + " etapa=PRESENCA SEM_LUGAR");
+					// 0.9.0-alpha20: a cena que não achou onde pô-lo não acaba em silêncio (ver PlanoB).
 					Diretor.logarFaltaDeLugar(p, e, seg);
+					Depuracao.log(p, seg, "CENA id=" + e.cenaCasaId + " etapa=PRESENCA SEM_LUGAR planoB="
+							+ PlanoB.executar(level, p, e, "CENA_CASA", seg, tick));
 					silencioCenaCasa(p, e, seg, rnd);
 				}
 			}

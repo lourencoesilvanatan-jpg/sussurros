@@ -184,7 +184,7 @@ public final class PrimeiroContato {
 	}
 
 	/** Dois passos no chão em que ele está. São do corpo dele: como os outros sons do corpo, quem está perto ouve. */
-	private static void passos(ServerLevel level, ServerPlayer p, HospedeEntity h, int atraso) {
+	static void passos(ServerLevel level, ServerPlayer p, HospedeEntity h, int atraso) {
 		for (int i = 0; i < 2; i++) {
 			Diretor.agendar(level, atraso + i * 9, () -> {
 				if (h.isRemoved() || h.isSumindo() || h.jaFoiEncarado() || p.isRemoved()) {

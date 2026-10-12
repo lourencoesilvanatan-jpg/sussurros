@@ -1547,3 +1547,147 @@ Tiradas no túnel de teste, com a procura de verdade e ele no modo que não some
 - **A cabeça passa do teto.** Pela conta do modelo, com o tronco dobrado a 72 graus o pescoço fica a 1,72 bloco do chão e o topo da cabeça a uns 2,3: um terço de bloco dentro do teto de dois blocos. A foto 42 é compatível com a conta (a cabeça chega à linha do teto). Não é desta versão (é a pose da caça, desde que ela existe), e de frente o próprio teto esconde; parado, ele está sempre de frente para o alvo. Aparece de lado (um segundo jogador, ou a caça passando) e por um teto de vidro. **Não mexi no modelo:** é mudança no desenho da caça, às cegas quanto ao perfil. Para quem for mexer (a ideia 2.7 pede uma pose nova de qualquer jeito): dobrar o tronco a 90 graus e erguer a cabeça 45 dá um topo a 1,95 bloco, e uma foto de perfil precisa de uma criatura que não vire para o jogador (a de hoje vira sempre).
 
 A câmera das fotos 41 e 42 olha um pouco para cima (o comando `facing entity ... eyes` mede a partir dos pés do jogador), e por isso ele aparece na metade de baixo da imagem.
+
+---
+# Versão 0.9.0-alpha20 — nada termina em nada (pacote 1)
+
+É o primeiro dos dez pacotes do plano de conteúdo de 11/10/2026 (`pesquisa/2026-10-11-pesquisa-profunda.md`, arquivo local). O dono autorizou os dez de uma vez ("por mim pode todos") e joga depois; o pacote 1 são as ideias 2.9 e 2.10 do cardápio. O fato a que ele responde: em noventa minutos nas fases 3 e 4 o Diretor quis mostrar a criatura oito vezes e conseguiu três, duas de quatro sequências de ameaça acabaram sem ninguém, e quem jogava com o dono perguntou "cadê o bicho?".
+
+A alpha18 e a alpha19 atacaram a causa (a procura de lugar). Esta ataca o que sobra depois delas: o caso em que não há mesmo onde pôr o corpo, e o caso em que ele foi posto e ninguém viu.
+
+## O plano B (`PlanoB`)
+
+**O que o jogador percebe.** Quando o mod prepara uma aparição e não acha onde pôr o corpo, a preparação não termina mais em silêncio. Termina num sinal físico, com lugar, do lado em que ele estaria:
+
+- **`PO`**: cai pó do teto, em três punhados ao longo de um segundo, com um toque surdo no bloco de onde ele sai. As partículas são as do próprio bloco do teto (`FALLING_DUST` e `BLOCK`). Só onde há teto de dois a sete blocos acima do lugar, e só quando o jogador enxerga o lugar.
+- **`TOCHA`**: uma tocha de verdade daquele lado (a até oito blocos do lugar e dezesseis do jogador) apaga por quatro a sete segundos, com o som de chama apagando. É miragem: só ele vê, e o bloco continua no mundo.
+- **`PASSOS`**: dois passos se afastam do jogador, a partir do lugar, com o som do chão de verdade de cada um (tom 0,6, o dos passos dele).
+
+**De que lado.** "O lado em que ele estaria" é o **quase lugar** (`Aparicao.Quase`): o melhor lugar em que a procura que acabou de falhar quis pô-lo e não pôde, com a exigência em que ele caiu. As duas procuras instrumentadas (a de sempre e a de perto) guardam um por tick; primeiro o que o jogador enxerga, depois o mais perto. Lugares que caíram pela zona da vela ou por uma Linha de Cinza não entram.
+
+- O caso que a alpha19 deixou conhecido, o bolsão em que o único espaço fica à frente do jogador: todo lugar de 8 a 14 blocos cai por estar na tela (ele nunca nasce na tela), e o quase lugar é o mais perto deles, **à vista**. É ali que o pó cai. A regra "nunca na tela" continua valendo para o corpo; o sinal, ao contrário, é melhor quando é visto.
+- Se o quase lugar fica a mais de 14 blocos (a procura de sempre tenta lugares a trinta), o sinal vem do mesmo lado, a nove blocos: passos a trinta blocos não são com ninguém.
+- Sem quase lugar, vale um ponto por onde o jogador passou (de 5 a 14 blocos; de preferência fora da tela, o mais perto de nove). Sem isso, atrás dele: seis, dez ou catorze blocos, o primeiro que estiver fora da zona da vela.
+
+**Qual sinal** (`PlanoB.escolherTipo`, função pura, com teste JUnit). À vista do jogador, o que se vê vem primeiro: pó, tocha, passos. Fora da vista, o que se ouve: passos, tocha (pó que ninguém vê não é sinal). Havendo escolha, nunca o mesmo duas vezes seguidas.
+
+**Onde entra.** Nos quatro pontos em que o analisador já contava "construção que acabou sem ninguém":
+
+- `Diretor.fimAmeaca`, quando o motivo é `SEM_LUGAR` (a sequência de ameaça que esperou um minuto);
+- o `SEM_LUGAR` das quatro cenas com presença (túnel, marco, campo nas duas aparições, casa);
+- o vulto do Véu: na última tentativa que cabia no tempo, com quatro ou cinco segundos de Véu pela frente (se o Véu é rasgado antes por uma vela, não sai nada: `planoB=-`);
+- a aparição chamada pelo Olho que não coube (o Olho já tinha dito "ele sentiu").
+
+**Regras.**
+
+- Só o alvo vê e ouve: as partículas saem por `sendParticles(jogador, ...)` e os sons por `tocarEventoPara`. Um teste de servidor confere com um segundo jogador colado nele.
+- Nada dentro da zona da vela. Se não sobra lugar fora dela, não sai nada e o log diz `NENHUM`.
+- Não é manifestação, e o analisador não a conta como uma: a linha `SEM_LUGAR` continua lá e continua nos alertas, agora com `planoB=`.
+- Não gasta saldo de atenção (é o fim de algo que já tinha começado; a sequência e as cenas entram em silêncio logo depois), só impõe o respiro.
+- **Não usa o sorteio do mundo**: o que sai depende do lugar e do que saiu da última vez. Os sorteios do Diretor ficam como estavam.
+
+**O vazio por escolha continua.** O relatório pedia que o log separasse o vazio por falha do vazio por escolha, e que uma parcela pequena de vazios escolhidos continuasse existindo (esperar e não receber mantém o alerta; é a regra da 0.6). Minha leitura, que vale conferir: o plano B cobre **toda** falha, e o vazio escolhido é o que o mod já fazia de propósito e não passa por aqui: o falso aviso de caçada (`PRENUNCIO real=nao`), a sensação de ser olhado sem ninguém (`VIGIA falsa`) e as cenas que não mostram ninguém antes da fase 3 (`PRESENCA PULADA`, que a cena do túnel passou a registrar). Não criei um sorteio de "plano B que não sai": para o jogador ele seria igual a uma falha. O analisador conta os dois separados e alerta se, em mais de uma hora de fase 3 ou 4, não houve nenhum vazio escolhido.
+
+## A cota de corpo (`Cota`)
+
+**A ideia.** O primeiro contato garante que ele seja visto uma vez. Depois disso, para o Diretor, "tentei" e "ele viu" contavam igual. A cota passa a contar o que foi visto.
+
+**"Visto" tem a definição de sempre**, agora medida em toda aparição e não só na do contato (`HospedeEntity.foiVistoDeVerdade`): seis ticks seguidos na mira do jogador, com luz para enxergá-lo, ou dissolver com a mira em cima (o "visto demais" de quem olhou direto). Ficar no canto da tela não conta; uma virada de câmera não conta; olhar para onde ele está no breu não conta. A linha `EXPOSICAO` do log passou a dizer `naMira=` e `visto=`.
+
+**A regra**, por jogador, depois do primeiro contato e da fase 3:
+
+- um relógio na `Memoria` (`cota_relogio`) conta os segundos de jogo desde a última aparição vista. Zera quando qualquer aparição que não seja de comando é vista de verdade, e também numa caçada em que ele esteve ao menos um segundo na tela (ali ele é visto correndo, quase sempre no escuro, e ninguém pergunta onde ele está: é a única folga na definição);
+- **aos 20 minutos** a cota fica devendo. A presença comum seguinte, que o Diretor escolher por conta própria, usa a colocação fácil antes de todas as outras (menos da isca) e é anunciada sempre pelos dois passos que dizem o lado, repetidos uma vez se ele ainda não olhou (o anúncio do primeiro contato, sem o aviso da caçada);
+- **aos 30 minutos** ela não espera mais o Diretor: tenta sozinha, como o primeiro contato. Não passa pelo portão de vulnerabilidade nem pelo saldo de atenção; respeita o respiro, e não acontece com criatura presente, cena em curso, sequência de ameaça, Diretor recuando, Véu aberto, zona da vela, trégua ou jogador em perigo;
+- a tentativa que ninguém viu **não gasta atenção** (só segura os outros pelo respiro); vista, custa o que custa uma presença. A seguinte espera de quatro a seis minutos, mais dois a cada tentativa, até dez a doze.
+
+**A colocação fácil** (`Cota.colocar`): fora de casa, primeiro de perto, num lugar fechado **e com luz** (`Aparicao.buscarDePerto` ganhou o parâmetro `soComLuz`); senão, o lugar com luz que ele enxerga ao virar (`invocarOndeHaLuz`), perto da borda da tela (de 80 a 140 graus na primeira tentativa, de 62 a 110 nas seguintes), a 18 a 26 blocos (26 a 36 de dia, a céu aberto). Sem luz não há tentativa: no breu ele estaria lá e, pela definição, ninguém o teria visto.
+
+**O que não muda.** Ele continua sendo relance (some ao ser olhado, e de perto nunca sai andando), nunca nasce na tela, e de perto só em lugar fechado. **A cota não põe ninguém dentro da casa do jogador**: com o contexto `CASA` ela pula a procura de perto. De dentro de uma casa com janela de vidro o lugar com luz quase nunca tem linha de visão (o vidro tem corpo), então para quem não sai de casa a cota espera; a janela é assunto da cena dela.
+
+**O risco, e por que ele é aceito.** A colocação fácil é a que mais mostra, e o que aparece demais deixa de assustar (Grip, na pesquisa). A cota só existe enquanto ele **não** foi visto: com o mod funcionando ela não dispara nunca. Os números (20 e 30 minutos, a espera) são o palpite do cardápio, sem sessão de gente.
+
+## Consertos de passagem
+
+- **O vulto do Véu passou a exigir que o jogador o enxergue ao virar.** A procura de sempre, para ele, não pedia linha de visão: numa caverna ela o punha no bolsão ao lado, o log dizia `vulto=sim` e o jogador não via ninguém. Achado pelo teste novo (a cela fechada do teste ficava dentro de um bloco de pedra pequeno, e o vulto nascia no gramado do lado de fora). Em campo aberto não muda nada.
+- **A ordem das linhas de log** nas cenas, no Véu e no Olho: `LUGAR falhou` vem antes do `SEM_LUGAR`, como na sequência de ameaça. O analisador só juntava o motivo à construção quando a ordem era essa.
+- **O `README.md`** dizia alpha1. Agora aponta para o `gradle.properties` e o `VERSAO-ATUAL.md`, para não envelhecer a cada versão.
+
+## O analisador
+
+- Fontes novas no ritmo: `plano B` e `cota` (só a tentativa da própria cota; a que vem pelo Diretor já é um evento).
+- Seção nova, "Nada termina em nada": vazio por falha (com e sem o sinal), de que lado o sinal veio e quantos à vista, vazio por escolha, o que a cota fez, e o maior tempo de jogo, da fase 3 em diante, sem uma aparição vista de verdade.
+- "Na mira" passou a ser o `visto=sim` da linha `EXPOSICAO` (num log de antes da alpha20, o primeiro tick de `ENCAROU`, como era). O alerta "ele viu a criatura em N de M vezes" dispara abaixo de **duas em cada três** (era abaixo da metade): é a prova que o relatório pede para este pacote.
+- Alertas novos: construção sem ninguém **e sem sinal**; mais de quarenta minutos, da fase 3 em diante, sem vê-lo; nenhum vazio por escolha em mais de uma hora de fase 3 ou 4.
+
+## Os testes
+
+Nove de servidor (78 no total) e quatro de JUnit.
+
+`TestesDoPlanoB` monta os dois lugares em que a procura falha de verdade: uma cela de pedra fechada, de três por três, e um corredor sem saída de doze blocos que só vai para a frente do jogador.
+
+- `naCelaFechadaAAmeacaAcabaEmPassos`: a sequência de ameaça espera o minuto dela, acaba em `SEM_LUGAR`, ninguém aparece, e o alvo recebe os dois passos (nenhuma partícula).
+- `noCorredorSemSaidaCaiPoAVistaDele`: no corredor, olhando para o único lado com espaço, ninguém nasce; o fim é `SEM_LUGAR` com `planoB=PO`, o alvo recebe as partículas e o toque, e **o amigo parado ao lado não recebe partícula nenhuma nem som nenhum em volta do sinal**.
+- `doisSinaisSeguidosNaoSaoOMesmo`: no corredor com uma tocha no fundo, o primeiro sinal é o pó e o segundo é a tocha; a tocha apagada é miragem (o bloco continua lá) e volta sozinha.
+- `aCenaQueNaoAchaLugarTambemTemSinal`: a cena do túnel, na cela.
+- `oVeuEmQueOVultoNaoCabeTambemTemSinal`: o Véu, na cela; o sinal sai com o Véu ainda aberto.
+
+`TestesDaCota` usa o túnel de `TestesDePerto` (a curva iluminada dez blocos atrás do jogador).
+
+- `aCotaTentaSozinhaESoCustaQuandoEVista`: com trinta minutos no relógio ele nasce na curva em menos de três segundos, pela cota; três segundos sem olhar e o saldo de atenção não caiu; olhado, some, o relógio zera e a atenção é cobrada.
+- `semSerVistaACotaContinuaDevendo`: ninguém olha, ele vai embora aos quarenta segundos, o relógio não zera e a tentativa seguinte não vem em seguida.
+- `aPresencaDoDiretorPagaACotaQuandoElaDeve`: sem a cota dever, a presença é a de sempre; com vinte minutos no relógio a cota não tenta sozinha, e a presença que o Diretor roda é a dela.
+- `aCotaNaoValeAntesDaFase3NemDentroDeCasa`: na fase 2 o relógio nem anda; na fase 3, com a cama ali (contexto `CASA`), ninguém aparece de perto; tirada a cama, aparece.
+
+`PlanoBTest` (JUnit): a escolha do sinal, à vista e fora dela, e a regra de não repetir.
+
+Ganchos novos no `Diretor`: `planoBParaTeste`, `testarPlanoB` (também como `/sussurros teste planob`) e `eventoDoDiretorParaTeste`, que roda um evento como o Diretor rodaria (o `forcarEvento`, de comando, não conta para nada, e a cota depende de contar). `JogadorDeTeste.recebidos` separa sons, partículas e blocos trocados.
+
+Duas coisas que os testes ensinaram, e que estão no `CLAUDE.md`: classe de teste nova só roda depois de entrar no `fabric.mod.json` de `src/gametest/resources` (a primeira execução passou com os 69 de antes, sem os novos); e o pacote que o servidor manda a um jogador só sai da fila na vez da conexão, então um teste que confere o que chegou tem de olhar no tick seguinte.
+
+## O que ficou de fora, de propósito
+
+- **A espreita, o "atrás de você" e as cenas não usam a colocação fácil da cota.** Só a presença comum e a tentativa da própria cota. É a menor mudança que cumpre a garantia.
+- **A cota não entra em casa** (ver acima), e não usa a saída andando de propósito: a presença do Diretor continua com a regra de uma em três.
+- **O primeiro contato** continua como estava (sem a procura de perto).
+- **Um sinal próprio para cada cena.** O plano B é o mesmo nos quatro pontos. As ideias de caverna com corpo (pacote 3) são outra coisa: aqui o pó é pouco e curto de propósito.
+- **O vazio escolhido como sorteio novo** (ver "O vazio por escolha continua").
+
+## Não verificado por ninguém
+
+- Se o pó aparece e se lê como pó. As fotos 43 a 45 mostram a tela (ver "As fotos"); o movimento, só jogando.
+- Como soam o toque no teto e os dois passos, e se, a nove blocos atrás de uma parede, os passos parecem alguém ou parecem ruído. A máquina do GitHub não tem som.
+- Os números da cota. Vinte e trinta minutos são palpite. O que ler na primeira sessão: o maior tempo sem vê-lo, quantas tentativas a cota precisou, e os segundos de exposição por hora (a referência da revisão externa é de 20 a 30 por hora, perto e com luz, na fase 3).
+- Se a colocação fácil, de dia, a 26 blocos e na borda da tela, lê como presença ou como boneco. É a forma diurna do primeiro contato, que ele viu uma vez e não reclamou.
+- O plano B dentro do Véu (as partículas com a neblina fechada e a cor do outro lado).
+
+## Medição
+
+Sessão sintética de uma hora, três jogadores de mentira, em campo aberto (11/10/2026, uma execução):
+
+| | Fase 2 | Fase 4 | Mundo novo |
+|---|---|---|---|
+| Saídas por hora | 33 | 41 | 31 |
+| Manifestações da criatura por hora | 10 | 9 | 12 |
+| Tentativas da cota | 2 | 2 | 0 |
+| Segundos na tela por hora (perto e com luz) | 5 (0) | 5 (1) | 5 (2) |
+
+Na faixa das medições anteriores (26, 36 e 42 saídas na alpha19; 30, 39 e 49 na alpha16). Nenhuma construção acabou sem ninguém (em campo aberto há lugar), então **o plano B não apareceu na sessão**: ele só é exercitado pelos testes de servidor. A cota tentou duas vezes por hora em cada um dos dois jogadores que já tinham o primeiro contato, sempre pela regra (aos 30 minutos), a 32 blocos, de dia; nenhuma foi vista, porque jogador de mentira não mira em nada. É o pior caso: duas aparições a mais por hora para quem nunca olha. No jogador da fase 4 a cota foi paga pela caçada.
+
+Três avisos sobre esta medição:
+
+- **A sessão mudou, e por isso não se compara linha a linha com as anteriores.** Os dois jogadores que começam nas fases 2 e 4 passaram a começar com o primeiro contato feito (`TestesDeSessao`), como num mundo de verdade. Antes, sem mirar em nada, eles recebiam tentativas de primeiro contato a hora inteira (oito cada um, numa execução desta versão feita antes da mudança: 42, 48 e 26 saídas por hora), e a cota, que só vale depois do contato, nunca entrava.
+- Em duas execuções, **a presença comum não foi sorteada nenhuma vez** em campo aberto (as aparições foram vulto, espreita, "atrás de você", caçada e as tentativas de contato ou da cota). O caminho "a presença do Diretor paga a cota" só foi exercitado pelo teste de servidor.
+- Os alertas "ele viu a criatura em N de M" e "mais de quarenta minutos sem vê-la" disparam sempre para jogador de mentira. Valem para sessão de gente.
+
+`./gradlew build`: ver o corpo do PR para a contagem exata. O teste do amigo ao lado falhou duas vezes antes de ficar certo, por defeito do teste: ele contava todo som que chegava ao amigo, e o amigo recebe sons que não são do plano B (cinco de uma vez, numa execução; não descobri quais eram, e a hipótese é um bicho andando em cima do bloco de pedra). Passou a conferir pelo lugar: o toque do pó vem do teto, oito blocos à frente, e é esse som que o amigo não pode ter recebido.
+
+## As fotos (43 a 45)
+
+Tiradas no corredor sem saída dos testes (pedra, doze blocos, uma tocha no fundo), com `/sussurros teste planob`. Abri as três.
+
+- **43, o corredor antes:** escuro perto do jogador, a tocha acesa no fundo. É a referência.
+- **44, o pó:** um punhado de pontos claros junto do teto, oito blocos à frente, um pouco acima da mira, contra a parede iluminada pela tocha. Vê-se, e lê-se como algo no teto; é pequeno, do tamanho de um bloco visto a oito blocos, que é o que se queria (um sinal, não um efeito). A cor é a da pedra. **No escuro, sem uma luz atrás, eu não apostaria que se vê**: nesta foto ele aparece porque a tocha do fundo o recorta. Num bolsão sem tocha o que sobra é o toque no teto, que só se confere ouvindo.
+- **45, a tocha apagada:** a tela fica preta, só com a barra de itens. Era a única luz do corredor. É bem mais forte do que eu esperava de "uma tocha apaga por uns segundos": quando a tocha escolhida é a única por perto, o jogador fica de quatro a sete segundos no breu. Não mexi: é reversível, é curto, e é só para o alvo; mas é o primeiro ponto a perguntar a ele (sem dizer o quê) e o primeiro a rever se parecer defeito do jogo.
+
+O que as fotos não dizem: o movimento do pó caindo (são três punhados em um segundo) e o som.

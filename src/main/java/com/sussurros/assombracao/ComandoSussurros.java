@@ -258,6 +258,12 @@ public final class ComandoSussurros {
 				}
 			}
 			teste.then(dePerto);
+			// O sinal que fecha uma construção que acabou sem ninguém (para as fotos do teste de cliente).
+			teste.then(Commands.literal("planob").executes(ctx -> {
+				String saiu = Diretor.testarPlanoB(ctx.getSource().getPlayerOrException());
+				ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] Plano B: " + saiu + "."), false);
+				return 1;
+			}));
 			teste.then(Commands.literal("miragem")
 					.executes(ctx -> {
 						String msg = Experimentos.miragem(ctx.getSource().getPlayerOrException(), false);
