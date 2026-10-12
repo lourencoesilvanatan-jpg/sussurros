@@ -994,6 +994,25 @@ public class TestesDeCliente implements FabricClientGameTest {
 			context.waitTicks(20);
 			context.takeScreenshot(lado == 0 ? "57-de-quatro-de-perfil" : "58-de-quatro-de-perfil-o-outro-braco");
 		}
+		// De cima, para ver o corpo inteiro sem o chão na frente; e em cima de um bloco, de lado, para ver o que
+		// o chão esconderia (um membro que mergulha na terra não aparece nas fotos de perfil).
+		BlockPos alto = pes.offset(16, 0, 6);
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto, Blocks.STONE.defaultBlockState(), 3));
+		context.waitTicks(5);
+		mundo.getServer().runOnServer(server -> Diretor.deQuatroParaFoto(server.getPlayerList().getPlayers().get(0), alto.above(), 90.0F));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, alto.getX() + 0.5, alto.getY(), alto.getZ() + 5.0, 180, 0));
+		context.waitTicks(20);
+		context.takeScreenshot("59-de-quatro-em-cima-de-um-bloco");
+		// De cima: o jogador em pé num bloco invisível, seis blocos acima dele, olhando para baixo.
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto.above(5), Blocks.BARRIER.defaultBlockState(), 3));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 90", alto.getX() + 0.5, alto.getY() + 6, alto.getZ() + 0.5));
+		context.waitTicks(15);
+		context.takeScreenshot("60-de-quatro-de-cima");
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto.above(5), Blocks.AIR.defaultBlockState(), 3));
 		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
 		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
