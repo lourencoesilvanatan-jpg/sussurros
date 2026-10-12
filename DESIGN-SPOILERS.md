@@ -1820,3 +1820,57 @@ Abertas e conferidas, do job `fotos` do PR #43.
 - Se os morcegos passam "bonito" num túnel largo e numa caverna aberta: o teste é num túnel de um bloco, onde eles se espremem no teto.
 - Se duas em cinco é apertado demais numa caverna sem tochas, nas fases 1 e 2, em que quase tudo o que existe é som (o Diretor cede, mas as outras fontes não).
 - Os quinze minutos da dívida e os dez do túnel dos morcegos: palpites do cardápio, sem sessão.
+
+---
+# Versão 0.9.0-alpha23 — a caverna com corpo (pacote 3, segunda parte)
+
+O que tinha ficado de fora da alpha22 e não dependia de resposta do dono: as ideias 3.5 e 3.4 do cardápio. São mais duas coisas da família "objeto" para o subsolo, que era a que a caverna dele menos teve (uma em quarenta saídas).
+
+## A tampa do baú (`Caverna.tampa`, 3.5)
+
+Um baú que ele pôs lá embaixo levanta a tampa, fica um segundo aberto e fecha, com o som de baú abrindo e fechando. Dentro, tudo igual.
+
+- É o evento de bloco do jogo (`ClientboundBlockEventPacket(pos, bloco, 1, 1)`, e depois com 0) mandado só pela conexão dele, com os dois sons também só para ele. O baú de verdade não abre: o contador de quem o tem aberto fica em zero, quem está ao lado não vê, e nada dispara (um baú com armadilha não dá sinal). O cardápio marcava a ideia como "conferir"; conferi no código do jogo e a foto mostra a tampa levantada.
+- Qual baú: de dois e meio a quatorze blocos, fora da zona da vela, e que ninguém esteja usando de verdade. De preferência um que esteja **na borda da tela** (é onde se percebe "alguma coisa mexeu ali"); depois um fora da tela (ele só ouve, e vira); por último um bem no meio. Se alguém abre o baú de verdade nesse segundo, o mod não manda o "fechar".
+- **Só com o contexto `SUBSOLO`.** O cardápio dizia "no acampamento da mina ou em casa"; a parte de casa a pesquisa põe no pacote 6 (o que fica na casa), e aqui ela ficou de fora de propósito: o baú de casa é o lugar seguro dele, e mexer ali pede o desenho daquele pacote (raridade, a vela que trata).
+- Duas por sessão, vinte minutos entre uma e outra. Vale para baú comum, com armadilha e de cobre (todo `ChestBlock`); barril e baú do Fim não.
+
+## A passagem fechada (`Caverna.passagem`, 3.4)
+
+O caminho por onde ele veio, visto de longe: há pedra onde ficava a passagem. Quando ele chega a seis blocos, está aberto.
+
+- São miragens (`Miragem`, motivo `PASSAGEM_FECHADA`): só ele vê, o mundo não muda, e clicar nelas as desfaz, como toda miragem.
+- Onde: num ponto do `Rastro` (ele passou por ali há dez segundos ou mais), de dez a vinte e seis blocos dele, **fora da tela na hora de pôr** e **à vista se ele virar** (linha livre até os olhos). De preferência a uns dezesseis blocos.
+- Só numa **passagem estreita**: o vão, no plano atravessado ao caminho, tem de ser de ar, ter no máximo seis blocos e estar todo cercado de bloco inteiro (`Caverna.vaoDaPassagem`). Um salão, uma bifurcação, um vão com tocha, escada, trilho ou laje não servem: ali a parede falsa ficaria com buraco, ou esconderia uma coisa dele.
+- A pedra é a pedra natural que mais cerca o vão (senão, pedra comum), para a parede ter a cor do túnel.
+- **O cuidado que o cardápio pedia.** Bloco de miragem é sólido para o jogo dele: encostando, ele ficaria preso num bloco que não existe, e isso parece travamento. Por isso ela se desfaz a **seis blocos** (o cardápio pedia "2,5 ou mais": a miragem só confere a cada cinco ticks, e correndo ele anda um bloco e meio nesse tempo), e nunca é posta a menos de dez. Nunca a três blocos de água ou de lava (o líquido "atravessaria" a pedra). Dura de sessenta a noventa segundos se ele não for ver.
+- Duas por sessão, vinte minutos entre uma e outra, e nunca duas ao mesmo tempo.
+
+As duas são perturbações da Atmosfera (`TAMPA`, `PASSAGEM_FECHADA`) e pagam a dívida do subsolo, junto com os morcegos e a pedrinha. A dívida passou a tentar primeiro a que saiu menos vezes na sessão (`Atmosfera.ordemDaDivida`, função pura); a pedra no caminho continua sendo a última. Como perturbações de caminho que são, não acontecem com a criatura presente, numa cena, numa caçada, em trégua nem com o Véu aberto. Comandos de teste: `/sussurros cena tampa` e `cena passagem`.
+
+## Os testes
+
+- **JUnit** (`FamiliasTest`, um teste a mais, sete no total): a ordem em que a dívida tenta as coisas, e que todas são das famílias que se tocam.
+- **Servidor** (`TestesDaCaverna`, dois testes a mais; 87 no total):
+  - `aTampaDoBauLevantaSoParaEle`: o evento de abrir e o de fechar chegam ao alvo, com um som cada; nada chega ao amigo colado nele; o baú de verdade não abre em momento nenhum; o que está dentro continua lá.
+  - `aPassagemPorOndeEleVeioPareceFechadaDeLonge`: o jogador de mentira anda quinze blocos por um túnel (com os pés no chão, para deixar caminho); duas pedras de miragem fecham o túnel entre dez e vinte e seis blocos dele; o túnel de verdade continua aberto; quando ele volta, a parede se desfaz com ele a mais de quatro blocos e meio, e ele nunca chega mais perto do que isso de uma pedra que não existe.
+- **Cliente** (`TestesDeCliente.caverna`, fotos 49t e 49p): a tampa levantada e de volta; a passagem fechada de longe e aberta de perto.
+
+**Esta versão foi conferida no GitHub, não na máquina do dono.** A compilação e os testes JUnit rodaram aqui; o servidor de teste não subiu, porque a máquina estava sem memória livre (o arquivo de paginação no limite, com o navegador, as IDEs e vários chats antigos abertos). Os testes de servidor rodaram no job `build` do PR, repetido para pegar instabilidade, e as fotos no job `fotos`. A sessão sintética não foi rodada: nada desta versão acontece em campo aberto, como na alpha22.
+
+## Um achado sobre a sessão sintética
+
+O jogador de mentira não tem os pés no chão para o jogo (`onGround` falso), e o `Rastro` só anota quem está no chão: **na sessão sintética o caminho andado tem sempre zero pontos**, e nada do que depende dele acontece lá (vestígios, pegadas, o seguidor, a trilha, as cenas que usam o rastro). É por isso que a família "marca" não aparece na tabela dos três jogadores sintéticos. O teste da passagem liga isso à mão (`setOnGround(true)`). Ligar na sessão sintética mudaria todos os números dela de uma vez: fica para quando alguém for mexer em ritmo, com a comparação antes e depois.
+
+## O que ficou de fora, de propósito
+
+- **"Alguém esteve aqui antes"** (blocos de verdade postos em caverna natural). Continua esperando a resposta do dono. A versão só em miragem já existe há tempo (a tocha que ele não pôs).
+- A tampa do baú em casa (pacote 6).
+- Barril e baú do Fim.
+
+## Não verificado por ninguém
+
+- Se a passagem fechada se lê de longe como "fecharam o caminho" ou só como um trecho escuro: a foto mostra um caso, com tocha por perto.
+- Se a parede some "na cara" dele: a seis blocos, andando, ele pode estar olhando para ela quando ela se desfaz. Toda miragem do mod faz isso, e ele disse em 08/10 que perceber uma coisa piscando "é justamente isso que eu queria"; mas uma parede inteira é maior que uma tocha.
+- O caso em que a parede fica entre ele e a saída enquanto ele é surpreendido por outra coisa: a caçada não começa com perturbação em curso, mas uma que comece depois encontra a miragem ainda lá, até ele chegar a seis blocos.
+- Como soa a tampa (são os sons do próprio jogo).

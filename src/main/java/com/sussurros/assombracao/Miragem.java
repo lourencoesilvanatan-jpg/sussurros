@@ -72,6 +72,17 @@ final class Miragem {
 		return n;
 	}
 
+	/** Onde estão as miragens deste motivo deste jogador (para os testes). */
+	static List<BlockPos> posicoes(ServerPlayer p, String motivo) {
+		List<BlockPos> lista = new ArrayList<>();
+		for (Ativa a : ATIVAS) {
+			if (a.jogador().equals(p.getUUID()) && a.motivo().equals(motivo)) {
+				lista.add(a.pos());
+			}
+		}
+		return lista;
+	}
+
 	/** Este jogador já tem uma miragem nesta posição? */
 	static boolean tem(ServerPlayer p, BlockPos pos) {
 		for (Ativa a : ATIVAS) {

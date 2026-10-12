@@ -284,6 +284,7 @@ final class EstadoJogador {
 	final List<BlockPos> portas = new ArrayList<>();
 	final List<BlockPos> tochas = new ArrayList<>();
 	final List<BlockPos> janelas = new ArrayList<>();
+	final List<BlockPos> baus = new ArrayList<>();
 
 	// --- Sentidos (0.9): o que o cliente deste jogador mostra e toca. Só apresentação. ---
 	/** O último pacote calculado. Os testes leem daqui, porque jogador de teste não recebe pacote. */

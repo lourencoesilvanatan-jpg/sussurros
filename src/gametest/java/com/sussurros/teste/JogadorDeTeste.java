@@ -13,6 +13,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
@@ -99,12 +100,13 @@ public final class JogadorDeTeste {
 
 	/**
 	 * O mesmo, separando o que chegou: [0] sons, [1] partículas, [2] blocos trocados (é assim que uma miragem chega)
-	 * e [3] rachaduras (o progresso de quebra de um bloco; quem quebra de verdade não recebe o seu).
+	 * [3] rachaduras (o progresso de quebra de um bloco; quem quebra de verdade não recebe o seu) e [4] eventos
+	 * de bloco (a tampa de um baú abrindo ou fechando).
 	 * Esvazia a fila, como sonsRecebidos: quem quer o total de um trecho soma as chamadas.
 	 */
 	public static int[] recebidos(ServerPlayer jogador) {
 		EmbeddedChannel canal = CANAIS.get(jogador.getUUID());
-		int[] n = new int[4];
+		int[] n = new int[5];
 		Object pacote;
 		while (canal != null && (pacote = canal.readOutbound()) != null) {
 			if (pacote instanceof ClientboundSoundPacket || pacote instanceof ClientboundSoundEntityPacket) {
@@ -125,6 +127,8 @@ public final class JogadorDeTeste {
 			} else if (pacote instanceof ClientboundBlockDestructionPacket rachadura && rachadura.getProgress() >= 0
 					&& rachadura.getProgress() <= 9) {
 				n[3]++;
+			} else if (pacote instanceof ClientboundBlockEventPacket) {
+				n[4]++;
 			}
 		}
 		return n;

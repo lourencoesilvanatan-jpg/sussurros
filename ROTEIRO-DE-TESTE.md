@@ -11,11 +11,13 @@ Você vai jogar várias versões de uma vez. Não precisa testar uma por uma: é
 | alpha18 e alpha19 | Em casa, fora, e **um bom tempo debaixo da terra** (caverna ou mina) | Alguma coisa pareceu "de boneco", artificial? Alguma coisa pareceu perto demais? |
 | alpha20 | O mesmo. Vale ficar um tempo **parado num lugar apertado** (um canto de caverna, uma mina estreita) e jogar **mais de meia hora seguida** | Teve algum momento em que você sentiu que ia acontecer alguma coisa e não aconteceu nada? Você (ou a sua irmã) voltou a perguntar "cadê o bicho?" |
 | alpha21 | **Durma.** Deite numa cama, à noite, em pelo menos **três noites de jogo** (não precisam ser seguidas), e espere uns segundos deitado em vez de levantar logo | Teve alguma coisa nesta sessão que você nunca tinha visto? |
-| alpha22 | **Debaixo da terra**, de novo: pelo menos **uns quarenta minutos seguidos** numa caverna ou mina funda, **minerando de verdade**, e não só passando | A caverna ainda pareceu repetitiva? Alguma coisa lá embaixo pareceu **defeito do jogo**, e não parte do mod? |
+| alpha22 e alpha23 | **Debaixo da terra**, de novo: pelo menos **uns quarenta minutos seguidos** numa caverna ou mina funda, **minerando de verdade**, e não só passando. Jogue como você joga: monte o seu acampamento lá embaixo, guarde as suas coisas, vá e volte pelos túneis | A caverna ainda pareceu repetitiva? Alguma coisa lá embaixo pareceu **defeito do jogo**, e não parte do mod? Em algum momento você ficou **preso** ou o jogo te **puxou de volta** andando por um túnel? |
 
 De comando, só o `/sussurros debug on`, como sempre.
 
 ## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha23: **o terceiro pacote do plano de conteúdo, segunda parte.** Mais duas coisas novas debaixo da terra, do mesmo tipo das da alpha22. Para testar, é o mesmo: um bom tempo seguido numa caverna ou mina funda, jogando como você joga (com o seu acampamento, as suas coisas guardadas, indo e voltando pelos túneis). As duas aparecem só para quem é o alvo.
 
 Versão 0.9.0-alpha22: **o terceiro pacote do plano de conteúdo, primeira parte.** É a resposta ao que você disse da caverna em 11/10. Entram coisas novas debaixo da terra, de tipos que faltavam lá, e o que se repetia demais passa a dar a vez para o resto. Na superfície e em casa nada muda nesta versão. Para testar, é o que está na lista acima: um bom tempo seguido numa caverna ou mina funda, minerando. Um aviso para quando jogar com a sua irmã: quase tudo o que é novo aparece só para um de vocês, mas uma das coisas os dois veem.
 
@@ -127,6 +129,7 @@ Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abr
 Você não precisa repetir isto. Fica registrado para quem programa.
 
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
+- O que mudou na alpha23 foi exercitado contra um jogador de mentira em mais duas situações, no mesmo túnel, e fotografado dentro do jogo de verdade. Desta vez os testes pesados rodaram só na máquina do GitHub: a sua estava sem memória livre para eles.
 - O que mudou na alpha22 foi exercitado contra um jogador de mentira em seis situações, dentro de um túnel montado para isso, e a regra nova é conferida também em números (seis casos). Uma das situações confere que quem está colado em você não vê nem ouve o que é só seu. O que aparece na tela foi fotografado dentro do jogo de verdade, na máquina do GitHub.
 - O que mudou na alpha21 é uma regra só: ela é conferida em números (cinco casos), contra um jogador de mentira, e de ponta a ponta dentro do jogo de verdade, na máquina do GitHub.
 - O que mudou na alpha20 foi exercitado contra um jogador de mentira em nove situações, em lugares montados para isso, e o desfecho foi o esperado em todas. Uma delas confere que quem está ao seu lado não vê nem ouve o que é só seu.

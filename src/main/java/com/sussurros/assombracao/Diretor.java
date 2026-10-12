@@ -37,6 +37,7 @@ import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -335,6 +336,16 @@ public final class Diretor {
 	/** Quantas miragens deste motivo este jogador tem agora (para os testes). */
 	public static int miragensParaTeste(ServerPlayer p, String motivo) {
 		return Miragem.ativas(p, motivo);
+	}
+
+	/** Onde estão as miragens deste motivo deste jogador (para os testes). */
+	public static List<BlockPos> posicoesDeMiragemParaTeste(ServerPlayer p, String motivo) {
+		return Miragem.posicoes(p, motivo);
+	}
+
+	/** Só para os testes: quantos pontos tem o caminho andado deste jogador. */
+	public static int rastroParaTeste(ServerPlayer p) {
+		return estado(p).rastro.tamanho();
 	}
 
 	/** O que o cliente deste jogador foi mandado sentir por último (para os testes e para o comando memoria). */
@@ -2087,6 +2098,7 @@ public final class Diretor {
 		e.portas.clear();
 		e.tochas.clear();
 		e.janelas.clear();
+		e.baus.clear();
 		BlockPos centro = p.blockPosition();
 		for (int ox = -12; ox <= 12; ox++) {
 			for (int oy = -4; oy <= 4; oy++) {
@@ -2097,6 +2109,8 @@ public final class Diretor {
 						e.tochas.add(pos);
 					} else if (s.getBlock() instanceof DoorBlock && !s.is(Blocks.IRON_DOOR) && s.hasProperty(BlockStateProperties.OPEN)) {
 						e.portas.add(pos);
+					} else if (s.getBlock() instanceof ChestBlock) {
+						e.baus.add(pos);
 					} else if (!s.isAir()) {
 						String caminho = BuiltInRegistries.BLOCK.getKey(s.getBlock()).getPath();
 						if (caminho.contains("glass")) {

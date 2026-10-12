@@ -903,3 +903,17 @@ Para conferir depois de uma sessão: `AVESSO chegou visita=1` depois de, no máx
 A pedrinha e os morcegos também deixam a linha `ATMOSFERA cena=PEDRINHA|MORCEGOS teste=nao`, que é a que o analisador conta como saída.
 
 Para conferir depois de uma sessão (o analisador faz as contas na seção "As famílias do que saiu, por lugar"): no subsolo, nenhuma família acima de 40% (em 11/10 a luz foi 52%, e 18 das 21 eram chamas pálidas); o maior `semFisico` perto de quinze minutos e não de quarenta; ao menos uma `RACHADURA` numa sessão em que ele minerou na fase 2 ou mais; e quantas vezes ele quebrou o bloco rachado.
+
+## 0.9.0-alpha23 — a tampa do baú e a passagem fechada
+
+```
+[6120s][Jogador] TAMPA pos=(-415,30,190) dist=6.2 naTela=BORDA teste=nao
+[7340s][Jogador] PASSAGEM_FECHADA pos=(-420,31,204) blocos=2 dist=15.8 eixo=z duracao=74s teste=nao
+[7362s][Jogador] MIRAGEM fim motivo=PASSAGEM_FECHADA por=CHEGOU_PERTO pos=(-420,31,204)
+```
+
+- `TAMPA pos=... dist=... naTela=BORDA|FORA|CENTRO teste=...`: o baú cuja tampa levantou, a que distância, e onde ele estava na tela do jogador (`BORDA`: à vista e fora do centro; `FORA`: ele só ouviu; `CENTRO`: estava olhando para ele).
+- `PASSAGEM_FECHADA pos=... blocos=N dist=... eixo=x|z duracao=...s teste=...`: onde a parede falsa foi posta (o ponto do caminho dele), de quantos blocos, a que distância, atravessada a que eixo e por quanto tempo fica se ele não for ver.
+- `MIRAGEM fim motivo=PASSAGEM_FECHADA por=CHEGOU_PERTO|TEMPO`: uma linha por bloco da parede (a linha é a de toda miragem, e já existia). `CHEGOU_PERTO` é ele indo ver: a parede se desfaz a seis blocos.
+
+As duas também deixam `ATMOSFERA cena=TAMPA|PASSAGEM_FECHADA teste=nao` e a linha `FAMILIA familia=OBJETO`. O analisador as soma em "As coisas da caverna", com quantas vezes ele foi ver a passagem.

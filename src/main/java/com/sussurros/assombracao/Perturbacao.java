@@ -11,5 +11,8 @@ enum Perturbacao {
 	MARCA_IMPOSSIVEL,
 	// 0.9.0-alpha22: só debaixo da terra (ver Caverna).
 	PEDRINHA,
-	MORCEGOS
+	MORCEGOS,
+	// 0.9.0-alpha23.
+	TAMPA,
+	PASSAGEM_FECHADA
 }
