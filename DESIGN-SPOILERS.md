@@ -1856,7 +1856,14 @@ As duas são perturbações da Atmosfera (`TAMPA`, `PASSAGEM_FECHADA`) e pagam a
   - `aPassagemPorOndeEleVeioPareceFechadaDeLonge`: o jogador de mentira anda quinze blocos por um túnel (com os pés no chão, para deixar caminho); duas pedras de miragem fecham o túnel entre dez e vinte e seis blocos dele; o túnel de verdade continua aberto; quando ele volta, a parede se desfaz com ele a mais de quatro blocos e meio, e ele nunca chega mais perto do que isso de uma pedra que não existe.
 - **Cliente** (`TestesDeCliente.caverna`, fotos 49t e 49p): a tampa levantada e de volta; a passagem fechada de longe e aberta de perto.
 
-**Esta versão foi conferida no GitHub, não na máquina do dono.** A compilação e os testes JUnit rodaram aqui; o servidor de teste não subiu, porque a máquina estava sem memória livre (o arquivo de paginação no limite, com o navegador, as IDEs e vários chats antigos abertos). Os testes de servidor rodaram no job `build` do PR, repetido para pegar instabilidade, e as fotos no job `fotos`. A sessão sintética não foi rodada: nada desta versão acontece em campo aberto, como na alpha22.
+**Esta versão foi conferida no GitHub, não na máquina do dono.** A compilação e os testes JUnit rodaram aqui; o servidor de teste não subiu, porque a máquina estava sem memória livre (o arquivo de paginação no limite, com o navegador, as IDEs e vários chats antigos abertos). Os testes de servidor rodaram no job `build` do PR #44, três execuções do mesmo commit, as três com os 87 passando, e as fotos no job `fotos`. A sessão sintética não foi rodada: nada desta versão acontece em campo aberto, como na alpha22.
+
+## As fotos (49t e 49p)
+
+Abertas e conferidas, do job `fotos` do PR #44.
+
+- **49t, a tampa.** Levantada na primeira foto e de volta na segunda: o evento de bloco mandado só para um jogador abre a tampa no jogo dele, com o baú de verdade fechado (o teste confere o contador em zero na mesma hora).
+- **49p, a passagem.** De longe (onze blocos e meio), o túnel termina numa face de pedra escura onde antes se via a curva iluminada. De perto (cinco blocos), a parede já se desfez e vê-se a curva de novo. De longe ela é **escura**: a pedra falsa tapa a luz que vinha de trás, e lê-se mais como "o túnel acaba ali" do que como parede nítida. É o efeito pedido, mas é sutil; com uma tocha dele perto do ponto fica mais clara.
 
 ## Um achado sobre a sessão sintética
 
