@@ -1684,4 +1684,10 @@ Três avisos sobre esta medição:
 
 ## As fotos (43 a 45)
 
-FOTOS_PENDENTES
+Tiradas no corredor sem saída dos testes (pedra, doze blocos, uma tocha no fundo), com `/sussurros teste planob`. Abri as três.
+
+- **43, o corredor antes:** escuro perto do jogador, a tocha acesa no fundo. É a referência.
+- **44, o pó:** um punhado de pontos claros junto do teto, oito blocos à frente, um pouco acima da mira, contra a parede iluminada pela tocha. Vê-se, e lê-se como algo no teto; é pequeno, do tamanho de um bloco visto a oito blocos, que é o que se queria (um sinal, não um efeito). A cor é a da pedra. **No escuro, sem uma luz atrás, eu não apostaria que se vê**: nesta foto ele aparece porque a tocha do fundo o recorta. Num bolsão sem tocha o que sobra é o toque no teto, que só se confere ouvindo.
+- **45, a tocha apagada:** a tela fica preta, só com a barra de itens. Era a única luz do corredor. É bem mais forte do que eu esperava de "uma tocha apaga por uns segundos": quando a tocha escolhida é a única por perto, o jogador fica de quatro a sete segundos no breu. Não mexi: é reversível, é curto, e é só para o alvo; mas é o primeiro ponto a perguntar a ele (sem dizer o quê) e o primeiro a rever se parecer defeito do jogo.
+
+O que as fotos não dizem: o movimento do pó caindo (são três punhados em um segundo) e o som.
