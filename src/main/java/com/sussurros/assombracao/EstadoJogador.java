@@ -371,6 +371,17 @@ final class EstadoJogador {
 	int ossosNoDia;
 	/** Onde está a vela de verdade da zona de calma, se coube colocar uma. */
 	@Nullable BlockPos velaBloco;
+	// --- A afronta (0.9.0-alpha25, ver Afronta) ---
+	/** O que o jogador fez a ele desde o último segundo do Diretor: o número muda lá, com a Memoria do tick. */
+	final java.util.List<Afronta.Motivo> afrontasPendentes = new java.util.ArrayList<>();
+	/** Só para o log: qual foi a resposta na hora da última afronta. */
+	String afrontaResposta = "-";
+	/** O tick da última resposta na hora: duas seguidas em menos de dois segundos viram uma. */
+	long afrontaRespostaTick = -1000;
+	/** A aparição diante da qual ele já fechou a passagem (uma vez por aparição). */
+	String afrontaFechouEm = "";
+	/** A aparição em que ele bateu ou investiu: essa não conta como "deixou em paz". */
+	String afrontaNaAparicao = "";
 
 	// --- Lugar atual ---
 	long ultimoChunk = Long.MIN_VALUE;

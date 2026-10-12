@@ -939,3 +939,24 @@ As duas também deixam `ATMOSFERA cena=TAMPA|PASSAGEM_FECHADA teste=nao` e a lin
 - `ENSINO primeiro=CACADA pagina=23` e `ENSINO primeiro=VAO pagina=29`: as páginas da caçada foram pedidas (a primeira, para quem já foi caçado alguma vez; a segunda, depois de um `vao boca=` numa caçada de verdade). A entrega deixa a linha de sempre, `ENSINO pagina entregue`.
 
 Para conferir depois de uma sessão (o analisador soma na seção "Caçadas, capturas e o outro lado"): quantas vezes ficou de quatro e quantas avisou; quantas piscadas foram pelo caminho; e, se houve `CAMINHO_FALHOU`, de que tipo. Um `caminho=MESMO` abre o relatório como alerta: é um lugar a que o jogador chega e ele não. Com o `ele=` e o `alvo=` da linha, copie a região do mundo e desenhe os dois pontos com `ler_mundo.py` antes de mexer em qualquer limite.
+
+## 0.9.0-alpha25 — a afronta
+
+```
+[9400s][Jogador] AFRONTA +25 por=BATEU total=25 resposta=CHAMAS_2
+[9460s][Jogador] AFRONTA +15 por=FECHOU total=40 resposta=BATIDAS
+[9900s][Jogador] AFRONTA visita=JANELA total=20 visitas=1
+[9900s][Jogador] ATENCAO fonte=afronta:C007 custo=24 saldo=12 ambiente=4
+[10200s][Jogador] AFRONTA -15 por=OFERECEU total=5 resposta=-
+[11000s][Jogador] AFRONTA esfriou de=5 para=2 dias=1
+[11500s][Jogador] AFRONTA adiantou ameaca faltavam=1340s agora=120s total=50
+[9960s][Jogador] ENSINO primeiro=AFRONTA pagina=30 nova=sim
+```
+
+- `AFRONTA ±N por=<motivo> total=T resposta=<resposta>`: uma coisa que ele fez (ou deixou de fazer) ao Hóspede, quanto somou ou tirou, e onde o número ficou (0 a 100). Motivos: `BATEU`, `INVESTIU`, `FECHOU`, `OFENDEU`, `DESFEZ` (somam); `OFERECEU`, `CONSULTOU`, `DEIXOU` (tiram). `resposta` é o que ele percebeu na hora: `CHAMAS_N` (N tochas ficaram pálidas), `SILENCIO` (não havia chama por perto), `BATIDAS` (no bloco que ele pôs), `JA_RESPONDEU` (outra afronta menos de dois segundos antes) ou `-` (os que não têm resposta na hora). A linha sai no segundo do Diretor seguinte ao gatilho; a resposta saiu antes.
+- `AFRONTA visita=JANELA|BATIDA total=T visitas=N`: de 40 para cima, na primeira noite em casa, ele veio sem sorteio. O total já vem com os 20 que a visita paga. A linha `ATENCAO` da mesma hora tem `fonte=afronta:<cena>` (ou `evento:BATIDA`).
+- `AFRONTA adiantou ameaca faltavam=...s agora=120s total=T`: de 80 para cima, na fase 4, o descanso até a próxima sequência de ameaça foi cortado. O total já vem com os 40 pagos.
+- `AFRONTA esfriou de=A para=B dias=D`: virou o dia do jogo (ou vários, com o mundo fechado não conta: é o relógio do mundo).
+- `ENSINO primeiro=AFRONTA pagina=30`: a página do diário sobre isso foi pedida, depois da primeira visita.
+
+Para conferir depois de uma sessão (seção "A afronta" do analisador): o que ele fez e quantas vezes; o maior valor; se a visita veio na noite seguinte a ele passar dos 40; e as batidas e portas por hora com o número alto e baixo. Se ele bateu e a resposta foi `SILENCIO`, não havia tocha a doze blocos: é o caso em que ele pode não ter percebido nada.

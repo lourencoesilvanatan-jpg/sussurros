@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha25
+
+Quarto pacote do plano de conteúdo, segunda parte. É a resposta ao que você pediu em 11/10 ("ações que podem irritar"): o que você faz com ele passa a ficar guardado por um tempo e a ter consequência, na hora e nos dias seguintes. Vale para os dois lados: há coisas que pioram e coisas que acalmam. Não entra item nem lugar novo, e quem não mexe com ele não muda nada.
+
 ## 0.9.0-alpha24
 
 Quarto pacote do plano de conteúdo, primeira parte. É sobre o momento mais forte das fases avançadas, aquele que você viveu uma vez, na caverna, em 11/10. Responde ao que você disse dele (que em certa hora parecia preso num lugar), fecha duas maneiras de escapar dele sem esforço que eu achei ao testar, e faz o jogo te dizer, depois que ele acontece, o que você podia ter feito. Não entra item nem lugar novo. A segunda parte do pacote vem na próxima versão.

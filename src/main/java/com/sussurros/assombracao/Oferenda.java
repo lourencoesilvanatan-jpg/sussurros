@@ -149,6 +149,7 @@ public final class Oferenda {
 			if (m.get(SEGUIDAS) >= 3) {
 				e.desfeitaAte = tick + 20L * 240;
 				m.set(SEGUIDAS, 0);
+				Afronta.anotar(p, e, Afronta.Motivo.DESFEZ, Vec3.atCenterOf(pos));
 				Depuracao.log(p, seg, "OFERENDA faltou: desfeita por 240s");
 				return "DESFEITA";
 			}
@@ -165,6 +166,7 @@ public final class Oferenda {
 		if (valor < 0) {
 			// Afronta: ele não leva, e vem tirar satisfação.
 			e.desfeitaAte = tick + 20L * 240;
+			Afronta.anotar(p, e, Afronta.Motivo.OFENDEU, Vec3.atCenterOf(pos));
 			Depuracao.log(p, seg, "OFERENDA afronta item=" + BuiltInRegistries.ITEM.getKey(item.getItem()));
 			return "AFRONTA";
 		}
@@ -185,6 +187,8 @@ public final class Oferenda {
 		m.add(Memoria.INQUIETACAO, -30);
 		m.limitar(Memoria.INQUIETACAO, 0, Memoria.MAX_INQUIETACAO);
 		e.obsessao = Diretor.limitar(e.obsessao - 3.0 * valor, 0, 100);
+		// 0.9.0-alpha25: a oferenda aceita é a mão que baixa a afronta.
+		Afronta.anotar(p, e, Afronta.Motivo.OFERECEU, null);
 		// A trégua vai até o amanhecer.
 		long hora = Math.floorMod(level.getDefaultClockTime(), 24000L);
 		e.treguaCasaAte = tick + Math.max(600, (hora <= 23500 ? 23500 - hora : 0));

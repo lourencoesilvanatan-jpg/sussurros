@@ -82,6 +82,10 @@ public final class Ossos {
 		if (forcado == null && Conta.cobrarNoUso(p, m, Conta.Item.OSSOS)) {
 			d = Desfecho.PRESENCA;
 		}
+		// 0.9.0-alpha25: perguntar a ele, uma vez por dia, baixa um pouco a afronta (as outras jogadas do dia não).
+		if (e.ossosNoDia == 0) {
+			Afronta.anotar(p, e, Afronta.Motivo.CONSULTOU, null);
+		}
 		e.ossosNoDia++;
 
 		// O que precisa de alvo e não tem vira o desfecho vizinho.

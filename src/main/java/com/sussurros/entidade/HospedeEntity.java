@@ -865,6 +865,7 @@ public class HospedeEntity extends PathfinderMob {
 	private void tickObservar(ServerLevel level, boolean percebido, boolean encarado, double distSqr) {
 		// Se você chegar perto, ele não está mais lá. Vale também para quem corre atrás dele enquanto ele sai.
 		if (distSqr < this.distSumir * this.distSumir) {
+			this.notarInvestida(percebido);
 			this.sumir(level, true, "CHEGOU_PERTO");
 			return;
 		}
@@ -903,6 +904,13 @@ public class HospedeEntity extends PathfinderMob {
 				return;
 			}
 			this.sumir(level, true, "VISTO_DEMAIS");
+		}
+	}
+
+	/** Chegar perto dele andando é curiosidade; correndo, com a mira nele, é ir para cima (ver assombracao.Afronta). */
+	private void notarInvestida(boolean percebido) {
+		if (percebido && this.alvo != null && this.alvo.isSprinting() && Diretor.estaVendo(this.alvo, this, CONE_MIROU)) {
+			Diretor.criaturaInvestida(this.alvo, this);
 		}
 	}
 
@@ -979,6 +987,7 @@ public class HospedeEntity extends PathfinderMob {
 		this.ficarParadoOlhando();
 
 		if (distSqr < this.distSumir * this.distSumir) {
+			this.notarInvestida(percebido);
 			this.sumir(level, true, "CHEGOU_PERTO");
 			return;
 		}
@@ -1106,7 +1115,7 @@ public class HospedeEntity extends PathfinderMob {
 		// Só conta se for o jogador que ele estava assombrando, e se não for uma criatura de teste
 		// (bater num Hóspede do ovo gerador ou de comando não deixa a criatura de verdade mais rápida).
 		if (source.getEntity() instanceof ServerPlayer jogador && jogador == this.alvo && !this.ehTeste()) {
-			Diretor.criaturaFerida(jogador);
+			Diretor.criaturaFerida(jogador, this);
 		}
 		// Na caça, bater não o manda embora: nas duas primeiras vezes ele recua, depois nem isso.
 		if (this.modo == Modo.CACAR && this.cacada != null && this.alvo != null && this.fadeRestante == 0) {

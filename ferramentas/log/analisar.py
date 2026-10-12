@@ -535,6 +535,57 @@ def analisar(linhas, jogador, caminho):
         veus, ' (vulto: ' + ', '.join('%s %d' % v for v in vultos.most_common()) + ')' if vultos else '', vulto_veio, vazios))
     out.append('')
 
+    # ----- a afronta (0.9.0-alpha25) -----
+    out.append('## A afronta')
+    out.append('')
+    afrontas = [(t, int(m.group(1)), m.group(2), int(m.group(3)), m.group(4)) for t, m in
+                ((t, re.match(r'^AFRONTA ([+-]\d+) por=(\S+) total=(\d+) resposta=(\S+)', texto)) for t, texto in linhas) if m]
+    visitas_afronta = [(m.group(1), int(m.group(2))) for m in (re.match(r'^AFRONTA visita=(\S+) total=(\d+)', texto) for _, texto in linhas) if m]
+    adiantou = sum(1 for _, texto in linhas if texto.startswith('AFRONTA adiantou ameaca'))
+    esfriou = sum(1 for _, texto in linhas if texto.startswith('AFRONTA esfriou'))
+    if afrontas or visitas_afronta or adiantou:
+        por_motivo = collections.Counter(a[2] for a in afrontas)
+        pontos = collections.Counter()
+        for _, n, motivo, _, _ in afrontas:
+            pontos[motivo] += n
+        out += tabela(['O que ele fez', 'Vezes', 'Pontos'], [(motivo, vezes, '%+d' % pontos[motivo]) for motivo, vezes in por_motivo.most_common()])
+        out.append('')
+        respostas = collections.Counter(a[4].rstrip('0123456789').rstrip('_') for a in afrontas if a[1] > 0)
+        out.append('Maior valor: **%d**; no fim da sessão: %d. Respostas na hora: %s. Esfriou com os dias %d vez(es).' % (
+            max([a[3] for a in afrontas] + [v for _, v in visitas_afronta] + [0]), afrontas[-1][3] if afrontas else 0,
+            ', '.join('%s %d' % r for r in respostas.most_common()) or 'nenhuma', esfriou))
+        out.append('')
+        out.append('Ele veio por causa dela %d vez(es)%s; adiantou a sequência de ameaça %d vez(es).' % (
+            len(visitas_afronta), ' (' + ', '.join('%s' % como for como, _ in visitas_afronta) + ')' if visitas_afronta else '', adiantou))
+        out.append('')
+        # A prova que o plano pede: a afronta mudando a mistura. Compara as batidas e portas por hora de jogo
+        # com o número acima e abaixo de 40.
+        alto = baixo = 0
+        tempo_alto = tempo_baixo = 0
+        valor = 0
+        antes = linhas[0][0] if linhas else 0
+        for t, texto in linhas:
+            if valor >= 40:
+                tempo_alto += max(0, t - antes)
+            else:
+                tempo_baixo += max(0, t - antes)
+            antes = t
+            if texto.startswith('AFRONTA '):
+                m = re.search(r' (?:total|para)=(\d+)', texto)
+                if m:
+                    valor = int(m.group(1))
+            if re.match(r'^EVENTO (BATIDA|PORTA) ', texto):
+                if valor >= 40:
+                    alto += 1
+                else:
+                    baixo += 1
+        out.append('Batidas e portas com a afronta de 40 para cima: %d em %s (%.1f por hora); abaixo de 40: %d em %s (%.1f por hora).' % (
+            alto, hms(tempo_alto), por_hora(alto, tempo_alto or 1), baixo, hms(tempo_baixo), por_hora(baixo, tempo_baixo or 1)))
+    else:
+        out.append('Nenhuma linha `AFRONTA`: ele não fez nada a ele nesta sessão (não bateu, não investiu, não fechou a passagem, '
+                   'não mexeu na tigela nem nos ossos), ou o log é de antes da alpha25.')
+    out.append('')
+
     # ----- lugares e baralho -----
     out.append('## Lugares e baralho')
     out.append('')
