@@ -204,6 +204,8 @@ public final class Diretor {
 					// Colocar bloco faz tanto barulho quanto quebrar. Só quebrar era ouvido: quem se tampava com
 					// três blocos e ficava parado deixava a caçada acabar sozinha.
 					avisarCacador(estado(jogador), Vec3.atCenterOf(clicado.relative(hitResult.getDirection())), "COLOCOU");
+					// 0.9.0-alpha25: pôr um bloco entre os dois, com ele perto, é fechar a passagem na cara dele.
+					Afronta.aoColocarBloco(jogador, estado(jogador), clicado.relative(hitResult.getDirection()));
 				}
 			}
 			return InteractionResult.PASS;
@@ -859,6 +861,7 @@ public final class Diretor {
 		Atencao.segundo(e, fase);
 		Cantiga.segundo(level, p, m, e, seg, tick);
 		Oferenda.segundo(level, p, m, e, fase, noite, seg, tick);
+		Afronta.segundo(level, p, m, e, fase, seg);
 		Conta.segundo(level, p, m, e, seg, tick);
 		Ensino.segundo(level, p, m, e, seg, tick);
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
@@ -935,6 +938,9 @@ public final class Diretor {
 		}
 		if (!tregua && !contatoAgora && Atencao.podeGastar(e, Atencao.MINIMO, seg)) {
 			String antes = cenaAtiva(e);
+			// 0.9.0-alpha25: irritado, na primeira noite em casa ele vem, sem sorteio (ver Afronta). Vem antes das
+			// cenas sorteadas: se veio, é ele a cena desta vez (ou a batida), e paga atenção como elas.
+			boolean veioPelaAfronta = Afronta.visitar(level, p, m, e, fase, noite, calma, seg, tick, rnd);
 			CenaVoltouComVoce.verificarVoltaParaCasa(p, m, e, fase, seg, rnd);
 			CenaAlgoNoTunel.verificarCenaTunel(p, e, fase, subterraneo, calma, seg, rnd);
 			CenaLinhaDasArvores.verificarCenaCampo(p, m, e, fase, calma, seg, rnd);
@@ -942,7 +948,7 @@ public final class Diretor {
 			CenaDoOutroLadoDoVidro.verificarCenaJanela(level, p, m, e, fase, noite, calma, seg, rnd);
 			String depois = cenaAtiva(e);
 			if (!depois.equals(antes)) {
-				Atencao.gastar(p, e, "cena:" + depois, Atencao.CENA, seg);
+				Atencao.gastar(p, e, (veioPelaAfronta ? "afronta:" : "cena:") + depois, Atencao.CENA, seg);
 				// A cena do marco abre com um eco que não passa por posEvento: a família dele entra aqui. As outras
 				// registram os seus passos por posEvento, e o corpo, quando vem, registra-se sozinho (ver criar).
 				if (e.cenaMarco != EstadoJogador.CenaMarco.NENHUMA) {
@@ -1350,7 +1356,7 @@ public final class Diretor {
 			case ECO -> !e.acoes.isEmpty();
 			case PORTA -> temPorta(level, p);
 			case TOCHA -> acharTochaAtras(level, p, 12) != null;
-			case BATIDA -> (Oferenda.emDesfeita(e, level.getGameTime()) || m.get(Memoria.CASEIRO) >= 300
+			case BATIDA -> (Oferenda.emDesfeita(e, level.getGameTime()) || Afronta.irritado(m) || m.get(Memoria.CASEIRO) >= 300
 					|| Perfil.get(m, Perfil.Traco.CASEIRO) >= 60) && temPorta(level, p);
 			case ECO_CHAT -> !e.falas.isEmpty();
 			case ATRAS -> escuro;
@@ -1427,6 +1433,8 @@ public final class Diretor {
 			if ((ev == Evento.BATIDA || ev == Evento.PORTA) && Oferenda.emDesfeita(e, level.getGameTime())) {
 				peso *= 4.0;
 			}
+			// 0.9.0-alpha25: o que ele guarda pesa no sorteio por dias (a porta, e um pouco a presença).
+			peso *= Afronta.peso(m.get(Afronta.VALOR), ev);
 			if (Familias.barrada(e, Familias.de(ev))) {
 				barrados.add(ev);
 				pesosBarrados.add(peso);
@@ -4025,21 +4033,50 @@ public final class Diretor {
 		EstadoJogador e = ESTADOS.get(p.getUUID());
 		if (e != null) {
 			Cota.aoSumir(p, e, criatura, motivo);
+			// 0.9.0-alpha25: ele o viu de verdade e o deixou em paz (não bateu, não investiu). É a outra mão da
+			// afronta. Só as aparições que o Diretor montou, e nunca a caçada.
+			if (criatura.foiVistoDeVerdade() && !criatura.ehTeste() && criatura.getOrigem() == HospedeEntity.Origem.DIRETOR
+					&& criatura.getModo() != HospedeEntity.Modo.CACAR && criatura.getModo() != HospedeEntity.Modo.AVESSO
+					&& !criatura.getIdManifestacao().equals(e.afrontaNaAparicao)) {
+				Afronta.anotar(p, e, Afronta.Motivo.DEIXOU, null);
+			}
 		}
 		if (e != null && e.criatura == criatura) {
 			e.criatura = null;
 		}
 	}
 
-	public static void criaturaFerida(ServerPlayer p) {
+	public static void criaturaFerida(ServerPlayer p, HospedeEntity criatura) {
 		Memoria m = Memoria.de(p);
 		m.add(Memoria.VEZES_FERIDO, 1);
 		Perfil.puxar(m, Perfil.Traco.CONFRONTO, 100, 0.1);
 		m.salvar();
+		// 0.9.0-alpha25: bater nele fica guardado, e ele responde na hora (ver Afronta).
+		EstadoJogador e = estado(p);
+		e.afrontaNaAparicao = criatura.getIdManifestacao();
+		Afronta.anotar(p, e, Afronta.Motivo.BATEU, criatura.position());
 		if (m.get(Memoria.VEZES_FERIDO) % 2 == 0) {
 			p.sendOverlayMessage(Component.translatable("message.sussurros.ferido")
 					.withStyle(s -> s.withColor(0x7A1010).withItalic(true)));
 		}
+	}
+
+	/** O jogador correu para cima dele, olhando para ele, até ele não estar mais lá. Só as aparições de verdade contam. */
+	public static void criaturaInvestida(ServerPlayer p, HospedeEntity criatura) {
+		if (criatura.ehTeste()) {
+			return;
+		}
+		EstadoJogador e = estado(p);
+		if (criatura.getIdManifestacao().equals(e.afrontaNaAparicao)) {
+			return; // já bateu nela: é uma afronta só
+		}
+		e.afrontaNaAparicao = criatura.getIdManifestacao();
+		Afronta.anotar(p, e, Afronta.Motivo.INVESTIU, criatura.position());
+	}
+
+	/** Só para a visita da afronta: ele bate à porta agora, como o evento de sempre (conta para tudo). */
+	static boolean baterNaPortaPelaAfronta(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, long seg, long tick) {
+		return temPorta(level, p) && executar(level, p, m, e, Evento.BATIDA, seg, tick);
 	}
 
 	public static void criaturaTocou(ServerPlayer p, HospedeEntity criatura) {

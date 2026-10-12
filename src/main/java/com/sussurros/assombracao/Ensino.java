@@ -75,6 +75,9 @@ public final class Ensino {
 	private static final int PAGINA_DA_CACADA = 22;
 	private static final String TEVE_VAO = "teve_vao";
 	private static final int PAGINA_DO_VAO = 28;
+	/** 0.9.0-alpha25: a página da afronta, depois da primeira vez em que ele veio por causa dela (ver Afronta). */
+	private static final String TEVE_VISITA = "teve_visita";
+	private static final int PAGINA_DA_AFRONTA = 29;
 
 	/** A página chega um pouco depois de ele pegar o item, nunca na mesma hora. */
 	private static final int ESPERA_DA_PAGINA = 20;
@@ -105,6 +108,9 @@ public final class Ensino {
 			if (m.get(Memoria.CACA_VAOS) >= 1) {
 				pedirUmaVez(p, m, seg, TEVE_VAO, PAGINA_DO_VAO, "VAO");
 			}
+		}
+		if (m.get(Afronta.VISITAS) >= 1) {
+			pedirUmaVez(p, m, seg, TEVE_VISITA, PAGINA_DA_AFRONTA, "AFRONTA");
 		}
 		entregarPagina(level, p, m, e, seg, tick);
 	}

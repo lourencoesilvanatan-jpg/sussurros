@@ -1978,3 +1978,90 @@ A sessão sintética (uma hora, três jogadores de mentira em campo aberto) deu 
 - **O atalho no meio de um túnel.** A mais de dezesseis blocos e três segundos sem ser visto continua valendo o atalho da caçada (da segunda caçada em diante): ele some de dentro do túnel e reaparece a oito a doze blocos do jogador, fora da tela. Num teste isso o tirou de um túnel de dezoito blocos antes de ele chegar perto. É a regra de sempre, e o corpo se ajusta ao lugar novo; mas quer dizer que um túnel comprido de um bloco raramente será atravessado inteiro.
 - **Debaixo de folhagem baixa** ele também se abaixa de quatro (folha a um bloco do chão é teto). Não testei numa floresta.
 - **O piscar pelo caminho quando o caminho é uma volta comprida.** Encarado por uma janela de vidro com a porta aberta do outro lado da casa, ele agora vem pela porta, três blocos por piscada. É "fechar o que encerra de graça", mas é a mudança desta versão que mais muda a caçada dentro de uma casa.
+
+---
+# Versão 0.9.0-alpha25 — ele guarda (pacote 4, segunda parte)
+
+A segunda metade do pacote 4: a ideia 2.8 do cardápio, na forma que a pesquisa de 11/10 pediu (um estado que atravessa os dias e anda para os dois lados, e não só uma reação de um segundo).
+
+O que ele disse: "senti falta de algumas ações que pode 'irritar' o monstro" (11/10, de manhã). À tarde, na caverna, bateu nele, e a resposta foi a de sempre. Havia contadores (bater somava num número que o deixava mais ousado; oferecer uma arma contra ele na Tigela pesava a porta por quatro minutos), e nenhum dava para ler como "eu o irritei, e ele respondeu".
+
+## A afronta (`Afronta`)
+
+Um número só por jogador, de 0 a 100, escondido, guardado na Memoria, que **cai pela metade a cada dia do jogo** (um dia do jogo são vinte minutos: três golpes viram quase nada em uma hora se ele parar).
+
+| O que ele faz | Pontos | Onde é notado |
+|---|---|---|
+| Bate nele (`BATEU`) | +25 | `Diretor.criaturaFerida`, inclusive na caçada |
+| Corre para cima dele, com a mira nele, até ele sumir (`INVESTIU`) | +10 | `HospedeEntity.notarInvestida`; andando não conta |
+| Põe um bloco entre os dois, com ele a até dez blocos (`FECHOU`) | +15 | o clique de pôr bloco; uma vez por aparição |
+| Oferece na Tigela uma ferramenta contra ele (`OFENDEU`) | +20 | `Oferenda.resolver` |
+| Deixa a Tigela vazia depois de três noites aceitas (`DESFEZ`) | +15 | `Oferenda.resolver` |
+| Tem a oferenda aceita (`OFERECEU`) | −15 | `Oferenda.resolver` |
+| Joga os Ossos pela primeira vez no dia (`CONSULTOU`) | −5 | `Ossos.jogar` |
+| Vê-o de verdade e não faz nada (`DEIXOU`) | −3 | `Diretor.criaturaSumiu`; só aparição do Diretor, nunca a caçada |
+
+Nenhum dos que somam é coisa que se faz sem querer. Um golpe só (25) não chega aos 40; dois no mesmo dia chegam.
+
+## A resposta na hora
+
+É o "ele registrou", e é **sempre a mesma** (o achado de SOMA na pesquisa: o jogador não lê ameaça ambígua; um sinal que se repete dá para aprender):
+
+- **As chamas em volta do jogador ficam pálidas todas juntas** (até três tochas, a até doze blocos), por dez a quinze segundos. É miragem (`Miragem`, motivo `AFRONTA`): só ele vê, a tocha de verdade não muda. Ao contrário das chamas pálidas de sempre, estas mudam **na tela**: é para ele ver acontecer. É o primeiro degrau que o cardápio pedia para a caverna ("no golpe, a tocha mais próxima empalidece na hora").
+- **Sem chama por perto, o mundo emudece** por oito segundos.
+- **Fechar a passagem tem a sua**: duas batidas do outro lado do bloco que ele pôs (`PANCADA`, só para ele) e o bloco racha (o desenho de rachadura do jogo, mandado só para ele; o bloco de verdade fica inteiro). É o segundo degrau do cardápio.
+- O que acontece na Tigela (ofensa, desfeita) não tem resposta na hora: é de noite, sem ninguém olhando, e a consequência dela já existia (a porta).
+- Duas afrontas em menos de dois segundos dão uma resposta só.
+
+## O que muda nos dias seguintes
+
+- **O sorteio.** Enquanto o número está alto, a batida e a porta pesam mais (até quatro vezes com 100: `Afronta.peso`), e a presença e o "atrás de você" um pouco mais (até duas vezes). A batida, que só entrava no sorteio de quem passa muito tempo em casa, entra para quem está de 40 para cima. É "a mistura de eventos" que o plano pedia para ver no log.
+- **A visita (de 40 para cima).** Na primeira noite em que ele está em casa há meio minuto, ele vem **sem sorteio**: a cena da janela, se a casa tem vidro; a batida na porta, se não tem. Uma vez por noite. Uma parte da conta fica paga (−20). Passa pelo mesmo portão das outras cenas (a trégua da oferenda aceita, o saldo de atenção, nada por cima de outra cena, nunca com ele recuando ou numa sequência de ameaça) e gasta atenção como elas.
+- **A cobrança (de 80 para cima, na fase 4).** O descanso até a próxima sequência de ameaça cai para dois minutos, e uma parte grande da conta fica paga (−40). A sequência vem como sempre vem, com todos os avisos dela: isto só tira a espera. É o "a afronta pode adiantar a caçada, nunca tirar o aviso" do cardápio.
+
+## A página chega depois
+
+Como as da caçada (alpha24): depois da **primeira visita** por afronta, a página 30 do diário é pedida. Ela conta, na voz de sempre, o que soma e o que faz esquecer. Antes de ele viver uma vez, nada é explicado. O diário passa a ter 30 páginas.
+
+## Onde me afastei da proposta de 11/10, e por quê
+
+- **Encarar não soma.** A proposta tinha "encarar enquanto ele fica" (+15). Na caçada, encarar é o verbo que a página 23 acabou de ensinar: cobrar por ele seria punir a jogada certa. Fora da caçada, quem é olhado some em menos de dois segundos; não há "ficar encarando" para medir. Fica para quando existir a saída em que ele fica (a `FICA` da pesquisa de 11/10).
+- **Mexer no que é dele não entrou** (derrubar o Boneco, esvaziar o baú da Casa do Vigia, tocar o Sino com ele à vista). O último é a ideia 7.2, do pacote 7; os outros dois pedem ganchos nos blocos, e nenhum apareceu numa sessão dele ainda.
+- **"Ele não some, recua de frente" e "a cabeça inclina no terceiro golpe" não entraram.** São poses e movimento na frente do jogador; a resposta na hora ficou num sinal só, do mundo e não do corpo dele, para dar para aprender.
+- **"Deixar em paz" tira, não soma.** A página 7 do diário diz que não reagir "acho que isso o irritou"; ali é sobre os sustos, não sobre ele. A pesquisa cita Sons of the Forest (não reagir pode baixar a agressão) e o risco de a relação virar bichinho. Ficou a mão que dá sentido a "quem não quer irritar, não irrita".
+- **Não criei um lado "aplacado".** O número para em zero. A Tigela já tem a sua trégua, e um Hóspede "contente" é o caminho para o "kinda cute" que a pesquisa registra sobre The Obsessed.
+
+## Os testes
+
+- **JUnit** (`AfrontaTest`, cinco testes): quanto esfria por dia, os limites, que nenhum motivo é neutro e que um golpe só não chama a visita, o peso por evento, e as condições da visita.
+- **Servidor** (`TestesDaAfronta`, seis testes; 100 no total):
+  - `baterNeleFicaGuardadoEAsChamasRespondem`: no golpe, as duas tochas em volta dele empalidecem para ele e só para ele (o amigo ao lado não tem miragem nenhuma), a tocha de verdade não muda, e o número vai a 25 e a 50.
+  - `fecharAPassagemNaCaraDeleTemResposta`: duas batidas vindas do bloco, a rachadura chega a ele, o bloco de verdade fica inteiro, o número vai a 15, e o segundo bloco diante da mesma aparição não soma.
+  - `aOferendaBaixaEAOfensaSobe`: de 50 a 35 com o pão aceito, e a 55 com a vela oferecida, sem chama pálida nenhuma.
+  - `irritadoEleVemAJanela`: com 50, a visita começa a cena da janela, o número cai a 30, a visita fica contada, ele aparece do lado de fora do vidro e a página 30 é pedida.
+  - `furiosoODescansoAcabaEComOsDiasEsfria`: com 90 na fase 4 o descanso cai para dois minutos e o número a 50; na fase 3 nada muda; e 80 de dois dias atrás vira 20.
+  - `deixarEmPazBaixaEInvestirSobe`: no túnel, vê-lo e não fazer nada tira 3; correr para cima dele com a mira nele soma 10 e empalidece a tocha da curva.
+- **Não há foto nova.** A rachadura mandada só para um jogador foi fotografada na alpha22 (foto 46), e a tocha de almas no lugar da tocha é o mesmo mecanismo das chamas pálidas, que ele já viu dezenas de vezes. O que é novo é o momento em que acontecem, e isso foto não mostra.
+
+## O analisador
+
+Seção nova, "A afronta": o que ele fez, quantas vezes e quantos pontos; o maior valor e o do fim da sessão; as respostas na hora; quantas vezes ele veio por causa dela e quantas adiantou a ameaça; e **batidas e portas por hora com o número de 40 para cima e abaixo de 40** (é a prova que o plano pede: a afronta mudando a mistura).
+
+## Medição
+
+A sessão sintética (uma hora, três jogadores de mentira em campo aberto) deu 37, 42 e 29 saídas por hora e 10, 12 e 11 aparições por hora (fase 2, fase 4, mundo novo). Na alpha24: 30, 42 e 26, e 10, 9 e 8. Está dentro da variação de uma execução para outra, e era o esperado: sem o jogador fazer nada a ele, a afronta fica em zero e não pesa em nada. Em uma hora houve uma linha `AFRONTA` nos três (um `DEIXOU`, com o número já em zero). O que é novo só os testes exercitam.
+
+## O que ficou de fora, de propósito
+
+- Os gatilhos listados acima (encarar, mexer no que é dele) e as duas poses.
+- Dizer o estado dele por um item (os Ossos caindo de um jeito quando ele está irritado). É a melhor ideia para tornar o número legível sob demanda, e é assunto do pacote 7 (itens que pagam).
+- Qualquer efeito da afronta dentro do Avesso.
+
+## Não verificado por ninguém
+
+- **Se dá para ler.** O sinal é um só e se repete, mas ninguém viu as chamas mudarem na frente de um jogador de verdade. Pode passar despercebido de dia, ao ar livre, sem tocha por perto (aí o mundo só emudece, e isso é fácil de não notar no meio de um golpe).
+- **Tocha que já está pálida não empalidece de novo.** Se as chamas em volta dele já estiverem pálidas pelo motivo de sempre (as chamas pálidas da fase 2 em diante), a resposta na hora passa para as outras; se todas estiverem, vira silêncio. Dois testes meus falharam uma vez por isto antes de eu entender.
+- **Os números** (25, 40, 80, a metade por dia): são os da proposta de 11/10, sem sessão. O primeiro a olhar é quanto tempo o número fica acima de 40 numa sessão dele, e se a visita veio na noite certa.
+- **Vira botão?** "Deixa eu bater para ver." É aceitável nas primeiras vezes (é ele testando a regra), e a visita é uma por noite. Se virar rotina, o analisador mostra: muitos `BATEU` e muitas visitas.
+- **Somado com a Conta e com a obsessão**, pode ficar difícil saber por que uma coisa aconteceu. Por isso toda linha `AFRONTA` diz o motivo, e a visita e a cobrança têm linha própria.
+- **Com amigos:** a afronta é de quem fez. A visita à janela é uma aparição de verdade: quem estiver na casa vê.

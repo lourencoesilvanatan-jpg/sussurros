@@ -16,7 +16,7 @@ import net.minecraft.sounds.SoundSource;
  * página, então quem lê a 11 antes da 2 vê que há páginas faltando.
  */
 public final class Diario {
-	public static final int TOTAL_PAGINAS = 29;
+	public static final int TOTAL_PAGINAS = 30;
 
 	/** Bit N ligado: a página N (contando do zero) já foi lida. */
 	static final String MASCARA = "paginas_mascara";
