@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha24
+
+Quarto pacote do plano de conteúdo, primeira parte. É sobre o momento mais forte das fases avançadas, aquele que você viveu uma vez, na caverna, em 11/10. Responde ao que você disse dele (que em certa hora parecia preso num lugar), fecha duas maneiras de escapar dele sem esforço que eu achei ao testar, e faz o jogo te dizer, depois que ele acontece, o que você podia ter feito. Não entra item nem lugar novo. A segunda parte do pacote vem na próxima versão.
+
 ## 0.9.0-alpha23
 
 Terceiro pacote do plano de conteúdo, segunda parte. Mais duas coisas novas para o tempo que você passa debaixo da terra, do mesmo tipo das da alpha22. Na superfície e em casa nada muda.

@@ -105,14 +105,17 @@ final class Terreno {
 		return bloco.defaultBlockState();
 	}
 
-	/** Uma camada de pedra em volta e em cima da caixa. Embaixo fica o chão do mundo de teste. */
+	/**
+	 * Uma camada de pedra em volta, em cima e embaixo da caixa. Embaixo também: o chão do mundo de teste não é
+	 * plano, e onde ele é mais baixo que o canto a caverna ficava com o fundo aberto para o lado de fora.
+	 */
 	private static void casca(ServerLevel level, BlockPos canto, int[] tamanho) {
 		BlockState pedra = Blocks.STONE.defaultBlockState();
 		for (int x = -1; x <= tamanho[0]; x++) {
 			for (int z = -1; z <= tamanho[2]; z++) {
 				boolean borda = x == -1 || x == tamanho[0] || z == -1 || z == tamanho[2];
-				for (int y = 0; y <= tamanho[1]; y++) {
-					if (borda || y == tamanho[1]) {
+				for (int y = -1; y <= tamanho[1]; y++) {
+					if (borda || y == tamanho[1] || y == -1) {
 						level.setBlock(canto.offset(x, y, z), pedra, SEM_AVISAR);
 					}
 				}

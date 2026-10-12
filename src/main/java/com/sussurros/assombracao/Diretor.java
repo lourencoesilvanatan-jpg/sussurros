@@ -386,6 +386,37 @@ public final class Diretor {
 	}
 
 	/**
+	 * Só para os testes: a caçada começa com ele neste chão, e não num lugar sorteado. É como um teste repete, num
+	 * terreno montado, uma caçada que aconteceu num lugar certo do mundo do dono.
+	 */
+	public static void cacadaEmParaTeste(ServerPlayer p, BlockPos chao, boolean contaNaMemoria) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		if (e.criatura != null && !e.criatura.isRemoved()) {
+			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
+		}
+		PedidoManifestacao pedido = contaNaMemoria
+				? PedidoManifestacao.doDiretor(Evento.CACA)
+				: PedidoManifestacao.deComando(Evento.CACA);
+		criar(level, p, e, chao, HospedeEntity.Modo.CACAR, 20 * 130, 1.0, pedido.comNota("LUGAR_DO_TESTE"));
+	}
+
+	/**
+	 * Só para as fotos do teste de cliente: ele de quatro neste chão, parado, sem caçada (não conta para nada).
+	 * É o modo do outro lado, que desenha igual e não some ao ser olhado. rumo: para onde ele fica virado, em
+	 * graus; NaN para olhar para o jogador. Não chegue a menos de três blocos: nesse modo, encostar é o fim da visita.
+	 */
+	public static void deQuatroParaFoto(ServerPlayer p, BlockPos chao, float rumo) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		if (e.criatura != null && !e.criatura.isRemoved()) {
+			e.criatura.sumir(level, false, "SUBSTITUIDA_POR_COMANDO");
+		}
+		criar(level, p, e, chao, HospedeEntity.Modo.AVESSO, 20 * 120, 1.0, PedidoManifestacao.deComando(Evento.PRESENCA).comNota("FOTO_DE_QUATRO"));
+		e.criatura.posarDeQuatroParaTeste(true, rumo);
+	}
+
+	/**
 	 * Só para os testes: começa agora a sequência de ameaça, sem esperar a obsessão nem o bom momento. Dali em
 	 * diante ela anda sozinha, como no jogo (presença que espreita, pausa, golpe).
 	 */

@@ -12,10 +12,13 @@ Você vai jogar várias versões de uma vez. Não precisa testar uma por uma: é
 | alpha20 | O mesmo. Vale ficar um tempo **parado num lugar apertado** (um canto de caverna, uma mina estreita) e jogar **mais de meia hora seguida** | Teve algum momento em que você sentiu que ia acontecer alguma coisa e não aconteceu nada? Você (ou a sua irmã) voltou a perguntar "cadê o bicho?" |
 | alpha21 | **Durma.** Deite numa cama, à noite, em pelo menos **três noites de jogo** (não precisam ser seguidas), e espere uns segundos deitado em vez de levantar logo | Teve alguma coisa nesta sessão que você nunca tinha visto? |
 | alpha22 e alpha23 | **Debaixo da terra**, de novo: pelo menos **uns quarenta minutos seguidos** numa caverna ou mina funda, **minerando de verdade**, e não só passando. Jogue como você joga: monte o seu acampamento lá embaixo, guarde as suas coisas, vá e volte pelos túneis | A caverna ainda pareceu repetitiva? Alguma coisa lá embaixo pareceu **defeito do jogo**, e não parte do mod? Em algum momento você ficou **preso** ou o jogo te **puxou de volta** andando por um túnel? |
+| alpha24 | Não dá para marcar hora: é jogar bastante, **longe de casa e de noite ou debaixo da terra**. Se voltar a acontecer aquele momento em que alguma coisa vem atrás de você (o de 11/10, na caverna), **faça o que você faria de verdade para escapar**, do jeito que vier à cabeça. E **se aparecer uma página no chão, pegue e leia** | Em algum momento ele pareceu **preso** ou **travado** de novo? Depois de ler a página, deu para entender o que você podia ter feito? Alguma coisa nele pareceu **artificial**, "de boneco"? |
 
 De comando, só o `/sussurros debug on`, como sempre.
 
 ## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha24: **o quarto pacote do plano de conteúdo, primeira parte.** É a resposta ao que você disse em 11/10 sobre o momento mais forte que você viveu ("ele estava preso num local"). Mexi nesse momento: no que ele consegue fazer, em duas brechas que o encerravam de graça, e no que o jogo te conta **depois** que ele acontece. Não tem item nem lugar novo. Um aviso: esse momento é raro, e pode levar mais de uma sessão para ele voltar. Não tente forçar com comando: os comandos de teste não contam para o que eu preciso ler no log. Nos primeiros minutos da próxima sessão deve aparecer uma página para você: leia. Se você já tiver uma página guardada sem ler, é essa.
 
 Versão 0.9.0-alpha23: **o terceiro pacote do plano de conteúdo, segunda parte.** Mais duas coisas novas debaixo da terra, do mesmo tipo das da alpha22. Para testar, é o mesmo: um bom tempo seguido numa caverna ou mina funda, jogando como você joga (com o seu acampamento, as suas coisas guardadas, indo e voltando pelos túneis). As duas aparecem só para quem é o alvo.
 

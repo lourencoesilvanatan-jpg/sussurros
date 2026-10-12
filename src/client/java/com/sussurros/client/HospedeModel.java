@@ -27,6 +27,15 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 	/** Quanto o tronco tomba para a frente quando ele se abaixa (radianos, uns 72 graus). */
 	private static final float DOBRA = 1.26f;
 
+	/**
+	 * De quatro (0.9.0-alpha24): o tronco deita quase de todo (89 graus) e o quadril desce até três pixels do chão
+	 * e recua, para a cabeça e os ombros ficarem onde está a caixa de colisão. Com estes números o topo da cabeça
+	 * fica a uns 14 pixels do chão: cabe num vão de um bloco (16).
+	 */
+	private static final float DOBRA_DE_QUATRO = 1.55f;
+	private static final float QUADRIL_DE_QUATRO_Y = 21.0f;
+	private static final float QUADRIL_DE_QUATRO_Z = 13.0f;
+
 	public HospedeModel(ModelPart root) {
 		super(root);
 		this.cabeca = root.getChild(PartNames.HEAD);
@@ -155,9 +164,15 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 		// Dobrado para caber sob um teto de dois blocos: o tronco tomba para a frente a partir do quadril,
 		// e a cabeça e os ombros descem junto. O tronco gira em torno do topo, então desloca-se o topo para
 		// onde ele ficaria se o giro fosse no quadril (que está em y = 2, com 18 de comprimento).
-		float dobra = state.agachado ? DOBRA : 0.0f;
-		float topoY = 2.0f - 18.0f * Mth.cos(dobra);
-		float topoZ = -18.0f * Mth.sin(dobra);
+		float dobra = state.deQuatro ? DOBRA_DE_QUATRO : state.agachado ? DOBRA : 0.0f;
+		float quadrilY = state.deQuatro ? QUADRIL_DE_QUATRO_Y : 2.0f;
+		float quadrilZ = state.deQuatro ? QUADRIL_DE_QUATRO_Z : 0.0f;
+		float topoY = quadrilY - 18.0f * Mth.cos(dobra);
+		float topoZ = quadrilZ - 18.0f * Mth.sin(dobra);
+		this.pernaDireita.y = quadrilY;
+		this.pernaDireita.z = quadrilZ;
+		this.pernaEsquerda.y = quadrilY;
+		this.pernaEsquerda.z = quadrilZ;
 		this.corpo.y = topoY;
 		this.corpo.z = topoZ;
 		this.cabeca.y = topoY;
@@ -166,7 +181,9 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 		this.bracoDireito.z = topoZ;
 		this.bracoEsquerdo.y = topoY + 1.0f;
 		this.bracoEsquerdo.z = topoZ;
-		if (state.agachado) {
+		if (state.deQuatro) {
+			this.posarDeQuatro(state, dobra, grausParaRad);
+		} else if (state.agachado) {
 			this.corpo.xRot += dobra;
 			// A cabeça vai à frente do corpo, erguida o bastante para continuar olhando para você.
 			this.cabeca.xRot += dobra * 0.55f;
@@ -174,5 +191,36 @@ public class HospedeModel extends EntityModel<HospedeRenderState> {
 			this.bracoDireito.xRot += 0.95f;
 			this.bracoEsquerdo.xRot += 0.95f;
 		}
+	}
+
+	/**
+	 * De quatro: o corpo deitado, a cabeça erguida olhando para a frente, um braço estendido adiante, o outro
+	 * recolhido ao longo do corpo, as pernas arrastadas atrás. Ele só anda quando não é olhado, então o jogador
+	 * não vê um rastejar: vê poses, e o braço da frente troca a cada bloco (passoDeQuatro).
+	 */
+	private void posarDeQuatro(HospedeRenderState state, float dobra, float grausParaRad) {
+		float anda = state.walkAnimationSpeed;
+		float vai = Mth.cos(state.walkAnimationPos * 0.5f) * anda;
+		float lado = state.passoDeQuatro ? 1.0f : -1.0f;
+
+		this.corpo.xRot = dobra + Mth.sin(state.ageInTicks * 0.05f) * 0.012f;
+		this.corpo.yRot = 0.0f;
+		this.corpo.zRot = 0.05f * lado;
+
+		// Erguida, e torta para um lado. Nunca mais alta que o vão: olhar para cima deita a cabeça para trás.
+		this.cabeca.xRot = Mth.clamp(state.xRot * grausParaRad, -0.9f, 0.25f) + 0.12f;
+		this.cabeca.zRot = this.cabeca.zRot * 0.5f + 0.18f * lado;
+
+		ModelPart daFrente = state.passoDeQuatro ? this.bracoDireito : this.bracoEsquerdo;
+		ModelPart deTras = state.passoDeQuatro ? this.bracoEsquerdo : this.bracoDireito;
+		daFrente.xRot = -1.50f + vai * 0.05f;
+		daFrente.zRot = 0.0f;
+		deTras.xRot = 1.46f - vai * 0.05f;
+		deTras.zRot = 0.0f;
+
+		this.pernaDireita.xRot = 1.47f + vai * 0.03f;
+		this.pernaEsquerda.xRot = 1.50f - vai * 0.03f;
+		this.pernaDireita.zRot = 0.07f;
+		this.pernaEsquerda.zRot = -0.07f;
 	}
 }

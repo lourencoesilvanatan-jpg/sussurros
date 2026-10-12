@@ -7,6 +7,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
+import net.minecraft.world.phys.AABB;
 
 import org.jspecify.annotations.Nullable;
 
@@ -38,8 +39,20 @@ public class HospedeRenderer extends MobRenderer<HospedeEntity, HospedeRenderSta
 		// isto é só o desenho acompanhando. Fora da caça ele não anda sob teto baixo: quem o pôs ali já decidiu
 		// se ele nasce dobrado, e o desenho só obedece (0.9.0-alpha19).
 		BlockPos acima = entity.blockPosition().above(2);
-		state.agachado = entity.isAbaixado() || (state.modoVisual == HospedeEntity.Modo.CACAR.ordinal()
-				&& !entity.level().getBlockState(acima).getCollisionShape(entity.level(), acima).isEmpty());
+		state.deQuatro = entity.isDeQuatro();
+		state.passoDeQuatro = (entity.blockPosition().getX() + entity.blockPosition().getZ() & 1) == 0;
+		state.agachado = !state.deQuatro && (entity.isAbaixado() || (state.modoVisual == HospedeEntity.Modo.CACAR.ordinal()
+				&& !entity.level().getBlockState(acima).getCollisionShape(entity.level(), acima).isEmpty()));
+	}
+
+	/**
+	 * De quatro o desenho é muito mais comprido que a caixa de colisão (um braço à frente, as pernas para trás):
+	 * com a caixa de sempre, ele sumia da tela quando só a mão ou os pés estavam à vista.
+	 */
+	@Override
+	protected AABB getBoundingBoxForCulling(HospedeEntity entity) {
+		AABB caixa = super.getBoundingBoxForCulling(entity);
+		return entity.isDeQuatro() ? caixa.inflate(2.5, 0.25, 2.5) : caixa;
 	}
 
 	// Enquanto dissolve, o corpo é desenhado translúcido e cada vez mais transparente.

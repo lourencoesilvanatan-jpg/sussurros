@@ -10,6 +10,10 @@ public class HospedeRenderState extends LivingEntityRenderState {
 	public boolean olhos;
 	/** Na caça, sob teto baixo: ele dobra o corpo para caber onde o jogador cabe. */
 	public boolean agachado;
+	/** De quatro, num vão de um bloco (0.9.0-alpha24). Quando vale, "agachado" não vale. */
+	public boolean deQuatro;
+	/** De quatro: qual braço vai à frente. Troca a cada bloco andado, e é o que faz as poses parecerem um rastejar. */
+	public boolean passoDeQuatro;
 	/** De 1 (inteiro) a 0: ele está dissolvendo. */
 	public float alfa = 1.0F;
 }

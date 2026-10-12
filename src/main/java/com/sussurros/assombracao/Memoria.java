@@ -84,6 +84,7 @@ public final class Memoria {
 	public static final String MARCAS = "marcas";                   // corações de vida máxima perdidos (0 a 3); dormir com vela acesa cura
 	public static final String CACA_DEVIDA = "caca_devida"; // 1: ele saiu do jogo ou fugiu para longe no meio de uma caçada; ela volta
 	public static final String CACA_ATRAVESSOU = "caca_atravessou"; // vezes que ele precisou atravessar (pilar, buraco, muro): cada uma encurta o aviso
+	public static final String CACA_VAOS = "caca_vaos";             // vezes que ele avisou na boca de um vão de um bloco e entrou por ele
 	public static final String AMEACA_LIBERADA_EM = "ameaca_liberada_em"; // segundo do mundo a partir do qual pode haver outra sequência de ameaça
 
 	// 0.9: os itens

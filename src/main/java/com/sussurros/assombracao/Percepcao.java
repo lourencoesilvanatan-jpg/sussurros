@@ -95,6 +95,19 @@ public final class Percepcao {
 				return true;
 			}
 		}
+		// De quatro, o desenho dele é muito mais comprido que a caixa de colisão: o braço estendido chega a quase dois
+		// blocos à frente. Com a caixa escondida atrás da borda de um buraco e o braço já do lado de cá, ele contaria
+		// como "não visto" e andaria com o braço na tela. Ver o braço é vê-lo.
+		if (alvo instanceof HospedeEntity h && h.isDeQuatro()) {
+			Vec3 frente = Vec3.directionFromRotation(0.0F, h.getYRot());
+			for (double adiante : new double[] {1.0, 1.9}) {
+				Vec3 ponto = alvo.position().add(frente.x * adiante, 0.2, frente.z * adiante);
+				HitResult r = level.clip(new ClipContext(olho, ponto, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, p));
+				if (r.getType() == HitResult.Type.MISS) {
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 

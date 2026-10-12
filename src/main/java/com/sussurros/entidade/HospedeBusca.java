@@ -8,7 +8,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.Depuracao;
@@ -231,7 +235,13 @@ final class HospedeBusca {
         }
 
         if (this.estado == Estado.ULTIMA_POSICAO) {
-            if (chegou(hospede, this.ultimaPosicaoConhecida, 2.8)) {
+            // "Chegou" é estar perto E enxergar o lugar, ou não ter mais para onde andar. Até a alpha23 bastava estar
+            // a 2,8 blocos em linha reta: a dois passos do jogador, com uma quina de pedra no meio, ele "chegava",
+            // parava, olhava em volta e saía procurando noutro lugar, com o caminho pela metade (aconteceu em dois
+            // de onze lugares da galeria do dono: num deles a caçada levava 24 s ou 70 s, conforme a sorte da procura).
+            // Quem enxerga o lugar e não vê ninguém é que chegou e não achou.
+            if (chegou(hospede, this.ultimaPosicaoConhecida, 2.8)
+                    && (hospede.getNavigation().isDone() || enxerga(level, hospede, this.ultimaPosicaoConhecida))) {
                 // Chegou e não achou: para, olha para os lados. É a pausa em que o jogador escondido prende o fôlego.
                 mudarEstado(level, hospede, Estado.OLHANDO, "CHEGOU_ULTIMA_POSICAO");
                 this.olhandoRestante = 8 + level.getRandom().nextInt(5); // em passos de 5 ticks: 2 a 3 s
@@ -241,6 +251,7 @@ final class HospedeBusca {
             }
             if (!navegarPara(hospede, this.ultimaPosicaoConhecida, 1.0)) {
                 if (++this.falhasNavegacao >= 3) {
+                    logarSemCaminho(level, hospede);
                     mudarEstado(level, hospede, Estado.INVESTIGANDO, "CAMINHO_FALHOU");
                     this.pontoBusca = null;
                     this.falhasNavegacao = 0;
@@ -342,8 +353,45 @@ final class HospedeBusca {
         }
     }
 
+    /**
+     * Só log (0.9.0-alpha24): o que havia quando a navegação respondeu "não" três vezes seguidas. O jogo responde
+     * assim em dois casos, e até aqui o log não dizia qual: ele está no ar (caindo de um degrau, e aí é passageiro),
+     * ou o caminho novo é igual ao que ele acabou de andar, ou seja, ele já está no ponto mais perto do alvo a que
+     * o corpo e os limites dele deixam chegar. "falta" é a distância desse ponto ao alvo.
+     */
+    private void logarSemCaminho(ServerLevel level, HospedeEntity h) {
+        if (!Depuracao.ativo || h.getAlvo() == null) {
+            return;
+        }
+        Path caminho = h.getNavigation().getPath();
+        String oQue;
+        if (caminho == null) {
+            oQue = h.onGround() || h.isInLiquid() ? "NENHUM" : "NO_AR";
+        } else {
+            Node fim = caminho.getEndNode();
+            oQue = String.format(Locale.ROOT, "MESMO fim=%s falta=%.1f nos=%d", fim == null ? "-" : pos(fim.asBlockPos()),
+                    caminho.getDistToTarget(), caminho.getNodeCount());
+        }
+        Vec3 alvo = this.ultimaPosicaoConhecida;
+        Depuracao.log(h.getAlvo(), level.getGameTime() / 20, String.format(Locale.ROOT,
+                "BUSCA id=%s sem_caminho ele=%s alvo=%s dist=%.1f corpo=%s caminho=%s",
+                h.getIdManifestacao(), pos(h.blockPosition()), pos(BlockPos.containing(alvo)), h.position().distanceTo(alvo),
+                h.isDeQuatro() ? "DE_QUATRO" : "ABAIXADO", oQue));
+    }
+
+    /** Um bloco no formato das outras linhas do log, sem espaços: (x,y,z). */
+    static String pos(BlockPos b) {
+        return "(" + b.getX() + "," + b.getY() + "," + b.getZ() + ")";
+    }
+
     private boolean navegarPara(HospedeEntity hospede, Vec3 ponto, double fator) {
         return hospede.getNavigation().moveTo(ponto.x, ponto.y, ponto.z, fator * this.velocidade);
+    }
+
+    /** Dos olhos dele até a altura do peito de quem estivesse neste ponto, sem bloco no meio. */
+    private static boolean enxerga(ServerLevel level, HospedeEntity hospede, Vec3 ponto) {
+        return level.clip(new ClipContext(hospede.getEyePosition(), ponto.add(0, 1.0, 0), ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, hospede)).getType() == HitResult.Type.MISS;
     }
 
     private boolean chegou(HospedeEntity hospede, Vec3 ponto, double raio) {
