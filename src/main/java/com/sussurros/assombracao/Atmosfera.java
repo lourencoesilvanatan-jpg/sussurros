@@ -293,6 +293,8 @@ final class Atmosfera {
 		// 0.9.0-alpha22: as duas coisas da caverna que se veem e se tocam (ver Caverna).
 		if (Caverna.podePedrinha(e, seg)) opcoes.add(Perturbacao.PEDRINHA);
 		if (Caverna.podeMorcegos(e, seg)) opcoes.add(Perturbacao.MORCEGOS);
+		if (Caverna.podeTampa(e, seg)) opcoes.add(Perturbacao.TAMPA);
+		if (Caverna.podePassagem(p, e, seg)) opcoes.add(Perturbacao.PASSAGEM_FECHADA);
 		if (e.rastro.tamanho() >= 8) opcoes.add(Perturbacao.O_CAMINHO_MUDOU);
 		if (e.contexto == ContextoMundo.Tipo.CASA && !e.portas.isEmpty()) opcoes.add(Perturbacao.NAO_FOI_VOCE);
 		if (fase >= 3 && e.rastro.tamanho() >= 12) opcoes.add(Perturbacao.MARCA_IMPOSSIVEL);
@@ -322,6 +324,8 @@ final class Atmosfera {
 			case NAO_FOI_VOCE -> naoFoiVoce(level, p, e, seg, rnd, teste);
 			case PEDRINHA -> Caverna.pedrinha(level, p, e, seg, teste);
 			case MORCEGOS -> Caverna.morcegos(level, p, e, seg, tick, teste);
+			case TAMPA -> Caverna.tampa(level, p, e, seg, teste);
+			case PASSAGEM_FECHADA -> Caverna.passagem(level, p, e, seg, teste);
 		};
 		if (ok) {
 			Depuracao.log(p, seg, "ATMOSFERA cena=" + pt + " teste=" + (teste ? "sim" : "nao") + " contexto=" + e.contexto);
@@ -332,8 +336,9 @@ final class Atmosfera {
 
 	/**
 	 * A dívida do subsolo (0.9.0-alpha22, ver Familias): quinze minutos debaixo da terra sem nada de objeto nem
-	 * de corpo, e a próxima coisa do ambiente é uma das que se tocam. Os morcegos e a pedrinha se revezam; quando
-	 * as cotas deles acabam (ou não há lugar), vale a pedra que aparece no caminho por onde ele veio.
+	 * de corpo, e a próxima coisa do ambiente é uma das que se tocam. Os morcegos, a pedrinha, a tampa do baú e a
+	 * passagem fechada se revezam (a que saiu menos vezes nesta sessão vem primeiro); quando as cotas delas
+	 * acabam (ou não há lugar), vale a pedra que aparece no caminho por onde ele veio.
 	 *
 	 * É regra, como a cota de corpo: não espera o saldo do ambiente, só o respiro, e gasta o saldo depois. Sem
 	 * isso ela não aconteceria: o presságio custa menos que uma perturbação e leva o saldo assim que ele chega
@@ -348,11 +353,7 @@ final class Atmosfera {
 			return false;
 		}
 		int semFisico = f.subsoloSemFisico;
-		boolean morcegosPrimeiro = e.caverna.revoadas <= e.caverna.pedrinhas;
-		Perturbacao[] ordem = morcegosPrimeiro
-				? new Perturbacao[] {Perturbacao.MORCEGOS, Perturbacao.PEDRINHA, Perturbacao.O_CAMINHO_MUDOU}
-				: new Perturbacao[] {Perturbacao.PEDRINHA, Perturbacao.MORCEGOS, Perturbacao.O_CAMINHO_MUDOU};
-		for (Perturbacao pt : ordem) {
+		for (Perturbacao pt : ordemDaDivida(e.caverna.revoadas, e.caverna.pedrinhas, e.caverna.tampas, e.caverna.passagens)) {
 			if (executarPerturbacao(level, p, m, e, fase, pt, seg, tick, rnd, false)) {
 				lembrar(e, "C:" + pt.name());
 				Depuracao.log(p, seg, "FAMILIA divida paga=" + pt + " semFisico=" + semFisico + "s");
@@ -363,6 +364,29 @@ final class Atmosfera {
 		f.dividaProximaTentativa = seg + 60;
 		Depuracao.log(p, seg, "FAMILIA divida sem_lugar semFisico=" + semFisico + "s");
 		return false;
+	}
+
+	/**
+	 * Em que ordem a dívida tenta as coisas que se tocam: a que saiu menos vezes nesta sessão primeiro (no
+	 * empate, morcegos, pedrinha, tampa, passagem), e por último a pedra no caminho. Função pura, para o teste.
+	 */
+	static Perturbacao[] ordemDaDivida(int revoadas, int pedrinhas, int tampas, int passagens) {
+		Perturbacao[] quais = {Perturbacao.MORCEGOS, Perturbacao.PEDRINHA, Perturbacao.TAMPA, Perturbacao.PASSAGEM_FECHADA};
+		int[] vezes = {revoadas, pedrinhas, tampas, passagens};
+		Perturbacao[] ordem = new Perturbacao[quais.length + 1];
+		boolean[] usada = new boolean[quais.length];
+		for (int n = 0; n < quais.length; n++) {
+			int menor = -1;
+			for (int i = 0; i < quais.length; i++) {
+				if (!usada[i] && (menor < 0 || vezes[i] < vezes[menor])) {
+					menor = i;
+				}
+			}
+			usada[menor] = true;
+			ordem[n] = quais[menor];
+		}
+		ordem[quais.length] = Perturbacao.O_CAMINHO_MUDOU;
+		return ordem;
 	}
 
 	@Nullable

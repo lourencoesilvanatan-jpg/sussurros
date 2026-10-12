@@ -1,5 +1,6 @@
 package com.sussurros.assombracao;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -86,6 +87,20 @@ class FamiliasTest {
 		assertEquals(Familia.CORPO, Familias.de(Perturbacao.MORCEGOS));
 		assertTrue(Familias.de(Perturbacao.PEDRINHA).fisica() && Familias.de(Perturbacao.MORCEGOS).fisica());
 		assertEquals(Familia.LUZ, Familias.de(Evento.LUZ_ERRADA));
+	}
+
+	/** A dívida do subsolo tenta primeiro a coisa que saiu menos vezes; a pedra no caminho fica sempre por último. */
+	@Test
+	void aDividaRevezaOQueSeToca() {
+		assertArrayEquals(new Perturbacao[] {Perturbacao.MORCEGOS, Perturbacao.PEDRINHA, Perturbacao.TAMPA, Perturbacao.PASSAGEM_FECHADA,
+				Perturbacao.O_CAMINHO_MUDOU}, Atmosfera.ordemDaDivida(0, 0, 0, 0), "no empate, a ordem de sempre");
+		assertArrayEquals(new Perturbacao[] {Perturbacao.PEDRINHA, Perturbacao.TAMPA, Perturbacao.PASSAGEM_FECHADA, Perturbacao.MORCEGOS,
+				Perturbacao.O_CAMINHO_MUDOU}, Atmosfera.ordemDaDivida(1, 0, 0, 0), "os morcegos já saíram: vão para o fim da fila");
+		assertArrayEquals(new Perturbacao[] {Perturbacao.PASSAGEM_FECHADA, Perturbacao.TAMPA, Perturbacao.MORCEGOS, Perturbacao.PEDRINHA,
+				Perturbacao.O_CAMINHO_MUDOU}, Atmosfera.ordemDaDivida(2, 2, 1, 0));
+		for (Perturbacao pt : Atmosfera.ordemDaDivida(3, 1, 2, 0)) {
+			assertTrue(Familias.de(pt).fisica(), pt + " paga a dívida, então tem de ser coisa que se toca");
+		}
 	}
 
 	@Test

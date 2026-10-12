@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha23
+
+Terceiro pacote do plano de conteúdo, segunda parte. Mais duas coisas novas para o tempo que você passa debaixo da terra, do mesmo tipo das da alpha22. Na superfície e em casa nada muda.
+
 ## 0.9.0-alpha22
 
 Terceiro pacote do plano de conteúdo, primeira parte. É sobre o tempo que você passa debaixo da terra: entram coisas novas por lá, de tipos que faltavam, e o que já existia e se repetia demais passa a dar a vez. Na superfície e em casa nada muda nesta versão.

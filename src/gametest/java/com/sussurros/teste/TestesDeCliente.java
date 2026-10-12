@@ -23,6 +23,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -816,9 +817,9 @@ public class TestesDeCliente implements FabricClientGameTest {
 	}
 
 	/**
-	 * A caverna com corpo (0.9.0-alpha22): a rachadura, a pedrinha e os morcegos, no mesmo túnel dos testes de
-	 * servidor, com uma tocha a mais perto do fundo para a parede aparecer na foto. As três vêm pelos comandos de
-	 * teste, mas o que desenha é o caminho de verdade. A rachadura é o que mais precisa de foto: é o progresso de
+	 * A caverna com corpo (0.9.0-alpha22 e alpha23): a rachadura, a pedrinha, os morcegos, a tampa do baú e a
+	 * passagem fechada, no mesmo túnel dos testes de servidor, com uma tocha a mais perto do fundo para a parede
+	 * aparecer na foto. Todas vêm pelos comandos de teste, mas o que desenha é o caminho de verdade. A rachadura é o que mais precisa de foto: é o progresso de
 	 * quebra do jogo mandado só para ele, com um número que não é de entidade nenhuma, e nenhum teste de servidor
 	 * diz se o jogo desenha isso.
 	 */
@@ -888,6 +889,60 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.waitTicks(12);
 		context.takeScreenshot("49-caverna-os-morcegos-passando");
 		mundo.getServer().runCommand("kill @e[tag=sussurros_morcego]");
+
+		// A tampa (0.9.0-alpha23): um baú no fundo do túnel levanta a tampa só para ele. A lista de baús por perto
+		// só é refeita a cada dez segundos: por isso a espera antes do comando.
+		BlockPos bau = pes.offset(0, 0, 3);
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			level.setBlock(bau, Blocks.CHEST.defaultBlockState(), 3);
+			level.setBlock(pes.offset(-1, 1, -5), Blocks.TORCH.defaultBlockState(), 3);
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 0, 20));
+		context.waitTicks(230);
+		mundo.getServer().runCommand("execute as @p run sussurros cena tampa");
+		context.waitTicks(12);
+		String tampa = mundo.getServer().computeOnServer(server -> Diretor.cavernaParaTeste(server.getPlayerList().getPlayers().get(0)));
+		conferir("TAMPA".equals(tampa), "com um baú a três blocos, a tampa deveria levantar: " + tampa);
+		int aberto = mundo.getServer().computeOnServer(server ->
+				ChestBlockEntity.getOpenCount(server.getPlayerList().getPlayers().get(0).level(), bau));
+		conferir(aberto == 0, "a tampa levantada é só desenho: o baú de verdade tem de continuar fechado, e está aberto por " + aberto);
+		context.takeScreenshot("49t-caverna-a-tampa-levantada");
+		context.waitTicks(40);
+		context.takeScreenshot("49t-caverna-a-tampa-de-volta");
+
+		// A passagem fechada (0.9.0-alpha23): ele anda o túnel da curva até o fundo, e o caminho por onde veio
+		// aparece fechado. Cada passo espera mais de dois segundos, que é de quanto em quanto o caminho é anotado.
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level().setBlock(bau, Blocks.AIR.defaultBlockState(), 3));
+		mundo.getServer().runCommand("kill @e[type=item]");
+		for (double z : new double[] {-9.5, -7.5, -5.5, -3.5, -1.5, 0.5, 2.5, 3.5}) {
+			mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + z, 0, 0));
+			context.waitTicks(45);
+		}
+		context.waitTicks(220);
+		mundo.getServer().runCommand("execute as @p run sussurros cena passagem");
+		context.waitTicks(5);
+		int pedras = mundo.getServer().computeOnServer(server -> Diretor.miragensParaTeste(server.getPlayerList().getPlayers().get(0), "PASSAGEM_FECHADA"));
+		conferir(pedras == 2, "o túnel de um bloco por dois deveria fechar com duas pedras: " + pedras);
+		boolean tunelAberto = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			for (BlockPos pos : Diretor.posicoesDeMiragemParaTeste(p, "PASSAGEM_FECHADA")) {
+				if (!p.level().getBlockState(pos).isAir()) {
+					return false;
+				}
+			}
+			return true;
+		});
+		conferir(tunelAberto, "a parede é miragem: o túnel de verdade tem de continuar aberto");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 3.5, 180, 0));
+		context.waitTicks(15);
+		context.takeScreenshot("49p-caverna-a-passagem-de-longe");
+		// Ele volta para ver: a cinco blocos a pedra já não está.
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() - 2.5, 180, 0));
+		context.waitTicks(15);
+		pedras = mundo.getServer().computeOnServer(server -> Diretor.miragensParaTeste(server.getPlayerList().getPlayers().get(0), "PASSAGEM_FECHADA"));
+		conferir(pedras == 0, "de perto a parede já deveria ter se desfeito: " + pedras);
+		context.takeScreenshot("49p-caverna-a-passagem-de-perto");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}

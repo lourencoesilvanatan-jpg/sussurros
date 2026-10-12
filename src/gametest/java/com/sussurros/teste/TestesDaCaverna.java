@@ -10,8 +10,11 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -23,7 +26,8 @@ import com.sussurros.assombracao.Evento;
 import com.sussurros.entidade.HospedeEntity;
 
 /**
- * A caverna com corpo (0.9.0-alpha22): a rachadura, a pedrinha, os morcegos e a regra das famílias.
+ * A caverna com corpo (0.9.0-alpha22 e alpha23): a rachadura, a pedrinha, os morcegos, a tampa do baú, a
+ * passagem fechada e a regra das famílias.
  *
  * Tudo dentro de um túnel de pedra montado pelo teste (o mundo de teste é um gramado, e nada disto acontece
  * em gramado): o mesmo túnel com curva dos testes de perto. Conferem a regra contra um jogador de mentira: o
@@ -479,6 +483,176 @@ public class TestesDaCaverna {
 						helper.succeed();
 					} else if (relogio[0] > 460) {
 						helper.fail("com a vez de volta, uma tocha deveria ter mudado de cor em vinte segundos");
+					}
+				}
+				default -> {
+				}
+			}
+		});
+	}
+
+	/**
+	 * A tampa do baú (0.9.0-alpha23): um baú que ele pôs lá embaixo levanta a tampa e fecha um segundo depois.
+	 * Só para ele: o evento do bloco e os dois sons chegam ao alvo e não ao amigo colado nele. O baú de verdade
+	 * não abre, e o que há dentro fica onde estava.
+	 */
+	@GameTest(maxTicks = 400)
+	public void aTampaDoBauLevantaSoParaEle(GameTestHelper helper) {
+		BlockPos pes = TestesDePerto.montarTunel(helper, -8000);
+		ServerLevel level = helper.getLevel();
+		abrirNicho(level, pes);
+		// O baú fica no fundo do túnel, três blocos à frente dele, com uma coisa dentro.
+		BlockPos bau = pes.offset(0, 0, 3);
+		level.setBlock(bau, Blocks.CHEST.defaultBlockState(), 3);
+		if (level.getBlockEntity(bau) instanceof ChestBlockEntity dentro) {
+			dentro.setItem(4, new ItemStack(Items.IRON_INGOT, 7));
+		}
+		ServerPlayer jogador = jogadorEm(helper, pes, 0);
+		ServerPlayer amigo = jogadorEm(helper, pes, 1);
+		Vec3 centro = Vec3.atCenterOf(bau);
+		int[] relogio = {0};
+		int[] passo = {0};
+		int[] doAlvo = new int[5];
+		int[] doAmigo = new int[5];
+		TestesDePerto.cadaTick(helper, () -> {
+			if (passo[0] > 1) {
+				return;
+			}
+			level.getChunkSource().move(jogador);
+			level.getChunkSource().move(amigo);
+			TestesDePerto.olharParaOSul(jogador);
+			TestesDePerto.olharParaOSul(amigo);
+			relogio[0]++;
+			if (passo[0] == 0) {
+				if (relogio[0] > 200) {
+					helper.fail("o Diretor deveria ter lido o túnel como SUBSOLO; leu " + Diretor.contextoParaTeste(jogador));
+				}
+				if (relogio[0] >= 40 && "SUBSOLO".equals(Diretor.contextoParaTeste(jogador))) {
+					JogadorDeTeste.esquecerSons(jogador);
+					JogadorDeTeste.esquecerSons(amigo);
+					helper.assertTrue(Diretor.testarPerturbacaoPeloNome(jogador, "TAMPA"), "com um baú a três blocos, a tampa deveria levantar");
+					helper.assertTrue("TAMPA".equals(Diretor.cavernaParaTeste(jogador)), "o resumo deveria dizer TAMPA");
+					passo[0] = 1;
+					relogio[0] = 0;
+				}
+				return;
+			}
+			somar(doAlvo, JogadorDeTeste.recebidos(jogador));
+			somar(doAmigo, JogadorDeTeste.recebidos(amigo));
+			helper.assertTrue(ChestBlockEntity.getOpenCount(level, bau) == 0, "o baú de verdade não abre em momento nenhum");
+			if (relogio[0] == 8) {
+				helper.assertTrue(doAlvo[4] == 1, "a tampa levanta para o alvo: um evento de bloco; chegaram " + doAlvo[4]);
+				helper.assertTrue(JogadorDeTeste.sonsVindosDe(jogador, centro, FOLGA, "minecraft:block.chest.open") == 1,
+						"com o som de baú abrindo; o alvo ouviu " + JogadorDeTeste.ultimosSons(jogador));
+			}
+			if (relogio[0] == 40) {
+				helper.assertTrue(doAlvo[4] == 2, "um segundo depois a tampa fecha: outro evento de bloco; chegaram " + doAlvo[4]);
+				helper.assertTrue(JogadorDeTeste.sonsVindosDe(jogador, centro, FOLGA, "minecraft:block.chest.close") == 1,
+						"com o som de baú fechando; o alvo ouviu " + JogadorDeTeste.ultimosSons(jogador));
+				helper.assertTrue(doAmigo[4] == 0 && JogadorDeTeste.sonsVindosDe(amigo, centro, 6.0, "minecraft:block.chest.open") == 0
+						&& JogadorDeTeste.sonsVindosDe(amigo, centro, 6.0, "minecraft:block.chest.close") == 0,
+						"o amigo ao lado não vê nem ouve o baú do outro mexer: " + doAmigo[4] + " evento(s), e ouviu " + JogadorDeTeste.ultimosSons(amigo));
+				helper.assertTrue(level.getBlockEntity(bau) instanceof ChestBlockEntity dentro && dentro.getItem(4).is(Items.IRON_INGOT)
+						&& dentro.getItem(4).getCount() == 7, "dentro, tudo igual");
+				JogadorDeTeste.remover(jogador);
+				JogadorDeTeste.remover(amigo);
+				passo[0] = 2;
+				helper.succeed();
+			}
+		});
+	}
+
+	/**
+	 * A passagem fechada (0.9.0-alpha23): ele anda quinze blocos por um túnel; o caminho por onde veio, visto de
+	 * longe, aparece fechado com pedra (duas miragens, um bloco de largura por dois de altura). O túnel de
+	 * verdade continua aberto. Quando ele volta e chega perto, a pedra já não está: desfaz-se a mais de quatro
+	 * blocos e meio, e ele nunca encosta nela.
+	 */
+	@GameTest(maxTicks = 900)
+	public void aPassagemPorOndeEleVeioPareceFechadaDeLonge(GameTestHelper helper) {
+		BlockPos pes = montarTunelLongo(helper, -8100);
+		ServerLevel level = helper.getLevel();
+		// Ele começa doze blocos ao norte do ponto de sempre e anda para o sul até o fundo do túnel.
+		Vec3 partida = helper.relativeVec(new Vec3(pes.getX() + 0.5, pes.getY(), pes.getZ() - 11.5));
+		ServerPlayer jogador = JogadorDeTeste.criar(helper, GameType.SURVIVAL, partida.x, partida.y, partida.z);
+		Diretor.esquecer(jogador);
+		double x = pes.getX() + 0.5;
+		double y = pes.getY();
+		double[] z = {pes.getZ() - 11.5};
+		double fundo = pes.getZ() + 3.5;
+		int[] relogio = {0};
+		int[] passo = {0};
+		int[] blocosTrocados = {0};
+		List<BlockPos> parede = new java.util.ArrayList<>();
+		TestesDePerto.cadaTick(helper, () -> {
+			if (passo[0] > 3) {
+				return;
+			}
+			level.getChunkSource().move(jogador);
+			jogador.setOnGround(true);
+			relogio[0]++;
+			blocosTrocados[0] += JogadorDeTeste.recebidos(jogador)[2];
+			switch (passo[0]) {
+				case 0 -> {
+					// Parado até o Diretor ler o lugar; depois anda para o sul, um bloco e meio por segundo.
+					if (relogio[0] > 300 && !"SUBSOLO".equals(Diretor.contextoParaTeste(jogador))) {
+						helper.fail("o Diretor deveria ter lido o túnel como SUBSOLO; leu " + Diretor.contextoParaTeste(jogador));
+					}
+					if (relogio[0] >= 40 && "SUBSOLO".equals(Diretor.contextoParaTeste(jogador)) && z[0] < fundo) {
+						z[0] = Math.min(fundo, z[0] + 0.075);
+					}
+					jogador.snapTo(x, y, z[0], 0.0F, 0.0F);
+					if (z[0] >= fundo) {
+						passo[0] = 1;
+						relogio[0] = 0;
+					}
+				}
+				case 1 -> {
+					// No fundo, de costas para o caminho. Espera o caminho andado "envelhecer" dez segundos.
+					jogador.snapTo(x, y, fundo, 0.0F, 0.0F);
+					if (relogio[0] == 1) {
+						helper.assertTrue(Diretor.rastroParaTeste(jogador) >= 4, "andando quinze blocos ele deixa caminho; pontos: " + Diretor.rastroParaTeste(jogador));
+					}
+					if (relogio[0] == 120) {
+						blocosTrocados[0] = 0;
+						helper.assertTrue(Diretor.testarPerturbacaoPeloNome(jogador, "PASSAGEM_FECHADA"), "o caminho por onde ele veio deveria aparecer fechado");
+						parede.addAll(Diretor.posicoesDeMiragemParaTeste(jogador, "PASSAGEM_FECHADA"));
+						helper.assertTrue(parede.size() == 2, "um túnel de um bloco por dois fecha com duas pedras; foram " + parede.size());
+						for (BlockPos pos : parede) {
+							double dist = Math.sqrt(jogador.distanceToSqr(Vec3.atCenterOf(pos)));
+							helper.assertTrue(pos.getX() == pes.getX() && dist >= 10.0 && dist <= 26.0, "a parede fica no túnel, de dez a vinte e seis blocos dele; ficou em "
+									+ pos.toShortString() + ", a " + dist);
+							helper.assertTrue(level.getBlockState(pos).isAir(), "o túnel de verdade continua aberto");
+						}
+						passo[0] = 2;
+						relogio[0] = 0;
+					}
+				}
+				case 2 -> {
+					jogador.snapTo(x, y, fundo, 180.0F, 0.0F);
+					if (relogio[0] == 20) {
+						helper.assertTrue(blocosTrocados[0] == 2, "as duas pedras chegam ao jogo dele como blocos trocados; chegaram " + blocosTrocados[0]);
+						helper.assertTrue(Diretor.miragensParaTeste(jogador, "PASSAGEM_FECHADA") == 2, "de longe, a parede fica");
+						passo[0] = 3;
+						relogio[0] = 0;
+					}
+				}
+				case 3 -> {
+					// Ele volta para ver, no passo de quem anda. Antes de chegar, a parede já não está.
+					z[0] -= 0.2;
+					jogador.snapTo(x, y, z[0], 180.0F, 0.0F);
+					double perto = Double.MAX_VALUE;
+					for (BlockPos pos : parede) {
+						perto = Math.min(perto, Math.sqrt(jogador.distanceToSqr(Vec3.atCenterOf(pos))));
+					}
+					if (Diretor.miragensParaTeste(jogador, "PASSAGEM_FECHADA") == 0) {
+						helper.assertTrue(perto >= 4.5, "a parede se desfaz antes de ele chegar; desfez-se com ele a " + perto + " blocos");
+						helper.assertTrue(jogador.getHealth() == 20.0F, "a parede falsa não toca no jogador");
+						JogadorDeTeste.remover(jogador);
+						passo[0] = 4;
+						helper.succeed();
+					} else {
+						helper.assertTrue(perto > 4.5, "ele não pode chegar a quatro blocos e meio de uma parede que não existe; chegou a " + perto);
 					}
 				}
 				default -> {

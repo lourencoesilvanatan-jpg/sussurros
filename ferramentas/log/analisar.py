@@ -755,10 +755,16 @@ def analisar(linhas, jogador, caminho):
         ('rachadura', sum(1 for _, texto in linhas if re.match(r'^RACHADURA pos=.* teste=nao', texto))),
         ('pedrinha', sum(1 for _, texto in linhas if re.match(r'^PEDRINHA de=.* teste=nao', texto))),
         ('morcegos', sum(1 for _, texto in linhas if re.match(r'^MORCEGOS qtd=.* teste=nao', texto))),
+        ('tampa do baú', sum(1 for _, texto in linhas if re.match(r'^TAMPA pos=.* teste=nao', texto))),
+        ('passagem fechada', sum(1 for _, texto in linhas if re.match(r'^PASSAGEM_FECHADA pos=.* teste=nao', texto))),
     ]
     if familia_do_jogo:
-        out.append('As três coisas da caverna: ' + ', '.join('%s %d' % c for c in da_caverna) + '. Ele quebrou o bloco rachado para ver: %d vez(es).' % (
-            sum(1 for _, texto in linhas if texto.startswith('RACHADURA fim por=QUEBROU_O_BLOCO'))))
+        # Cada bloco da parede falsa deixa a sua linha de fim: conta os lugares, não os blocos.
+        foi_ver = len({(t, texto.split(' pos=')[-1][:12]) for t, texto in linhas
+                       if texto.startswith('MIRAGEM fim motivo=PASSAGEM_FECHADA por=CHEGOU_PERTO')})
+        out.append('As coisas da caverna: ' + ', '.join('%s %d' % c for c in da_caverna) + '. Ele quebrou o bloco rachado para ver: %d vez(es). '
+                   'Blocos de passagem fechada que se desfizeram porque ele chegou perto: %d.' % (
+                       sum(1 for _, texto in linhas if texto.startswith('RACHADURA fim por=QUEBROU_O_BLOCO')), foi_ver))
         out.append('')
 
     out.append('## A primeira hora: os critérios')

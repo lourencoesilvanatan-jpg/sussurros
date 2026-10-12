@@ -15,15 +15,20 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
+import net.minecraft.network.protocol.game.ClientboundBlockEventPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ambient.Bat;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -52,8 +57,18 @@ import com.sussurros.registro.ModSons;
  *    lá e passam por ele. São morcegos de verdade (todos veem), que não fazem mal, etiquetados e tirados em
  *    dez a quinze segundos. O que os espantou não aparece; mas a próxima aparição de perto prefere aquele túnel.
  *
- * A pedrinha e os morcegos são perturbações da Atmosfera (entram no sorteio dela no subsolo) e são o que paga a
- * dívida do subsolo (ver Familias). Nada aqui usa o sorteio do mundo: o que varia sai do relógio e do lugar.
+ * 0.9.0-alpha23, a segunda parte:
+ *
+ *  - A TAMPA (objeto). Um baú que ele pôs lá embaixo levanta a tampa por um segundo e fecha, com o som dele.
+ *    É o evento de bloco do jogo mandado só para ele: o baú de verdade não abre, quem está ao lado não vê, e
+ *    dentro fica tudo igual. De preferência um baú na borda da tela.
+ *  - A PASSAGEM FECHADA (objeto). O caminho por onde ele veio, visto de longe: há pedra onde ficava a passagem.
+ *    Quando ele chega a seis blocos, está aberto. São miragens (ver Miragem) num ponto do Rastro, postas com o
+ *    lugar fora da tela, só numa passagem estreita, e nunca perto de água ou de lava.
+ *
+ * A pedrinha, os morcegos, a tampa e a passagem são perturbações da Atmosfera (entram no sorteio dela no subsolo)
+ * e são o que paga a dívida do subsolo (ver Familias). Nada aqui usa o sorteio do mundo: o que varia sai do
+ * relógio e do lugar.
  */
 final class Caverna {
 	/** A etiqueta dos morcegos do mod. Fica salva com eles: é por ela que um que sobrou é achado e tirado. */
@@ -67,6 +82,20 @@ final class Caverna {
 	private static final int RACHADURA_DURACAO = 20 * 14;
 	static final int PEDRINHAS_POR_SESSAO = 2;
 	static final int REVOADAS_POR_SESSAO = 3;
+	static final int TAMPAS_POR_SESSAO = 2;
+	static final int PASSAGENS_POR_SESSAO = 2;
+	static final String MIRAGEM_PASSAGEM = "PASSAGEM_FECHADA";
+	/** A que distância do jogador a passagem fechada pode ser posta (blocos). */
+	private static final double PASSAGEM_MIN = 10.0;
+	private static final double PASSAGEM_MAX = 26.0;
+	/**
+	 * A menos disto a passagem se desfaz. Bloco de miragem é sólido para o jogo dele: se ele encostasse, ficaria
+	 * preso num bloco que não existe. A miragem confere a cada cinco ticks, e correndo ele anda um bloco e meio
+	 * nesse tempo: com seis blocos sobra folga.
+	 */
+	private static final double PASSAGEM_DESFAZ = 6.0;
+	/** Quantos blocos, no máximo, tem a passagem que pode ser fechada: mais do que isto é salão, não passagem. */
+	private static final int PASSAGEM_BLOCOS = 6;
 	private static final int INTERVALO_FISICO = 20 * 60;
 	/** Por quanto tempo o túnel dos morcegos é o lugar preferido da próxima aparição de perto (segundos). */
 	private static final int BOCA_VALE = 10 * 60;
@@ -91,6 +120,11 @@ final class Caverna {
 		long morcegosLiberadosEm;
 		@Nullable BlockPos boca;
 		long bocaAteSeg;
+		// A tampa e a passagem (0.9.0-alpha23).
+		int tampas;
+		long tampaLiberadaEm;
+		int passagens;
+		long passagemLiberadaEm;
 		/** Só para os testes: a última coisa que aconteceu aqui ("-" se nada). */
 		String resumo = "-";
 	}
@@ -601,5 +635,230 @@ final class Caverna {
 	@Nullable
 	static BlockPos bocaValida(EstadoJogador e, long seg) {
 		return e.caverna.boca != null && seg <= e.caverna.bocaAteSeg ? e.caverna.boca : null;
+	}
+
+	// =====================================================================
+	// A tampa do baú (0.9.0-alpha23)
+	// =====================================================================
+
+	static boolean podeTampa(EstadoJogador e, long seg) {
+		return e.contexto == ContextoMundo.Tipo.SUBSOLO && e.caverna.tampas < TAMPAS_POR_SESSAO && seg >= e.caverna.tampaLiberadaEm;
+	}
+
+	/**
+	 * Um baú por perto levanta a tampa por um segundo e fecha. Só o jogo dele recebe o evento do bloco e os dois
+	 * sons: o baú de verdade continua fechado. "teste": por comando, sem cota e em qualquer lugar.
+	 */
+	static boolean tampa(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, boolean teste) {
+		Estado c = e.caverna;
+		if (!teste && !podeTampa(e, seg)) {
+			return false;
+		}
+		Diretor.atualizarCacheAmbiente(level, p, e);
+		Vec3 olho = p.getEyePosition();
+		Vec3 olhar = p.getViewVector(1.0F);
+		double cone = Percepcao.coneSeguro(p);
+		BlockPos melhor = null;
+		String melhorOnde = "";
+		double melhorNota = Double.NEGATIVE_INFINITY;
+		for (BlockPos pos : e.baus) {
+			if (!(level.getBlockState(pos).getBlock() instanceof ChestBlock)) {
+				continue;
+			}
+			Vec3 centro = Vec3.atCenterOf(pos);
+			double dist = Math.sqrt(p.distanceToSqr(centro));
+			// Aberto de verdade por alguém (ele mesmo, um amigo): não se mexe nele.
+			if (dist < 2.5 || dist > 14.0 || ChestBlockEntity.getOpenCount(level, pos) > 0
+					|| Diretor.emZonaCalma(p, centro.x, centro.y, centro.z)) {
+				continue;
+			}
+			double naTela = olhar.dot(centro.subtract(olho).normalize());
+			// Na borda da tela é onde se percebe "alguma coisa mexeu ali"; fora dela, só se ouve; bem no meio, é
+			// o mais direto, e fica por último.
+			String onde = naTela <= cone ? "FORA" : naTela < 0.92 ? "BORDA" : "CENTRO";
+			double nota = ("BORDA".equals(onde) ? 3.0 : "FORA".equals(onde) ? 2.0 : 1.0)
+					+ (Aparicao.linhaLivre(level, olho, centro.add(0, 0.6, 0)) ? 1.0 : 0.0) - dist / 14.0;
+			if (nota > melhorNota) {
+				melhorNota = nota;
+				melhor = pos.immutable();
+				melhorOnde = onde;
+			}
+		}
+		if (melhor == null) {
+			return false;
+		}
+		if (!teste) {
+			c.tampas++;
+			c.tampaLiberadaEm = seg + INTERVALO_FISICO;
+		}
+		c.resumo = "TAMPA";
+		BlockPos bau = melhor;
+		ChestBlock bloco = (ChestBlock) level.getBlockState(bau).getBlock();
+		double x = bau.getX() + 0.5;
+		double y = bau.getY() + 0.5;
+		double z = bau.getZ() + 0.5;
+		// O mesmo evento que o jogo manda quando alguém abre o baú (1 = quantos o têm aberto), só para ele.
+		p.connection.send(new ClientboundBlockEventPacket(bau, bloco, 1, 1));
+		ModSons.tocarEventoPara(p, bloco.getOpenChestSound(), SoundSource.BLOCKS, x, y, z, Diretor.volumePara(p, x, y, z, 0.5F), 0.95F);
+		Diretor.agendar(level, 22, () -> {
+			// Se nesse segundo alguém o abriu de verdade, quem cuida da tampa é o jogo.
+			if (p.isRemoved() || p.hasDisconnected() || p.level() != level || level.getBlockState(bau).getBlock() != bloco
+					|| ChestBlockEntity.getOpenCount(level, bau) > 0) {
+				return;
+			}
+			p.connection.send(new ClientboundBlockEventPacket(bau, bloco, 1, 0));
+			ModSons.tocarEventoPara(p, bloco.getCloseChestSound(), SoundSource.BLOCKS, x, y, z, Diretor.volumePara(p, x, y, z, 0.5F), 0.95F);
+		});
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "TAMPA pos=%s dist=%.1f naTela=%s teste=%s",
+				Diretor.pos(x, bau.getY(), z), Math.sqrt(p.distanceToSqr(x, y, z)), melhorOnde, teste ? "sim" : "nao"));
+		return true;
+	}
+
+	// =====================================================================
+	// A passagem fechada (0.9.0-alpha23)
+	// =====================================================================
+
+	static boolean podePassagem(ServerPlayer p, EstadoJogador e, long seg) {
+		return e.contexto == ContextoMundo.Tipo.SUBSOLO && e.caverna.passagens < PASSAGENS_POR_SESSAO
+				&& seg >= e.caverna.passagemLiberadaEm && Miragem.ativas(p, MIRAGEM_PASSAGEM) == 0;
+	}
+
+	/**
+	 * O caminho por onde ele veio aparece fechado, de longe. "teste": por comando, sem cota e em qualquer lugar
+	 * (mas sempre num ponto do Rastro: sem ter andado, não há por onde).
+	 */
+	static boolean passagem(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg, boolean teste) {
+		Estado c = e.caverna;
+		if (!teste && !podePassagem(p, e, seg)) {
+			return false;
+		}
+		if (Miragem.ativas(p, MIRAGEM_PASSAGEM) > 0) {
+			return false;
+		}
+		Vec3 olho = p.getEyePosition();
+		double cone = Percepcao.coneSeguro(p);
+		List<Rastro.Ponto> pontos = e.rastro.comIdade(seg, 10, 420);
+		// Do mais perto de dezesseis blocos para o mais longe disso: perto demais não dá tempo de ver de longe,
+		// longe demais não se vê.
+		pontos.sort((a, b) -> Double.compare(Math.abs(Math.sqrt(p.distanceToSqr(a.x(), a.y(), a.z())) - 16.0),
+				Math.abs(Math.sqrt(p.distanceToSqr(b.x(), b.y(), b.z())) - 16.0)));
+		int tentados = 0;
+		for (Rastro.Ponto pt : pontos) {
+			double dist = Math.sqrt(p.distanceToSqr(pt.x(), pt.y(), pt.z()));
+			if (dist < PASSAGEM_MIN || dist > PASSAGEM_MAX || Math.abs(pt.y() - p.getY()) > 6) {
+				continue;
+			}
+			if (++tentados > 12) {
+				break;
+			}
+			BlockPos celula = BlockPos.containing(pt.x(), pt.y() + 0.2, pt.z());
+			Vec3 centro = Vec3.atCenterOf(celula);
+			// Fora da tela na hora de pôr (ele não vê a parede nascer), mas à vista de onde ele está, se virar.
+			if (Diretor.pontoNaFrente(p, centro, cone) || !Aparicao.linhaLivre(level, olho, centro)
+					|| Diretor.emZonaCalma(p, centro.x, centro.y, centro.z) || temLiquidoPerto(level, celula)) {
+				continue;
+			}
+			// A parede fica atravessada no caminho: de frente para quem vem de onde ele está.
+			Direction.Axis eixo = Math.abs(centro.x - p.getX()) > Math.abs(centro.z - p.getZ()) ? Direction.Axis.X : Direction.Axis.Z;
+			List<BlockPos> vao = vaoDaPassagem(level, celula, eixo);
+			if (vao == null) {
+				continue;
+			}
+			BlockState pedra = pedraDaParede(level, vao, eixo);
+			long duracao = 20L * (60 + Math.floorMod(seg, 31L));
+			int postos = 0;
+			for (BlockPos pos : vao) {
+				if (Miragem.mostrar(level, p, pos, pedra, duracao, PASSAGEM_DESFAZ, MIRAGEM_PASSAGEM)) {
+					postos++;
+				}
+			}
+			if (postos == 0) {
+				continue;
+			}
+			if (!teste) {
+				c.passagens++;
+				c.passagemLiberadaEm = seg + INTERVALO_FISICO;
+			}
+			c.resumo = "PASSAGEM_FECHADA";
+			Depuracao.log(p, seg, String.format(Locale.ROOT, "PASSAGEM_FECHADA pos=%s blocos=%d dist=%.1f eixo=%s duracao=%ds teste=%s",
+					Diretor.pos(centro.x, celula.getY(), centro.z), postos, dist, eixo, duracao / 20, teste ? "sim" : "nao"));
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Os blocos livres que formam o vão da passagem naquele ponto, no plano atravessado ao caminho: no máximo
+	 * seis, todos cercados de bloco firme. Devolve null se ali não é uma passagem estreita (é salão, é bifurcação,
+	 * ou há no vão alguma coisa que não é ar: uma tocha dele, uma escada, um trilho).
+	 */
+	@Nullable
+	static List<BlockPos> vaoDaPassagem(ServerLevel level, BlockPos celula, Direction.Axis eixo) {
+		Direction[] lados = eixo == Direction.Axis.X
+				? new Direction[] {Direction.UP, Direction.DOWN, Direction.NORTH, Direction.SOUTH}
+				: new Direction[] {Direction.UP, Direction.DOWN, Direction.WEST, Direction.EAST};
+		if (!level.getBlockState(celula).isAir()) {
+			return null;
+		}
+		List<BlockPos> vao = new ArrayList<>();
+		List<BlockPos> fila = new ArrayList<>();
+		Set<BlockPos> vistos = new HashSet<>();
+		fila.add(celula);
+		vistos.add(celula);
+		while (!fila.isEmpty()) {
+			BlockPos atual = fila.remove(fila.size() - 1);
+			vao.add(atual);
+			if (vao.size() > PASSAGEM_BLOCOS) {
+				return null;
+			}
+			for (Direction lado : lados) {
+				BlockPos vizinho = atual.relative(lado);
+				if (!vistos.add(vizinho)) {
+					continue;
+				}
+				BlockState s = level.getBlockState(vizinho);
+				if (s.isAir()) {
+					fila.add(vizinho);
+				} else if (!s.isCollisionShapeFullBlock(level, vizinho)) {
+					return null; // uma tocha, uma laje, uma porta, água: o vão não é só ar cercado de bloco inteiro
+				}
+			}
+		}
+		return vao;
+	}
+
+	/** A pedra de que a parede é feita: a pedra natural que mais cerca o vão; sem nenhuma, pedra comum. */
+	private static BlockState pedraDaParede(ServerLevel level, List<BlockPos> vao, Direction.Axis eixo) {
+		java.util.Map<BlockState, Integer> conta = new java.util.HashMap<>();
+		for (BlockPos pos : vao) {
+			for (Direction lado : Direction.values()) {
+				if (lado.getAxis() == eixo) {
+					continue;
+				}
+				BlockState s = level.getBlockState(pos.relative(lado));
+				if (s.is(BlockTags.BASE_STONE_OVERWORLD)) {
+					conta.merge(s, 1, Integer::sum);
+				}
+			}
+		}
+		BlockState melhor = Blocks.STONE.defaultBlockState();
+		int vezes = 0;
+		for (java.util.Map.Entry<BlockState, Integer> en : conta.entrySet()) {
+			if (en.getValue() > vezes) {
+				vezes = en.getValue();
+				melhor = en.getKey();
+			}
+		}
+		return melhor;
+	}
+
+	/** Água ou lava a até três blocos: uma parede falsa ao lado de líquido deixaria o líquido "atravessando" a pedra. */
+	private static boolean temLiquidoPerto(ServerLevel level, BlockPos centro) {
+		for (BlockPos pos : BlockPos.betweenClosed(centro.offset(-3, -2, -3), centro.offset(3, 2, 3))) {
+			if (!level.getFluidState(pos).isEmpty()) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

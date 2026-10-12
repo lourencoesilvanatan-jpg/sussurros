@@ -158,6 +158,19 @@ public final class ComandoSussurros {
 						String msg = Diretor.testarRachadura(p);
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
+					}))
+					// 0.9.0-alpha23.
+					.then(Commands.literal("tampa").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarPerturbacao(p, Perturbacao.TAMPA);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("passagem").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarPerturbacao(p, Perturbacao.PASSAGEM_FECHADA);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
 					})));
 
 			raiz.then(Commands.literal("pressagio").executes(ctx -> {

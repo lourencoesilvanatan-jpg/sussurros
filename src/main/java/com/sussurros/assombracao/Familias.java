@@ -92,7 +92,7 @@ final class Familias {
 		return switch (pt) {
 			case TODOS_OLHANDO, HA_ALGO_NO_CURRAL, MORCEGOS -> Familia.CORPO;
 			case LUZ_NO_FIM, PASSOU_PELA_MINA -> Familia.LUZ;
-			case O_CAMINHO_MUDOU, MARCA_IMPOSSIVEL, PEDRINHA -> Familia.OBJETO;
+			case O_CAMINHO_MUDOU, MARCA_IMPOSSIVEL, PEDRINHA, TAMPA, PASSAGEM_FECHADA -> Familia.OBJETO;
 			case NAO_FOI_VOCE -> Familia.SOM;
 		};
 	}
