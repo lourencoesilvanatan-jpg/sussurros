@@ -128,6 +128,11 @@ final class Atmosfera {
 		if (e.zonaAteTick > tick || e.forcando || temCenaAtiva(e) || tick - e.ultimoDanoTick < 200) {
 			return;
 		}
+		// 0.9.0-alpha22: a dívida do subsolo (ver Familias). Quinze minutos debaixo da terra sem nada que se
+		// toque: a próxima coisa do ambiente é uma delas, e vem antes do presságio. É regra, não sorteio.
+		if (fase >= 1 && Familias.devendo(e) && pagarDivida(level, p, m, e, fase, seg, tick, rnd)) {
+			return;
+		}
 		// 0.9: o ambiente tem saldo próprio de atenção, e respeita o respiro comum (ver Atencao).
 		if (!Atencao.podeGastarAmbiente(e, Atencao.PRESSAGIO, seg)) {
 			return;
@@ -237,10 +242,13 @@ final class Atmosfera {
 			Pressagio pr = opcoes.remove(rnd.nextInt(opcoes.size()));
 			String chave = "P:" + pr.name();
 			if (e.atmosfera.recentes.contains(chave)) continue;
+			// 0.9.0-alpha22: debaixo da terra, a família que já saiu demais espera a vez (ver Familias).
+			if (Familias.barrada(e, Familias.de(pr))) continue;
 			boolean ok = executarPressagio(level, p, m, e, pr, fase, seg, tick, rnd);
 			if (ok) {
 				lembrar(e, chave);
 				Depuracao.log(p, seg, "PRESSAGIO tipo=" + pr + " fase=" + fase + " contexto=" + e.contexto + " semAprendizado=sim");
+				Familias.registrar(p, e, Familias.de(pr), pr.name(), seg);
 				// De vez em quando o presságio vem com o mesmo silêncio que anuncia uma aparição.
 				if (!e.forcando && rnd.nextFloat() < 0.2F) {
 					Diretor.emudecer(level, p, 15, "PRESSAGIO");
@@ -282,6 +290,9 @@ final class Atmosfera {
 			opcoes.add(Perturbacao.LUZ_NO_FIM);
 			opcoes.add(Perturbacao.PASSOU_PELA_MINA);
 		}
+		// 0.9.0-alpha22: as duas coisas da caverna que se veem e se tocam (ver Caverna).
+		if (Caverna.podePedrinha(e, seg)) opcoes.add(Perturbacao.PEDRINHA);
+		if (Caverna.podeMorcegos(e, seg)) opcoes.add(Perturbacao.MORCEGOS);
 		if (e.rastro.tamanho() >= 8) opcoes.add(Perturbacao.O_CAMINHO_MUDOU);
 		if (e.contexto == ContextoMundo.Tipo.CASA && !e.portas.isEmpty()) opcoes.add(Perturbacao.NAO_FOI_VOCE);
 		if (fase >= 3 && e.rastro.tamanho() >= 12) opcoes.add(Perturbacao.MARCA_IMPOSSIVEL);
@@ -290,6 +301,7 @@ final class Atmosfera {
 			Perturbacao pt = opcoes.remove(rnd.nextInt(opcoes.size()));
 			String chave = "C:" + pt.name();
 			if (e.atmosfera.recentes.contains(chave)) continue;
+			if (Familias.barrada(e, Familias.de(pt))) continue;
 			if (executarPerturbacao(level, p, m, e, fase, pt, seg, tick, rnd, false)) {
 				lembrar(e, chave);
 				return true;
@@ -308,11 +320,49 @@ final class Atmosfera {
 			case O_CAMINHO_MUDOU -> marcaTemporaria(level, p, e, seg, tick, rnd, false, teste);
 			case MARCA_IMPOSSIVEL -> marcaTemporaria(level, p, e, seg, tick, rnd, true, teste);
 			case NAO_FOI_VOCE -> naoFoiVoce(level, p, e, seg, rnd, teste);
+			case PEDRINHA -> Caverna.pedrinha(level, p, e, seg, teste);
+			case MORCEGOS -> Caverna.morcegos(level, p, e, seg, tick, teste);
 		};
 		if (ok) {
 			Depuracao.log(p, seg, "ATMOSFERA cena=" + pt + " teste=" + (teste ? "sim" : "nao") + " contexto=" + e.contexto);
+			Familias.registrar(p, e, Familias.de(pt), pt.name(), seg);
 		}
 		return ok;
+	}
+
+	/**
+	 * A dívida do subsolo (0.9.0-alpha22, ver Familias): quinze minutos debaixo da terra sem nada de objeto nem
+	 * de corpo, e a próxima coisa do ambiente é uma das que se tocam. Os morcegos e a pedrinha se revezam; quando
+	 * as cotas deles acabam (ou não há lugar), vale a pedra que aparece no caminho por onde ele veio.
+	 *
+	 * É regra, como a cota de corpo: não espera o saldo do ambiente, só o respiro, e gasta o saldo depois. Sem
+	 * isso ela não aconteceria: o presságio custa menos que uma perturbação e leva o saldo assim que ele chega
+	 * (na sessão de 11/10/2026 foram quatorze presságios e uma perturbação). Não sorteia: o que falha tenta de
+	 * novo em um minuto.
+	 */
+	private static boolean pagarDivida(ServerLevel level, ServerPlayer p, Memoria m, EstadoJogador e, int fase,
+			long seg, long tick, RandomSource rnd) {
+		Familias.Estado f = e.familias;
+		if (seg < f.dividaProximaTentativa || seg < e.atencaoLivreEm || e.estado == EstadoDiretor.RECUANDO
+				|| (e.criatura != null && !e.criatura.isRemoved()) || tick < e.treguaAte || tick < e.veuAte) {
+			return false;
+		}
+		int semFisico = f.subsoloSemFisico;
+		boolean morcegosPrimeiro = e.caverna.revoadas <= e.caverna.pedrinhas;
+		Perturbacao[] ordem = morcegosPrimeiro
+				? new Perturbacao[] {Perturbacao.MORCEGOS, Perturbacao.PEDRINHA, Perturbacao.O_CAMINHO_MUDOU}
+				: new Perturbacao[] {Perturbacao.PEDRINHA, Perturbacao.MORCEGOS, Perturbacao.O_CAMINHO_MUDOU};
+		for (Perturbacao pt : ordem) {
+			if (executarPerturbacao(level, p, m, e, fase, pt, seg, tick, rnd, false)) {
+				lembrar(e, "C:" + pt.name());
+				Depuracao.log(p, seg, "FAMILIA divida paga=" + pt + " semFisico=" + semFisico + "s");
+				Atencao.gastarAmbiente(p, e, "divida", Atencao.MICROCENA, seg);
+				return true;
+			}
+		}
+		f.dividaProximaTentativa = seg + 60;
+		Depuracao.log(p, seg, "FAMILIA divida sem_lugar semFisico=" + semFisico + "s");
+		return false;
 	}
 
 	@Nullable

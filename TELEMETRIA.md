@@ -879,3 +879,27 @@ Para conferir depois de uma sessão (o analisador faz as contas na seção "Nada
 - `AVESSO garantia adiada motivo=CACADA`: ele deitou no meio de uma caçada na noite em que a garantia valeria. Fica para a próxima vez que deitar.
 
 Para conferir depois de uma sessão: `AVESSO chegou visita=1` depois de, no máximo, três linhas `deitou` em dias diferentes. O analisador conta as noites na seção "Caçadas, capturas e o outro lado" e alerta se a garantia foi decidida e ele não chegou lá.
+
+## 0.9.0-alpha22 — as famílias e a caverna
+
+```
+[4120s][Jogador] FAMILIA familia=LUZ de=CHAMA_PALIDA lugar=SUBSOLO naJanela=2/5 semFisico=312s
+[4133s][Jogador] FAMILIA barrou=[LUZ_ERRADA, TOCHA] cedeu=nao
+[4710s][Jogador] FAMILIA divida paga=MORCEGOS semFisico=903s
+[4770s][Jogador] FAMILIA divida sem_lugar semFisico=960s
+[4302s][Jogador] RACHADURA pos=(-412,31,188) lado=west bloco=Stone descida=412s quebra=6 teste=nao
+[4309s][Jogador] RACHADURA fim por=QUEBROU_O_BLOCO
+[4710s][Jogador] MORCEGOS qtd=4 boca=(-409,30,197) dist=10.2 luz=nao teste=nao
+[5930s][Jogador] PEDRINHA de=(-415,30,190) para=(-413,30,189) lado=30 corredor=6 luzNoFim=0 teste=nao
+```
+
+- `FAMILIA familia=... de=... lugar=...`: uma saída do mod, com a família dela (`LUZ`, `SOM`, `MARCA`, `OBJETO`, `CORPO`, `CABECA`), o que foi (`de=`: o nome do evento, do presságio ou da perturbação; `CHAMA_PALIDA`; `HOSPEDE_<modo>` para toda aparição; `PLANO_B_<tipo>`; `RACHADURA`; `CENA_MARCO`) e o tipo de lugar. Sai em qualquer lugar. Só no subsolo vêm `naJanela=N/M` (quantas das últimas `M` saídas, até cinco, são desta família, já contando esta) e `semFisico=` (segundos de subsolo desde a última coisa de objeto ou de corpo, **antes** de esta saída zerar o relógio, se for uma delas). O que vem de comando não gera a linha.
+- `FAMILIA barrou=[...] cedeu=sim|nao`: no sorteio do Diretor, os eventos que ficaram de fora por serem de uma família que já tem duas nas últimas cinco. `cedeu=sim`: só havia eles, e o sorteio foi entre eles mesmo. As chamas pálidas, os presságios e as perturbações barrados não deixam linha (só não saem).
+- `FAMILIA divida paga=<perturbação> semFisico=...`: a dívida do subsolo foi paga (quinze minutos sem nada que se toque). Vem logo depois da linha `ATMOSFERA cena=` da mesma coisa. `FAMILIA divida sem_lugar`: tentou os três e nenhum coube; tenta de novo em um minuto.
+- `RACHADURA pos=... lado=... bloco=... descida=...s quebra=N teste=sim|nao`: o bloco que rachou, de que lado do bloco quebrado ele fica, há quanto tempo o jogador está debaixo da terra e em que quebra da descida foi. `RACHADURA fim por=TEMPO|QUEBROU_O_BLOCO`: como acabou. `QUEBROU_O_BLOCO` é ele indo ver.
+- `MORCEGOS qtd=N boca=... dist=... luz=sim|nao teste=...`: de onde saíram (a boca é um chão; `dist` é dela até o jogador) e se havia luz ali. A aparição de perto seguinte, por dez minutos, prefere esse lugar: procure o `HOSPEDE ... motivoPosicao=DE_PERTO` seguinte e compare o `pos=`.
+- `PEDRINHA de=... para=... lado=G corredor=N luzNoFim=L teste=...`: onde quicou primeiro e onde parou; `lado` é o ângulo a partir de para onde ele olhava (0 = à frente, 180 = atrás); `corredor` é quantos blocos o espaço continua naquela direção e `luzNoFim` a luz no fim dele (0 = veio do breu).
+
+A pedrinha e os morcegos também deixam a linha `ATMOSFERA cena=PEDRINHA|MORCEGOS teste=nao`, que é a que o analisador conta como saída.
+
+Para conferir depois de uma sessão (o analisador faz as contas na seção "As famílias do que saiu, por lugar"): no subsolo, nenhuma família acima de 40% (em 11/10 a luz foi 52%, e 18 das 21 eram chamas pálidas); o maior `semFisico` perto de quinze minutos e não de quarenta; ao menos uma `RACHADURA` numa sessão em que ele minerou na fase 2 ou mais; e quantas vezes ele quebrou o bloco rachado.

@@ -89,6 +89,10 @@ final class PlanoB {
 		e.planoBUltimo = tipo;
 		e.planoBResumo = tipo.name();
 		Atencao.respirar(e, seg);
+		// A família do sinal (ver Familias). O que veio de comando não entra na conta.
+		if (!"COMANDO".equals(origem)) {
+			Familias.registrar(p, e, Familias.de(tipo), "PLANO_B_" + tipo, seg);
+		}
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "PLANO_B tipo=%s origem=%s lado=%s pos=%s dist=%.1f aVista=%s",
 				tipo, origem, lugar.lado(), Diretor.pos(onde.x, onde.y, onde.z), Math.sqrt(p.distanceToSqr(onde)),
 				lugar.aVista() ? "sim" : "nao"));

@@ -17,7 +17,9 @@ O que ele responde:
   - o que não coube (seleção que falhou, falta de lugar), e por quê: quantos lugares cada procura tentou e
     em que exigência eles caíram;
   - o que acabou sem ninguém, separando o vazio por falha (com o plano B que saiu no lugar) do vazio por
-    escolha, e o que a cota de corpo fez (0.9.0-alpha20).
+    escolha, e o que a cota de corpo fez (0.9.0-alpha20);
+  - de que família foi o que saiu em cada tipo de lugar (luz, som, marca, objeto, corpo, cabeça), e, debaixo
+    da terra, quanto tempo ele ficou sem nada que se toque (0.9.0-alpha22).
 
 Só usa a biblioteca padrão do Python.
 """
@@ -88,6 +90,62 @@ PROBLEMAS = [
     ('captura sem destino', re.compile(r'^CAPTURA deslocou .* para=- ')),
     ('cena da janela sem vidro por perto', re.compile(r'^CENA tipo=DO_OUTRO_LADO_DO_VIDRO pulada motivo=SEM_JANELA')),
 ]
+
+
+# De que família é cada saída, para os logs de antes da alpha22 (que não têm a linha FAMILIA). Da alpha22 em
+# diante quem diz é o jogo (Familias.java), e esta tabela não é usada: se as duas discordarem, vale a do jogo.
+FAMILIA_ANTIGA = {
+    'LUZ': ['LUZ_ERRADA', 'TOCHA', 'LUZ_DISTANTE', 'LUZ_NO_FIM', 'PASSOU_PELA_MINA', 'CHAMA_PALIDA'],
+    'SOM': ['PASSOS', 'PASSO_UNICO', 'ECO', 'PASSAGEM', 'SINAL_DISTANTE', 'RUIDO_RETORNO', 'ECO_PASSOS', 'SINAL', 'SEGUIDOR',
+            'CANTIGA', 'BATIDA', 'PRENUNCIO', 'PASSO_DISTANTE', 'ECO_TARDIO', 'RUIDO_NA_PAREDE', 'NAO_FOI_VOCE'],
+    'MARCA': ['VESTIGIO', 'TRILHA_INTERROMPIDA', 'PEGADAS', 'CINZA_NO_RASTRO'],
+    'OBJETO': ['OBJETO_FORA_LUGAR', 'PORTA', 'O_CAMINHO_MUDOU', 'MARCA_IMPOSSIVEL'],
+    'CORPO': ['ANIMAIS', 'ANIMAIS_VAZIO', 'ANIMAIS_JOGADOR', 'ANIMAIS_MOVIMENTO', 'TODOS_OLHANDO', 'HA_ALGO_NO_CURRAL', 'HOSPEDE'],
+    'CABECA': ['VIGIA', 'SUSSURRO', 'NEBLINA', 'ECO_CHAT', 'VEU', 'VISTO'],
+}
+FAMILIA_DE = {nome: familia for familia, nomes in FAMILIA_ANTIGA.items() for nome in nomes}
+# O que se pode tocar: são as duas famílias que a caverna do dono não teve em 11/10/2026.
+FISICAS = ('OBJETO', 'CORPO')
+# O teto que a pesquisa pede para uma família só, e quantas saídas no subsolo bastam para o número valer.
+TETO_DE_FAMILIA = 0.40
+MINIMO_PARA_FAMILIA = 10
+
+
+def familias_por_lugar(linhas):
+    """Devolve (contagem por lugar e família, de onde veio cada uma, se o log já traz a linha FAMILIA)."""
+    por_lugar = collections.defaultdict(collections.Counter)
+    origem = collections.defaultdict(collections.Counter)
+    do_jogo = any(texto.startswith('FAMILIA familia=') for _, texto in linhas)
+    lugar = 'OUTRO'
+    for _, texto in linhas:
+        m = re.match(r'^CONTEXTO \S+ -> (\S+)', texto)
+        if m:
+            lugar = m.group(1)
+            continue
+        if do_jogo:
+            m = re.match(r'^FAMILIA familia=(\S+) de=(\S+) lugar=(\S+)', texto)
+            if m:
+                por_lugar[m.group(3)][m.group(1)] += 1
+                origem[(m.group(3), m.group(1))][m.group(2)] += 1
+            continue
+        if 'forçado por comando' in texto:
+            continue
+        nome = None
+        for expr in (r'^EVENTO (\S+) \(estado=', r'^PRESSAGIO tipo=(\S+)', r'^ATMOSFERA cena=(\S+) teste=nao', r'^(CHAMA_PALIDA) pos='):
+            m = re.match(expr, texto)
+            if m:
+                nome = m.group(1)
+                break
+        if nome is None and re.match(r'^HOSPEDE id=\S+ criado origem=(?!COMANDO)', texto):
+            nome = 'HOSPEDE'
+        # A aparição já conta como HOSPEDE: o evento que a pediu não conta de novo.
+        if nome in ('PRESENCA', 'ATRAS', 'TUMULO', 'ESPREITA', 'VULTO', 'CACA', 'ESPERA'):
+            continue
+        familia = FAMILIA_DE.get(nome)
+        if familia:
+            por_lugar[lugar][familia] += 1
+            origem[(lugar, familia)][nome] += 1
+    return por_lugar, origem, do_jogo
 
 
 def ler(caminho, jogador):
@@ -645,6 +703,64 @@ def analisar(linhas, jogador, caminho):
         out.append('Maior tempo de jogo, da fase 3 em diante, sem uma aparição vista de verdade: **%s** (a cota tenta sozinha aos 30 minutos).' % hms(maior_sem_ver))
         out.append('')
 
+    # ----- as famílias, por lugar (0.9.0-alpha22) -----
+    out.append('## As famílias do que saiu, por lugar')
+    out.append('')
+    por_lugar, origem_familia, familia_do_jogo = familias_por_lugar(linhas)
+    ordem_familias = ['LUZ', 'SOM', 'MARCA', 'OBJETO', 'CORPO', 'CABECA']
+    if not por_lugar:
+        out.append('Nada saiu (ou o log não tem as linhas de contexto).')
+        out.append('')
+    else:
+        out.append('De que família foi cada coisa que o mod fez, pelo tipo de lugar em que ele estava. As chamas pálidas e a '
+                   'rachadura entram aqui (ele as percebe), embora não contem como "saída" no ritmo. %s' % (
+                       'Quem diz a família é o jogo (linha `FAMILIA`).' if familia_do_jogo
+                       else '**Log de antes da alpha22: a família foi estimada pelo nome de cada linha.**'))
+        out.append('')
+        linhas_tab = []
+        for lugar_nome, conta in sorted(por_lugar.items(), key=lambda kv: -sum(kv[1].values())):
+            total = sum(conta.values())
+            linhas_tab.append([lugar_nome, total] + ['%d (%.0f%%)' % (conta[f], 100.0 * conta[f] / total) if conta[f] else '-' for f in ordem_familias])
+        out += tabela(['Lugar', 'Saídas'] + [f.lower() for f in ordem_familias], linhas_tab)
+        out.append('')
+    subsolo = por_lugar.get('SUBSOLO', collections.Counter())
+    total_subsolo = sum(subsolo.values())
+    familia_demais = None
+    if total_subsolo:
+        maior, vezes = subsolo.most_common(1)[0]
+        fisicas = sum(subsolo[f] for f in FISICAS)
+        out.append('Debaixo da terra: %d saídas; a família que mais saiu foi **%s, com %.0f%%** (%s). Coisas que se tocam (objeto ou corpo): **%d**.' % (
+            total_subsolo, maior.lower(), 100.0 * vezes / total_subsolo,
+            ', '.join('%s %d' % o for o in origem_familia[('SUBSOLO', maior)].most_common(4)), fisicas))
+        out.append('')
+        if total_subsolo >= MINIMO_PARA_FAMILIA and vezes > TETO_DE_FAMILIA * total_subsolo:
+            familia_demais = (maior, vezes, total_subsolo)
+    # O relógio do subsolo sem nada que se toque: cada linha FAMILIA no subsolo diz quanto ele marcava.
+    relogios = [(int(m.group(2)), m.group(1) in FISICAS) for m in (
+        re.match(r'^FAMILIA familia=(\S+) de=\S+ lugar=SUBSOLO .*semFisico=(\d+)s', texto) for _, texto in linhas) if m]
+    maior_sem_fisico = max((r for r, _ in relogios), default=None)
+    dividas_pagas = collections.Counter(m.group(1) for m in (re.match(r'^FAMILIA divida paga=(\S+)', texto) for _, texto in linhas) if m)
+    dividas_sem_lugar = sum(1 for _, texto in linhas if texto.startswith('FAMILIA divida sem_lugar'))
+    barrou = sum(1 for _, texto in linhas if texto.startswith('FAMILIA barrou='))
+    cedeu = sum(1 for _, texto in linhas if texto.startswith('FAMILIA barrou=') and texto.endswith('cedeu=sim'))
+    if familia_do_jogo:
+        if maior_sem_fisico is not None:
+            out.append('Maior tempo de subsolo sem nada que se toque: **%s** (a dívida abre aos 15 minutos). Dívidas pagas: %d%s; tentativas sem lugar: %d.' % (
+                hms(maior_sem_fisico), sum(dividas_pagas.values()),
+                ' (%s)' % ', '.join('%s %d' % d for d in dividas_pagas.most_common()) if dividas_pagas else '', dividas_sem_lugar))
+            out.append('')
+        out.append('A regra das duas em cinco tirou alguma família do sorteio do Diretor %d vez(es); em %d delas cedeu, porque só havia aquela.' % (barrou, cedeu))
+        out.append('')
+    da_caverna = [
+        ('rachadura', sum(1 for _, texto in linhas if re.match(r'^RACHADURA pos=.* teste=nao', texto))),
+        ('pedrinha', sum(1 for _, texto in linhas if re.match(r'^PEDRINHA de=.* teste=nao', texto))),
+        ('morcegos', sum(1 for _, texto in linhas if re.match(r'^MORCEGOS qtd=.* teste=nao', texto))),
+    ]
+    if familia_do_jogo:
+        out.append('As três coisas da caverna: ' + ', '.join('%s %d' % c for c in da_caverna) + '. Ele quebrou o bloco rachado para ver: %d vez(es).' % (
+            sum(1 for _, texto in linhas if texto.startswith('RACHADURA fim por=QUEBROU_O_BLOCO'))))
+        out.append('')
+
     out.append('## A primeira hora: os critérios')
     out.append('')
     out.append('Trocam o que se conta: o que esteve na mira do jogador, e não o que foi criado; sinais seguidos de algo '
@@ -694,6 +810,17 @@ def analisar(linhas, jogador, caminho):
         alertas.append('**%d construção(ões) acabaram sem ninguém E sem o sinal do plano B** (%s). Da alpha20 em diante isto só deveria '
                        'acontecer com o Véu fechado antes da hora (`planoB=-`) ou dentro da zona da vela (`NENHUM`).' % (
                            len(sem_plano), ', '.join('%s: %s' % (s[1], 'sem planoB=' if s[3] is None else 'planoB=' + s[3]) for s in sem_plano[:6])))
+    # A prova do pacote "a caverna com corpo": nenhuma família acima de 40% do que saiu no subsolo, e nada de
+    # vinte minutos (os quinze da dívida e cinco de folga) debaixo da terra sem uma coisa que se toque.
+    if familia_demais:
+        alertas.append('**Debaixo da terra, %.0f%% do que saiu foi %s** (%d de %d; referência: nenhuma família acima de 40%%). '
+                       'O que mais pesou: %s.%s' % (
+                           100.0 * familia_demais[1] / familia_demais[2], familia_demais[0].lower(), familia_demais[1], familia_demais[2],
+                           ', '.join('%s %d' % o for o in origem_familia[('SUBSOLO', familia_demais[0])].most_common(3)),
+                           '' if familia_do_jogo else ' O log é de antes da regra das famílias (alpha22).'))
+    if maior_sem_fisico is not None and maior_sem_fisico > 20 * 60:
+        alertas.append('**%s de subsolo sem nada que se toque** (a dívida deveria ter sido paga aos 15 minutos; pagas %d, sem lugar %d). '
+                       'Veja as linhas `FAMILIA divida`.' % (hms(maior_sem_fisico), sum(dividas_pagas.values()), dividas_sem_lugar))
     # A prova do pacote "nada termina em nada": duas em cada três. Abaixo disso, o alerta.
     if do_mod + len(sem_ninguem) >= 4 and len(na_mira) * 3 < 2 * (do_mod + len(sem_ninguem)):
         alertas.append('**Ele %s em %d de %d vezes que o mod quis mostrá-la** (%d criadas, %d sem lugar). '

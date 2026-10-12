@@ -21,6 +21,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
+import net.minecraft.world.entity.ambient.Bat;
+import net.minecraft.world.phys.AABB;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -68,6 +70,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			saidaAndando(context, mundo);
 			dePerto(context, mundo);
 			planoB(context, mundo);
+			caverna(context, mundo);
 			cacada(context, mundo);
 			capturaQueLeva(context, mundo);
 		}
@@ -808,6 +811,83 @@ public class TestesDeCliente implements FabricClientGameTest {
 				server.getPlayerList().getPlayers().get(0).level().getBlockState(pes.offset(0, 0, 11)).is(Blocks.TORCH));
 		conferir(tochaDeVerdade, "a tocha apagada é miragem: o bloco de verdade tem de continuar no lugar");
 		context.takeScreenshot("45-plano-b-a-tocha-apagada");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/**
+	 * A caverna com corpo (0.9.0-alpha22): a rachadura, a pedrinha e os morcegos, no mesmo túnel dos testes de
+	 * servidor, com uma tocha a mais perto do fundo para a parede aparecer na foto. As três vêm pelos comandos de
+	 * teste, mas o que desenha é o caminho de verdade. A rachadura é o que mais precisa de foto: é o progresso de
+	 * quebra do jogo mandado só para ele, com um número que não é de entidade nenhuma, e nenhum teste de servidor
+	 * diz se o jogo desenha isso.
+	 */
+	private static void caverna(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		// Longe do túnel das fotos de perto, do corredor do plano B e de onde a caçada vai procurar lugar.
+		BlockPos pes = partida.offset(80, 0, 80);
+		int curva = -10;
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			for (int x = -3; x <= 11; x++) {
+				for (int z = curva - 3; z <= 6; z++) {
+					for (int y = 0; y <= 4; y++) {
+						level.setBlock(pes.offset(x, y, z), Blocks.STONE.defaultBlockState(), 3);
+					}
+				}
+			}
+			for (int y = 0; y <= 1; y++) {
+				for (int z = curva; z <= 3; z++) {
+					level.setBlock(pes.offset(0, y, z), Blocks.AIR.defaultBlockState(), 3);
+				}
+				for (int x = 0; x <= 8; x++) {
+					level.setBlock(pes.offset(x, y, curva), Blocks.AIR.defaultBlockState(), 3);
+				}
+			}
+			level.setBlock(pes.offset(-1, 1, curva), Blocks.TORCH.defaultBlockState(), 3);
+			level.setBlock(pes.offset(-1, 1, 2), Blocks.TORCH.defaultBlockState(), 3);
+		});
+		String noLugar = "tp @p %.2f %d %.2f %d %d";
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 0, 0));
+		context.waitTicks(40);
+		context.takeScreenshot("46-caverna-o-fundo-do-tunel");
+
+		// A rachadura, no bloco do fundo, para onde ele olha: cresce em um segundo e para na metade.
+		mundo.getServer().runCommand("execute as @p run sussurros cena rachadura");
+		context.waitTicks(30);
+		BlockPos rachado = mundo.getServer().computeOnServer(server -> Diretor.rachaduraParaTeste(server.getPlayerList().getPlayers().get(0)));
+		conferir(pes.offset(0, 1, 4).equals(rachado), "o comando deveria rachar o bloco do fundo, na altura dos olhos: " + rachado);
+		boolean pedraInteira = mundo.getServer().computeOnServer(server ->
+				server.getPlayerList().getPlayers().get(0).level().getBlockState(pes.offset(0, 1, 4)).is(Blocks.STONE));
+		conferir(pedraInteira, "a rachadura é só desenho: o bloco de verdade tem de continuar inteiro");
+		context.takeScreenshot("47-caverna-a-rachadura");
+
+		// A pedrinha: três toques no chão à frente dele. Olhando um pouco para baixo, para o chão caber na foto.
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 0, 30));
+		context.waitTicks(20);
+		mundo.getServer().runCommand("execute as @p run sussurros cena pedrinha");
+		context.waitTicks(3);
+		String pedrinha = mundo.getServer().computeOnServer(server -> Diretor.cavernaParaTeste(server.getPlayerList().getPlayers().get(0)));
+		conferir("PEDRINHA".equals(pedrinha), "no túnel a pedrinha deveria achar onde cair: " + pedrinha);
+		context.takeScreenshot("48-caverna-a-pedrinha-primeiro-toque");
+		context.waitTicks(5);
+		context.takeScreenshot("48-caverna-a-pedrinha-segundo-toque");
+
+		// Os morcegos: saem da curva, às costas dele. Ele vira para ver.
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 0, 0));
+		context.waitTicks(20);
+		mundo.getServer().runCommand("execute as @p run sussurros cena morcegos");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 180, 0));
+		context.waitTicks(22);
+		int morcegos = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.getEntitiesOfClass(Bat.class, new AABB(pes).inflate(30.0), m -> m.entityTags().contains("sussurros_morcego")).size());
+		conferir(morcegos >= 3 && morcegos <= 5, "deveriam ter saído de três a cinco morcegos: " + morcegos);
+		context.takeScreenshot("49-caverna-os-morcegos-vindo");
+		context.waitTicks(12);
+		context.takeScreenshot("49-caverna-os-morcegos-passando");
+		mundo.getServer().runCommand("kill @e[tag=sussurros_morcego]");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}

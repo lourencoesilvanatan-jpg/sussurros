@@ -12,6 +12,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
@@ -97,12 +98,13 @@ public final class JogadorDeTeste {
 	}
 
 	/**
-	 * O mesmo, separando o que chegou: [0] sons, [1] partículas, [2] blocos trocados (é assim que uma miragem chega).
+	 * O mesmo, separando o que chegou: [0] sons, [1] partículas, [2] blocos trocados (é assim que uma miragem chega)
+	 * e [3] rachaduras (o progresso de quebra de um bloco; quem quebra de verdade não recebe o seu).
 	 * Esvazia a fila, como sonsRecebidos: quem quer o total de um trecho soma as chamadas.
 	 */
 	public static int[] recebidos(ServerPlayer jogador) {
 		EmbeddedChannel canal = CANAIS.get(jogador.getUUID());
-		int[] n = new int[3];
+		int[] n = new int[4];
 		Object pacote;
 		while (canal != null && (pacote = canal.readOutbound()) != null) {
 			if (pacote instanceof ClientboundSoundPacket || pacote instanceof ClientboundSoundEntityPacket) {
@@ -120,6 +122,9 @@ public final class JogadorDeTeste {
 				n[1]++;
 			} else if (pacote instanceof ClientboundBlockUpdatePacket) {
 				n[2]++;
+			} else if (pacote instanceof ClientboundBlockDestructionPacket rachadura && rachadura.getProgress() >= 0
+					&& rachadura.getProgress() <= 9) {
+				n[3]++;
 			}
 		}
 		return n;
@@ -147,6 +152,42 @@ public final class JogadorDeTeste {
 			}
 		}
 		return n;
+	}
+
+	/**
+	 * O mesmo, contando só o som de nome "nome" (por exemplo "sussurros:estalo"). Para quando no mesmo lugar há
+	 * coisa de verdade fazendo barulho: um morcego do mundo guincha para todos, e o estalo do mod é só do alvo.
+	 */
+	public static int sonsVindosDe(ServerPlayer jogador, Vec3 ponto, double raio, String nome) {
+		int n = 0;
+		for (SomOuvido s : ULTIMOS_SONS.getOrDefault(jogador.getUUID(), new java.util.ArrayDeque<>())) {
+			if (s.nome().equals(nome) && ponto.distanceToSqr(s.x(), s.y(), s.z()) <= raio * raio) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/**
+	 * Entre os últimos sons que "recebidos" contou para este jogador, quantos NÃO são de bicho (os do jogo cujo
+	 * nome começa por "entity."). No gramado do mundo de teste há cavalos e vacas andando, e o som deles chega a
+	 * qualquer jogador de mentira: quem pergunta "chegou a ele algum som da assombração do outro?" não pode
+	 * contar o passo de um cavalo. Use depois de esquecerSons, para a conta começar do zero.
+	 */
+	public static int sonsQueNaoSaoDeBicho(ServerPlayer jogador) {
+		int n = 0;
+		for (SomOuvido s : ULTIMOS_SONS.getOrDefault(jogador.getUUID(), new java.util.ArrayDeque<>())) {
+			if (!s.nome().startsWith("minecraft:entity.")) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** Esvazia a fila do que chegou a este jogador e esquece os sons guardados: o que vier depois é de agora. */
+	public static void esquecerSons(ServerPlayer jogador) {
+		recebidos(jogador);
+		ULTIMOS_SONS.remove(jogador.getUUID());
 	}
 
 	/** Os mesmos sons, por extenso, para a mensagem de um teste que falha. */

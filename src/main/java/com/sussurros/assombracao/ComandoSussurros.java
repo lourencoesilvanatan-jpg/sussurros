@@ -139,6 +139,25 @@ public final class ComandoSussurros {
 						String msg = Diretor.testarPerturbacao(p, Perturbacao.HA_ALGO_NO_CURRAL);
 						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
 						return 1;
+					}))
+					// 0.9.0-alpha22: as três coisas da caverna (ver Caverna).
+					.then(Commands.literal("pedrinha").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarPerturbacao(p, Perturbacao.PEDRINHA);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("morcegos").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarPerturbacao(p, Perturbacao.MORCEGOS);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
+					}))
+					.then(Commands.literal("rachadura").executes(ctx -> {
+						ServerPlayer p = ctx.getSource().getPlayerOrException();
+						String msg = Diretor.testarRachadura(p);
+						ctx.getSource().sendSuccess(() -> Component.literal("[Sussurros] " + msg), false);
+						return 1;
 					})));
 
 			raiz.then(Commands.literal("pressagio").executes(ctx -> {

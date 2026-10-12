@@ -314,6 +314,8 @@ final class Aparicao {
 	static final double DE_PERTO_MAX = 14.0;
 	/** Quantas células a procura visita, no máximo. Num túnel são dezenas; num salão de caverna, centenas. */
 	private static final int DE_PERTO_CELULAS = 1200;
+	/** Quanto vale, na nota de um lugar, ficar no túnel de onde os morcegos saíram (ver Caverna). */
+	private static final double BONUS_DA_BOCA = 5.0;
 	private static final Direction[] LADOS = {Direction.NORTH, Direction.SOUTH, Direction.WEST, Direction.EAST};
 
 	/** O que a procura de lugar apertado achou. */
@@ -348,6 +350,24 @@ final class Aparicao {
 	 */
 	@Nullable
 	static DePerto buscarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente, boolean soComLuz) {
+		return buscarDePerto(level, p, e, semente, soComLuz, true);
+	}
+
+	/**
+	 * A boca de túnel de onde saem os morcegos (0.9.0-alpha22, ver Caverna): o mesmo lugar que a procura de
+	 * perto daria a ele. Aqui ninguém aparece, então a falta de lugar não entra na conta das falhas nem deixa
+	 * "quase lugar" para o plano B.
+	 */
+	@Nullable
+	static DePerto bocaDeTunel(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente) {
+		return buscarDePerto(level, p, e, semente, false, false);
+	}
+
+	@Nullable
+	private static DePerto buscarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente, boolean soComLuz,
+			boolean paraACriatura) {
+		// O túnel de onde os morcegos saíram há pouco: a aparição que vier prefere estar ali (ver Caverna).
+		BlockPos bocaDosMorcegos = paraACriatura ? Caverna.bocaValida(e, level.getGameTime() / 20) : null;
 		BlockPos inicio = null;
 		for (int dy : new int[] {0, 1, -1, -2}) {
 			BlockPos c = p.blockPosition().above(dy);
@@ -357,7 +377,9 @@ final class Aparicao {
 			}
 		}
 		if (inicio == null) {
-			e.falhasDeLugar.registrar("DE_PERTO", "semChaoDoJogador", 1);
+			if (paraACriatura) {
+				e.falhasDeLugar.registrar("DE_PERTO", "semChaoDoJogador", 1);
+			}
 			return null;
 		}
 		Vec3 olho = p.getEyePosition();
@@ -449,12 +471,18 @@ final class Aparicao {
 			double meio = (DE_PERTO_MIN + DE_PERTO_MAX) / 2.0;
 			double nota = (luz ? 2.0 : 0.0) + (quina ? 1.5 : 0.0)
 					+ 0.5 * (1.0 - Math.abs(distancia - meio) / (DE_PERTO_MAX - meio)) + 0.6 * ruido(c, semente);
+			if (bocaDosMorcegos != null && c.closerThan(bocaDosMorcegos, 3.5)) {
+				nota += BONUS_DA_BOCA; // mais do que todo o resto somado: havendo lugar ali, é ali
+			}
 			if (nota > melhorNota) {
 				melhorNota = nota;
 				melhor = new DePerto(c, distancia, luz, quina, abaixado, 0);
 			}
 		}
 		if (melhor == null) {
+			if (!paraACriatura) {
+				return null;
+			}
 			e.falhasDeLugar.registrar("DE_PERTO", "celulas", celulas, "naFaixa", naFaixa, "zona", naZona, "cinza", naCinza,
 					"tela", caiuNaTela, "semVisao", semVisao, "exposto", exposto, "aberto", aberto, "semLuz", semLuz);
 			for (int i = 0; i < naTelaChao.size(); i++) {
