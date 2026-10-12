@@ -15,6 +15,7 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -51,6 +52,9 @@ public class HospedeEntity extends PathfinderMob {
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
 	/** Abaixado fora da caça: nasceu sob um teto de dois blocos (ver definirAbaixado). */
 	private static final EntityDataAccessor<Boolean> ABAIXADO =
+			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
+	/** De quatro: o corpo com que ele passa por um vão de um bloco, só na caça (ver definirDeQuatro). */
+	private static final EntityDataAccessor<Boolean> DE_QUATRO =
 			SynchedEntityData.defineId(HospedeEntity.class, EntityDataSerializers.BOOLEAN);
 
 	/** Quando ele some na frente do jogador, dissolve por este tempo em vez de piscar para fora (ticks). */
@@ -93,6 +97,13 @@ public class HospedeEntity extends PathfinderMob {
 	 * alpha18 só a caça cabia em dois blocos, e numa mina ele não tinha onde aparecer para ser visto.
 	 */
 	private static final EntityDimensions CORPO_NA_CACA = EntityDimensions.scalable(0.7F, 1.9F);
+
+	/**
+	 * De quatro (0.9.0-alpha24): menos de um bloco de altura. É como ele passa por um vão de um bloco, que até a
+	 * alpha23 era, para ele, parede. A largura é a mesma dos outros corpos de propósito: trocar de corpo nunca o
+	 * empurra para o lado.
+	 */
+	private static final EntityDimensions CORPO_DE_QUATRO = EntityDimensions.scalable(0.7F, 0.9F);
 
 	/** Até esta ousadia ele ainda é tímido: basta olhar direto e desviar para ele não estar mais lá. */
 	public static final int OUSADIA_FICA = 4;
@@ -167,6 +178,10 @@ public class HospedeEntity extends PathfinderMob {
 	private int ticksNaMira = 0;         // só para o log: quantos ticks ao todo esteve na mira, com luz
 	private boolean cota = false;        // é uma aparição da cota de corpo (ver assombracao.Cota)
 	private boolean cotaDaRegra = false; // quem a pôs foi a própria cota, e não um evento do Diretor
+	/** Só no servidor e só durante uma conta de caminho: ele mede o caminho com o corpo de quatro (ver pensarDeQuatro). */
+	private boolean pensandoDeQuatro;
+	/** Só para a foto: o rumo em que ele fica virado, em vez de para o jogador (ver posarDeQuatroParaTeste). */
+	private float rumoDaPose = Float.NaN;
 
 	// A saída (0.9.0-alpha17): isto é comportamento. Ver Saida.
 	private Saida saida = Saida.SOME;
@@ -262,7 +277,67 @@ public class HospedeEntity extends PathfinderMob {
 				? this.entityData != null && this.entityData.get(MODO_VISUAL) == Modo.CACAR.ordinal()
 				: this.modo == Modo.CACAR;
 		boolean abaixado = this.entityData != null && this.entityData.get(ABAIXADO);
+		if (this.pensandoDeQuatro || (this.entityData != null && this.entityData.get(DE_QUATRO))) {
+			return CORPO_DE_QUATRO;
+		}
 		return cacando || abaixado ? CORPO_NA_CACA : super.getDefaultDimensions(pose);
+	}
+
+	/**
+	 * O caminho dele é calculado por uma navegação própria, que na caça mede com o corpo de quatro (ver
+	 * NavegacaoDoHospede). Fora da caça é a navegação de sempre.
+	 */
+	@Override
+	protected PathNavigation createNavigation(Level level) {
+		return new NavegacaoDoHospede(this, level);
+	}
+
+	/**
+	 * De quatro, na caça: quem decide é a Cacada, pelo teto de onde ele está e do próximo passo do caminho (ver
+	 * Cacada.ajustarCorpo). Vale para a caixa de colisão e, pelo dado sincronizado, para o desenho.
+	 */
+	void definirDeQuatro(boolean deQuatro) {
+		if (this.entityData.get(DE_QUATRO) != deQuatro) {
+			this.entityData.set(DE_QUATRO, deQuatro);
+			this.refreshDimensions();
+		}
+	}
+
+	public boolean isDeQuatro() {
+		return this.entityData.get(DE_QUATRO);
+	}
+
+	/**
+	 * Só para a foto do teste de cliente: de quatro onde ele está, sem caçada nenhuma. Com um rumo (graus), ele fica
+	 * virado para lá em vez de para o jogador, para a foto de perfil; com NaN, olha para o jogador como sempre.
+	 * Só tem efeito no modo do outro lado, que é o que as fotos usam para ele não sumir ao ser olhado.
+	 */
+	public void posarDeQuatroParaTeste(boolean deQuatro, float rumo) {
+		this.definirDeQuatro(deQuatro);
+		this.rumoDaPose = rumo;
+	}
+
+	/** A caçada está num estágio em que ele anda e cuida do próprio corpo: aí o caminho é medido de quatro. */
+	boolean planejaDeQuatro() {
+		return this.modo == Modo.CACAR && this.cacada != null && this.cacada.cuidaDoCorpo();
+	}
+
+	/**
+	 * Só no servidor, só enquanto um caminho é calculado: o jogo lê o tamanho da criatura na hora da conta, então
+	 * para ele achar a passagem de um bloco o tamanho tem de ser o de quatro NESSA hora. Muda só o tamanho que a
+	 * conta lê; a caixa de colisão e o lugar dele não se mexem, e nada vai para o cliente.
+	 */
+	@SuppressWarnings("deprecation")
+	void pensarDeQuatro(boolean sim) {
+		if (this.pensandoDeQuatro != sim) {
+			this.pensandoDeQuatro = sim;
+			this.fixupDimensions();
+		}
+	}
+
+	/** O corpo da caça (abaixado, 1,9 de altura) cabe com os pés neste ponto? Só os blocos contam. */
+	boolean cabeAbaixado(ServerLevel level, Vec3 pes) {
+		return level.noBlockCollision(this, CORPO_NA_CACA.makeBoundingBox(pes).deflate(1.0E-4));
 	}
 
 	/**
@@ -418,7 +493,7 @@ public class HospedeEntity extends PathfinderMob {
 		if (SUMINDO.equals(dado) && this.level().isClientSide() && this.isSumindo() && this.fadeInicioCliente < 0) {
 			this.fadeInicioCliente = this.tickCount;
 		}
-		if (MODO_VISUAL.equals(dado) || ABAIXADO.equals(dado)) {
+		if (MODO_VISUAL.equals(dado) || ABAIXADO.equals(dado) || DE_QUATRO.equals(dado)) {
 			this.refreshDimensions();
 		}
 	}
@@ -518,6 +593,7 @@ public class HospedeEntity extends PathfinderMob {
 		builder.define(OLHOS_VISUAIS, false);
 		builder.define(SUMINDO, false);
 		builder.define(ABAIXADO, false);
+		builder.define(DE_QUATRO, false);
 	}
 
 	public boolean isObservando() {
@@ -700,6 +776,14 @@ public class HospedeEntity extends PathfinderMob {
 			ServerPlayer tocado = this.alvo;
 			this.discard();
 			Avesso.tocado(tocado);
+			return;
+		}
+		if (!Float.isNaN(this.rumoDaPose)) {
+			this.getNavigation().stop();
+			this.setObservando(true);
+			this.setYRot(this.rumoDaPose);
+			this.setYBodyRot(this.rumoDaPose);
+			this.setYHeadRot(this.rumoDaPose);
 			return;
 		}
 		if (!this.avessoAnda) {

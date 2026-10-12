@@ -72,6 +72,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			dePerto(context, mundo);
 			planoB(context, mundo);
 			caverna(context, mundo);
+			deQuatro(context, mundo);
 			cacada(context, mundo);
 			capturaQueLeva(context, mundo);
 		}
@@ -943,6 +944,79 @@ public class TestesDeCliente implements FabricClientGameTest {
 		pedras = mundo.getServer().computeOnServer(server -> Diretor.miragensParaTeste(server.getPlayerList().getPlayers().get(0), "PASSAGEM_FECHADA"));
 		conferir(pedras == 0, "de perto a parede já deveria ter se desfeito: " + pedras);
 		context.takeScreenshot("49p-caverna-a-passagem-de-perto");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/**
+	 * A pose de quatro (0.9.0-alpha24), que ninguém viu: num buraco de um bloco numa parede de pedra, de frente, e
+	 * em campo aberto, de perfil, com cada um dos braços à frente. De dia, para ver o desenho; ele fica parado no
+	 * modo do outro lado (ver Diretor.deQuatroParaFoto). As conferências derrubam o teste: de quatro ele tem menos
+	 * de um bloco de altura e cabe no buraco sem encostar em nada.
+	 */
+	private static void deQuatro(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		// Longe do que as outras fotos montam e de onde a caçada, a seguir, vai procurar lugar.
+		BlockPos pes = partida.offset(-80, 0, 0);
+		BlockPos buraco = pes.offset(0, 0, -5);
+		String noLugar = "tp @p %.2f %d %.2f %d %d";
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			for (BlockPos pos : BlockPos.betweenClosed(pes.offset(-4, 0, -5), pes.offset(4, 3, -5))) {
+				level.setBlock(pos, Blocks.STONE.defaultBlockState(), 3);
+			}
+			level.setBlock(buraco, Blocks.AIR.defaultBlockState(), 3);
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5, 180, 12));
+		context.waitTicks(40);
+		String noBuraco = mundo.getServer().computeOnServer(server -> {
+			ServerPlayer p = server.getPlayerList().getPlayers().get(0);
+			Diretor.deQuatroParaFoto(p, buraco, Float.NaN);
+			HospedeEntity h = Diretor.criatura(p);
+			return h == null ? "ninguém" : String.format(Locale.ROOT, "deQuatro=%s altura=%.1f livre=%s", h.isDeQuatro(), h.getBbHeight(), p.level().noCollision(h));
+		});
+		Sussurros.LOGGER.info("[de quatro] no buraco: {}", noBuraco);
+		conferir(noBuraco.equals("deQuatro=true altura=0.9 livre=true"), "de quatro ele deveria caber no buraco de um bloco: " + noBuraco);
+		context.waitTicks(20);
+		context.takeScreenshot("55-de-quatro-no-buraco-a-cinco-blocos");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, pes.getX() + 0.5, pes.getY(), pes.getZ() - 1.3, 180, 20));
+		context.waitTicks(15);
+		context.takeScreenshot("56-de-quatro-no-buraco-de-perto");
+		// De perfil, em campo aberto: cada bloco troca o braço que vai à frente.
+		for (int lado = 0; lado < 2; lado++) {
+			BlockPos chao = pes.offset(8 + lado, 0, 6);
+			mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+			mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, chao.getX() + 0.5, chao.getY(), chao.getZ() + 5.0, 180, 12));
+			context.waitTicks(10);
+			mundo.getServer().runOnServer(server -> Diretor.deQuatroParaFoto(server.getPlayerList().getPlayers().get(0), chao, 90.0F));
+			// Três segundos: ele nasce virado para o jogador, e o corpo leva mais de um segundo para acabar de
+			// virar para o rumo da pose (com um segundo de espera a foto "de perfil" saía a uns 35 graus).
+			context.waitTicks(60);
+			context.takeScreenshot(lado == 0 ? "57-de-quatro-de-perfil" : "58-de-quatro-de-perfil-o-outro-braco");
+		}
+		// De cima, para ver o corpo inteiro sem o chão na frente; e em cima de um bloco, de lado, para ver o que
+		// o chão esconderia (um membro que mergulha na terra não aparece nas fotos de perfil).
+		BlockPos alto = pes.offset(16, 0, 6);
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto, Blocks.STONE.defaultBlockState(), 3));
+		context.waitTicks(5);
+		mundo.getServer().runOnServer(server -> Diretor.deQuatroParaFoto(server.getPlayerList().getPlayers().get(0), alto.above(), 90.0F));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, alto.getX() + 0.5, alto.getY(), alto.getZ() + 5.0, 180, 0));
+		context.waitTicks(60);
+		context.takeScreenshot("59-de-quatro-em-cima-de-um-bloco");
+		// De cima: o jogador em pé num bloco invisível, seis blocos acima dele, olhando para baixo.
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto.above(5), Blocks.BARRIER.defaultBlockState(), 3));
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 180 90", alto.getX() + 0.5, alto.getY() + 6, alto.getZ() + 0.5));
+		context.waitTicks(15);
+		context.takeScreenshot("60-de-quatro-de-cima");
+		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()
+				.setBlock(alto.above(5), Blocks.AIR.defaultBlockState(), 3));
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}

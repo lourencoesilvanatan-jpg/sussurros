@@ -20,6 +20,7 @@
 			"com.sussurros.teste.TestesDoPlanoB",
 			"com.sussurros.teste.TestesDaCota",
 			"com.sussurros.teste.TestesDaCaverna",
+			"com.sussurros.teste.TestesDoVao",
 			"com.sussurros.teste.TestesDeSessao"
 		],
 		"fabric-client-gametest": [

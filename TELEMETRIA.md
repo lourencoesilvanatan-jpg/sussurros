@@ -917,3 +917,25 @@ Para conferir depois de uma sessão (o analisador faz as contas na seção "As f
 - `MIRAGEM fim motivo=PASSAGEM_FECHADA por=CHEGOU_PERTO|TEMPO`: uma linha por bloco da parede (a linha é a de toda miragem, e já existia). `CHEGOU_PERTO` é ele indo ver: a parede se desfaz a seis blocos.
 
 As duas também deixam `ATMOSFERA cena=TAMPA|PASSAGEM_FECHADA teste=nao` e a linha `FAMILIA familia=OBJETO`. O analisador as soma em "As coisas da caverna", com quantas vezes ele foi ver a passagem.
+
+## 0.9.0-alpha24 — de quatro, o vão e o motivo de a navegação desistir
+
+```
+[9120s][Jogador] CACA id=M007 corpo=DE_QUATRO motivo=VAO pos=(-431,24,244) dist=4.9
+[9120s][Jogador] CACA id=M007 vao boca=(-431,24,245) espera=53t dist=4.9
+[9124s][Jogador] CACA id=M007 corpo=ABAIXADO motivo=SAIU pos=(-431,24,247) dist=2.6
+[9131s][Jogador] CACA id=M007 piscar pelo caminho andou=1.4 corpo=DE_QUATRO
+[9140s][Jogador] BUSCA id=M007 sem_caminho ele=(-440,25,247) alvo=(-428,19,267) dist=24.1 corpo=ABAIXADO caminho=MESMO fim=(-440,25,247) falta=23.9 nos=1
+[9160s][Jogador] CACA id=M007 CAPTURA como=TOCOU duracao=44s contato=8s vaos=1
+[9300s][Jogador] ENSINO primeiro=CACADA pagina=23 nova=sim
+[9300s][Jogador] ENSINO primeiro=VAO pagina=29 nova=sim
+```
+
+- `CACA id=... corpo=DE_QUATRO|ABAIXADO motivo=... pos=... dist=...`: ele trocou de corpo. `motivo=VAO`: o próximo passo do caminho é um vão onde abaixado ele não cabe; `TETO`: já está num lugar assim (foi posto ali pelo piscar, ou o teto mudou); `SAIU`: voltou a caber e se levantou. `dist` é até o jogador. Só acontece com ele fora da tela.
+- `CACA id=... vao boca=... espera=Nt dist=...`: ele parou na boca de um vão para avisar (o vão está a até oito blocos do jogador). `espera` é quanto fica ali, em ticks (30 a 60). Sem esta linha depois de um `corpo=DE_QUATRO`, o vão estava longe do jogador e ele entrou direto.
+- `CACA id=... piscar pelo caminho andou=... corpo=...`: no piscar, a linha reta até o jogador estava tampada e havia caminho por outro lado; ele avançou por ele. Vem logo depois da linha `piscar n=`.
+- `BUSCA id=... sem_caminho ele=... alvo=... dist=... corpo=... caminho=...`: vem imediatamente antes de um `BUSCA ... motivo=CAMINHO_FALHOU`, e diz por que a navegação respondeu "não" três vezes. `caminho=NO_AR`: ele estava caindo ou pulando (passageiro; não é defeito). `caminho=MESMO fim=... falta=... nos=N`: o caminho novo era igual ao que ele acabou de andar, ou seja, ele está no ponto mais perto do alvo a que consegue chegar; `fim` é esse ponto e `falta` a distância dele ao alvo. `caminho=NENHUM`: não havia caminho guardado e ele estava no chão (não deveria acontecer; se aparecer, é coisa nova).
+- As linhas `CACA ... FIM` e `CACA ... CAPTURA` ganharam `vaos=N` no fim: quantas vezes ele ficou de quatro naquela caçada.
+- `ENSINO primeiro=CACADA pagina=23` e `ENSINO primeiro=VAO pagina=29`: as páginas da caçada foram pedidas (a primeira, para quem já foi caçado alguma vez; a segunda, depois de um `vao boca=` numa caçada de verdade). A entrega deixa a linha de sempre, `ENSINO pagina entregue`.
+
+Para conferir depois de uma sessão (o analisador soma na seção "Caçadas, capturas e o outro lado"): quantas vezes ficou de quatro e quantas avisou; quantas piscadas foram pelo caminho; e, se houve `CAMINHO_FALHOU`, de que tipo. Um `caminho=MESMO` abre o relatório como alerta: é um lugar a que o jogador chega e ele não. Com o `ele=` e o `alvo=` da linha, copie a região do mundo e desenhe os dois pontos com `ler_mundo.py` antes de mexer em qualquer limite.

@@ -63,6 +63,19 @@ public final class Ensino {
 	private static final String RISCOU_LINHA = "teve_linha";
 	private static final int PAGINA_DA_LINHA = 25;
 
+	/**
+	 * A caçada também tem páginas (0.9.0-alpha24). Elas já existiam no diário, mas só chegavam na ordem, perto do
+	 * fim: o dono viveu a primeira caçada sem saber o que podia fazer, bateu nele, e leu a regra ("ele só anda
+	 * quando não é olhado") como defeito ("ele estava preso"). Agora a página dos dois verbos do jogador (olhar, que
+	 * segura; andar para trás até a luz) é pedida depois da primeira caçada, seja qual for o fim dela; e a do vão
+	 * de um bloco, depois da primeira vez em que ele avisa numa boca e entra. Sempre depois, nunca antes: a
+	 * primeira vez é para ser vivida sem manual.
+	 */
+	private static final String TEVE_CACADA = "teve_cacada";
+	private static final int PAGINA_DA_CACADA = 22;
+	private static final String TEVE_VAO = "teve_vao";
+	private static final int PAGINA_DO_VAO = 28;
+
 	/** A página chega um pouco depois de ele pegar o item, nunca na mesma hora. */
 	private static final int ESPERA_DA_PAGINA = 20;
 	/** Entre uma página deixada e a seguinte, o tempo de ele pegar a primeira do chão. */
@@ -86,7 +99,24 @@ public final class Ensino {
 			Diario.pedir(m, licao.pagina);
 			Depuracao.log(p, seg, "ENSINO primeiro=" + licao + " pagina=" + (licao.pagina + 1) + " nova=" + (nova ? "sim" : "nao"));
 		}
+		// As da caçada: pelo que ele já viveu (vale também para quem foi caçado antes desta versão).
+		if (m.get(Memoria.CACADAS) >= 1) {
+			pedirUmaVez(p, m, seg, TEVE_CACADA, PAGINA_DA_CACADA, "CACADA");
+			if (m.get(Memoria.CACA_VAOS) >= 1) {
+				pedirUmaVez(p, m, seg, TEVE_VAO, PAGINA_DO_VAO, "VAO");
+			}
+		}
 		entregarPagina(level, p, m, e, seg, tick);
+	}
+
+	private static void pedirUmaVez(ServerPlayer p, Memoria m, long seg, String chave, int pagina, String oQue) {
+		if (m.get(chave) == 1) {
+			return;
+		}
+		m.set(chave, 1);
+		boolean nova = !Diario.foiLida(m, pagina);
+		Diario.pedir(m, pagina);
+		Depuracao.log(p, seg, "ENSINO primeiro=" + oQue + " pagina=" + (pagina + 1) + " nova=" + (nova ? "sim" : "nao"));
 	}
 
 	/**

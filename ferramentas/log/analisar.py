@@ -482,6 +482,30 @@ def analisar(linhas, jogador, caminho):
     if devidas:
         out.append('Caçadas que ficaram devendo: ' + ', '.join('%s %d' % d for d in devidas.most_common()) + '.')
         out.append('')
+    # 0.9.0-alpha24: o vão de um bloco, o piscar pelo caminho, e por que a navegação desistiu.
+    de_quatro = collections.Counter(m.group(1) for m in (re.match(r'^CACA id=\S+ corpo=DE_QUATRO motivo=(\S+)', texto) for _, texto in linhas) if m)
+    vaos = [(int(m.group(1)), float(m.group(2))) for m in (re.match(r'^CACA id=\S+ vao boca=\S+ espera=(\d+)t dist=([\d.]+)', texto) for _, texto in linhas) if m]
+    piscadas = sum(1 for _, texto in linhas if re.match(r'^CACA id=\S+ piscar n=', texto))
+    pelo_caminho = sum(1 for _, texto in linhas if re.match(r'^CACA id=\S+ piscar pelo caminho', texto))
+    desistencias = sum(1 for _, texto in linhas if texto.startswith('BUSCA ') and 'motivo=CAMINHO_FALHOU' in texto)
+    sem_caminho = [m.groups() for m in (re.match(r'^BUSCA id=\S+ sem_caminho ele=(\S+) alvo=(\S+) dist=([\d.]+) corpo=(\S+) caminho=(\S+)(?: fim=\S+ falta=([\d.]+))?', texto)
+                                        for _, texto in linhas) if m]
+    if fins or capturas or de_quatro or desistencias:
+        out.append('De quatro: %d vez(es)%s; avisou na boca de um vão %d vez(es)%s. Piscadas: %d, das quais %d pelo caminho (a linha reta estava tampada).' % (
+            sum(de_quatro.values()), ' (' + ', '.join('%s %d' % c for c in de_quatro.most_common()) + ')' if de_quatro else '',
+            len(vaos), ', a %.1f blocos do jogador em média' % (sum(d for _, d in vaos) / len(vaos)) if vaos else '', piscadas, pelo_caminho))
+        out.append('')
+        if desistencias:
+            tipos = collections.Counter(c[4] for c in sem_caminho)
+            faltas = [float(c[5]) for c in sem_caminho if c[5]]
+            out.append('A navegação desistiu (CAMINHO_FALHOU) **%d** vez(es)%s%s.' % (
+                desistencias, ': ' + ', '.join('%s %d' % t for t in tipos.most_common()) if tipos else ' (log de antes da alpha24: sem o motivo)',
+                '; nos MESMO, faltavam %.1f blocos em média até o alvo' % (sum(faltas) / len(faltas)) if faltas else ''))
+            out.append('')
+            for ele, alvo, dist, corpo, tipo, falta in sem_caminho[:6]:
+                out.append('- ele em %s, alvo em %s, a %s blocos, corpo %s: %s%s' % (ele, alvo, dist, corpo, tipo, ', faltando ' + falta if falta else ''))
+            if sem_caminho:
+                out.append('')
     idas = collections.Counter(m.group(1) for m in (re.match(r'^AVESSO levado origem=(\S+)', texto) for _, texto in linhas) if m)
     voltas = [(m.group(1), int(m.group(2))) for m in (re.match(r'^AVESSO voltou motivo=(\S+) ficou=(\d+)s', texto) for _, texto in linhas) if m]
     out.append('Visitas ao outro lado: %d%s.' % (sum(idas.values()), ' (' + ', '.join('%s %d' % i for i in idas.most_common()) + ')' if idas else ''))
@@ -871,6 +895,11 @@ def analisar(linhas, jogador, caminho):
     if 3 in fase_em and fase_em[3] - linhas[0][0] < 45 * 60:
         alertas.append('Chegou à fase 3 com %s de jogo: a progressão das fases está rápida.' % hms(fase_em[3] - linhas[0][0]))
     bloco = ['## Alertas', '']
+    mesmo_caminho = sum(1 for c in sem_caminho if c[4] == 'MESMO')
+    if mesmo_caminho:
+        alertas.append('**Numa caçada ele parou %d vez(es) no ponto mais perto do alvo a que conseguia chegar** (CAMINHO_FALHOU, caminho=MESMO). '
+                       'Há um lugar a que o jogador chega e ele não. As linhas `sem_caminho` dizem onde ele estava e onde o alvo estava: confira no mundo '
+                       'com `ler_mundo.py` (queda de mais de três blocos? mais de 64 blocos andando? água?) antes de mexer em qualquer coisa.' % mesmo_caminho)
     bloco += ['- ' + alerta for alerta in alertas] if alertas else ['Nenhum.']
     bloco.append('')
     corte = out.index('## Fases e estados')

@@ -12,7 +12,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.ApoioCaca;
@@ -34,6 +36,10 @@ import com.sussurros.bloco.CinzaEspalhadaBlock;
  *     verdade o som do mundo volta. Esse é o sinal honesto de fim.
  *
  * As referências e os números de partida estão em pesquisa/2026-10-08-cacada.md.
+ *
+ * 0.9.0-alpha24: ele passa por vão de um bloco. O caminho é medido com o corpo de quatro (NavegacaoDoHospede), o
+ * corpo de verdade muda só onde o lugar pede (ajustarCorpo), e antes de entrar num vão perto do jogador ele para
+ * na boca e avisa. Um vão aberto é caminho, não exceção: vale também na primeira caçada.
  */
 final class Cacada {
 	enum Estagio {
@@ -63,6 +69,10 @@ final class Cacada {
 	/** O jogador anda a 4,3 blocos/s, corre a 5,6 e corre pulando a 7,1. */
 	private static final double VELOCIDADE_INICIAL = 4.9;
 	private static final double VELOCIDADE_MAXIMA = 6.3;
+	/** De quatro ele anda a pouco mais da metade: é no vão que o jogador tem tempo de vê-lo entrar. */
+	private static final double LENTO_DE_QUATRO = 0.55;
+	/** Só avisa na boca de um vão que esteja a até isto do jogador, no chão (blocos). Mais longe é só caminho. */
+	private static final double AVISO_DO_VAO = 8.0;
 
 	private final HospedeEntity h;
 	private final HospedeBusca busca;
@@ -115,6 +125,17 @@ final class Cacada {
 	@Nullable
 	private Vec3 pontoDaBorda;
 
+	/** Ticks que ele ainda fica parado na boca de um vão, avisando, antes de entrar. */
+	private int vaoEspera;
+	@Nullable
+	private BlockPos vaoBoca;
+	/** Quando ele avisou num vão pela última vez: não avisa de novo antes de dez segundos. */
+	private long vaoAvisadoTick = -1000;
+	/** Quantas vezes ele ficou de quatro nesta caçada (só para o log). */
+	private int vaos;
+	/** Ticks seguidos em que o corpo abaixado já cabe: ele só se levanta depois de alguns, para não ficar trocando. */
+	private int cabendo;
+
 	Cacada(HospedeEntity h, HospedeBusca busca, ServerPlayer alvo, double fatorDoDiretor, boolean comAviso) {
 		this.h = h;
 		this.busca = busca;
@@ -132,6 +153,11 @@ final class Cacada {
 
 	boolean encerrada() {
 		return this.encerrada;
+	}
+
+	/** Nestes estágios ele anda, e o corpo acompanha o lugar: o caminho é medido de quatro (ver NavegacaoDoHospede). */
+	boolean cuidaDoCorpo() {
+		return this.estagio == Estagio.PERSEGUE || this.estagio == Estagio.ESPERA_VELA;
 	}
 
 	/** Chamado quando a criatura some por qualquer motivo, para o fim ser contado uma vez só. */
@@ -283,9 +309,19 @@ final class Cacada {
 		}
 		// Na luz forte ele é mais lento. É por isso que apaga as luzes por onde passa.
 		boolean claro = level.getBrightness(LightLayer.BLOCK, this.h.blockPosition().above()) >= 12;
-		this.busca.definirVelocidade(modificadorPara(this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0)));
+		double passo = this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0) * (this.h.isDeQuatro() ? LENTO_DE_QUATRO : 1.0);
+		this.busca.definirVelocidade(modificadorPara(passo));
 
 		if (this.tentarAtalho(level, alvo, dist, sabe)) {
+			return;
+		}
+
+		// O vão de um bloco: perto do jogador, ele para na boca e avisa antes de entrar (como atrás de uma porta).
+		if (this.vaoEspera > 0) {
+			this.tickVao(level, alvo);
+			return;
+		}
+		if (this.ajustarCorpo(level, alvo, true)) {
 			return;
 		}
 
@@ -296,7 +332,7 @@ final class Cacada {
 		if (ve) {
 			// Vendo o alvo, ele não procura: vai direto até ele.
 			if (this.h.tickCount % 5 == 0) {
-				this.h.getNavigation().moveTo(alvo, modificadorPara(this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0)));
+				this.h.getNavigation().moveTo(alvo, modificadorPara(passo));
 				this.procurarPorta(level);
 			}
 		} else if (this.h.tickCount % 5 == 0) {
@@ -317,6 +353,112 @@ final class Cacada {
 				&& this.h.getDeltaMovement().horizontalDistanceSqr() > 0.0006) {
 			ApoioCaca.passo(level, alvo, this.h);
 		}
+	}
+
+	// ===== O corpo: abaixado onde cabe, de quatro onde o teto só deixa um bloco =====
+
+	/**
+	 * O corpo acompanha o lugar: abaixado (1,9) onde cabe, de quatro (0,9) onde o teto só deixa um bloco ou onde
+	 * o próximo passo do caminho só deixa. Só é chamado com ele fora da tela: o jogador nunca o vê trocar de
+	 * corpo, vê uma pose de cada vez. Devolve true quando ele acabou de parar na boca de um vão para avisar.
+	 */
+	private boolean ajustarCorpo(ServerLevel level, ServerPlayer alvo, boolean comAviso) {
+		boolean cabeAqui = this.h.cabeAbaixado(level, this.h.position());
+		BlockPos adiante = this.vaoAdiante(level);
+		if (cabeAqui && adiante == null) {
+			// Andando, ele se levanta um quarto de segundo depois de sair do vão. Parado e sem caminho (acabou de
+			// avisar na boca e espera o próximo passo da busca), só depois de dois segundos: sem isto ele se
+			// levantava e voltava a ficar de quatro no mesmo lugar, conforme o tick em que a busca rodava.
+			Path caminho = this.h.getNavigation().getPath();
+			boolean andando = caminho != null && !caminho.isDone();
+			if (this.h.isDeQuatro() && ++this.cabendo >= (andando ? 5 : 40)) {
+				this.h.definirDeQuatro(false);
+				this.logCorpo(level, alvo, "SAIU");
+			}
+			return false;
+		}
+		this.cabendo = 0;
+		if (!this.h.isDeQuatro()) {
+			this.h.definirDeQuatro(true);
+			this.vaos++;
+			this.logCorpo(level, alvo, cabeAqui ? "VAO" : "TETO");
+		}
+		// O aviso não depende de ele ter acabado de se abaixar: quem vem de longe por um túnel de um bloco já
+		// chega de quatro, e avisa do mesmo jeito quando o trecho que falta entra nos oito blocos do jogador.
+		if (!comAviso || adiante == null || !this.deveAvisar(level, alvo, adiante)) {
+			return false;
+		}
+		this.vaoBoca = adiante.immutable();
+		this.vaoAvisadoTick = level.getGameTime();
+		this.vaoEspera = 30 + this.sorte.nextInt(31); // de 1,5 a 3 s, como a espera atrás de uma porta
+		this.h.getNavigation().stop();
+		ApoioCaca.contarVao(alvo, this.h);
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s vao boca=%s espera=%dt dist=%.1f",
+				this.h.getIdManifestacao(), HospedeBusca.pos(this.vaoBoca), this.vaoEspera, Math.sqrt(this.h.distanceToSqr(alvo))));
+		return true;
+	}
+
+	/**
+	 * Um dos dois próximos passos do caminho, a até dois blocos, onde o corpo abaixado não cabe: a boca de um vão.
+	 * Conta também o degrau para cima debaixo de teto baixo, em que abaixado ele bateria a cabeça no pulo.
+	 */
+	@Nullable
+	private BlockPos vaoAdiante(ServerLevel level) {
+		Path caminho = this.h.getNavigation().getPath();
+		if (caminho == null || caminho.isDone()) {
+			return null;
+		}
+		int proximo = caminho.getNextNodeIndex();
+		for (int i = proximo; i < Math.min(caminho.getNodeCount(), proximo + 2); i++) {
+			BlockPos no = caminho.getNodePos(i);
+			double dx = no.getX() + 0.5 - this.h.getX();
+			double dz = no.getZ() + 0.5 - this.h.getZ();
+			if (dx * dx + dz * dz > 4.0) {
+				break;
+			}
+			double chao = WalkNodeEvaluator.getFloorLevel(level, no);
+			if (!this.h.cabeAbaixado(level, new Vec3(no.getX() + 0.5, chao, no.getZ() + 0.5))) {
+				return no;
+			}
+			double sobe = chao - this.h.getY();
+			if (sobe > 0.6 && !this.h.cabeAbaixado(level, this.h.position().add(0, sobe, 0))) {
+				return no;
+			}
+		}
+		return null;
+	}
+
+	/** O vão é a proteção de alguém quando está perto dele; longe, é só o caminho por onde ele vem. */
+	private boolean deveAvisar(ServerLevel level, ServerPlayer alvo, BlockPos boca) {
+		double dx = alvo.getX() - (boca.getX() + 0.5);
+		double dz = alvo.getZ() - (boca.getZ() + 0.5);
+		if (dx * dx + dz * dz > AVISO_DO_VAO * AVISO_DO_VAO || Math.abs(alvo.getY() - boca.getY()) > 5.0) {
+			return false;
+		}
+		return level.getGameTime() - this.vaoAvisadoTick > 200;
+	}
+
+	/** Parado na boca do vão, de quatro, olhando para dentro: algo se arrasta ali, e só o alvo ouve. */
+	private void tickVao(ServerLevel level, ServerPlayer alvo) {
+		this.h.pararEOlhar();
+		if (this.vaoEspera % 10 == 0 && this.vaoBoca != null) {
+			ApoioCaca.avisoNoVao(level, alvo, this.vaoBoca, this.vaoEspera / 10 % 2 == 0);
+		}
+		if (--this.vaoEspera <= 0) {
+			this.vaoBoca = null;
+		}
+	}
+
+	/** Ele acabou de mudar de lugar sem andar (o piscar, o atalho, atravessar): o corpo é o que cabe ali. */
+	private void aoMudarDeLugar(ServerLevel level) {
+		this.h.definirDeQuatro(!this.h.cabeAbaixado(level, this.h.position()));
+		this.cabendo = 0;
+	}
+
+	private void logCorpo(ServerLevel level, ServerPlayer alvo, String motivo) {
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s corpo=%s motivo=%s pos=%s dist=%.1f",
+				this.h.getIdManifestacao(), this.h.isDeQuatro() ? "DE_QUATRO" : "ABAIXADO", motivo,
+				HospedeBusca.pos(this.h.blockPosition()), Math.sqrt(this.h.distanceToSqr(alvo))));
 	}
 
 	/** Modificador de navegação que dá a velocidade pedida, em blocos por segundo. */
@@ -386,17 +528,86 @@ final class Cacada {
 			livre = d;
 		}
 		if (livre < 0.5) {
+			// A linha reta está tampada. Se há caminho por outro lado (uma fresta, a volta na parede), é por ele
+			// que o piscar o traz: encarar segura, mas não fecha uma passagem que está aberta. Sem isto, olhar para
+			// ele por um buraco de um bloco o deixava parado do lado de fora até a caçada acabar.
+			this.avancarPeloCaminho(level, alvo, avanco);
 			return;
 		}
 		Vec3 destino = this.h.position().add(direcao.normalize().scale(livre));
-		BlockPos chao = HospedeBusca.acharChao(level, destino.x, this.h.getY() - 2, destino.z);
+		// O chão é o do andar em que o avanço chegou, ou logo abaixo. Até a alpha23 era o primeiro chão achado de
+		// cima para baixo, a partir de cinco blocos acima dele: debaixo de um teto de até cinco blocos de espessura
+		// (uma casa, uma caverna rasa, a copa de uma árvore) o chão achado era o lado de cima do teto, o avanço era
+		// recusado por desnível, e quem o encarava ali o segurava até a caçada acabar.
+		BlockPos chao = chaoNoAndar(level, destino.x, andar, destino.z);
 		if (chao == null || Math.abs(chao.getY() - this.h.getY()) > 2.5
 				|| Diretor.emZonaCalma(alvo, chao.getX(), chao.getY(), chao.getZ())) {
 			return;
 		}
 		this.h.getNavigation().stop();
 		this.h.snapTo(chao.getX() + 0.5, chao.getY(), chao.getZ() + 0.5, this.h.getYRot(), 0.0F);
+		this.aoMudarDeLugar(level);
 		this.h.olharPara(alvo);
+	}
+
+	/**
+	 * O piscar por onde há caminho: até "avanco" blocos ao longo dele, um passo de cada vez. Para antes de uma
+	 * Linha de Cinza, da zona da vela e de encostar no jogador, como o avanço em linha reta. O caminho só passa
+	 * por onde ele cabe, então isto continua não atravessando nada que tenha corpo. Onde o passo seguinte é um vão,
+	 * ele já fica de quatro: é a pose que o jogador vê ao abrir os olhos.
+	 */
+	private void avancarPeloCaminho(ServerLevel level, ServerPlayer alvo, double avanco) {
+		Path caminho = this.h.getNavigation().createPath(alvo, 0);
+		if (caminho == null) {
+			return;
+		}
+		Node fim = caminho.getEndNode();
+		if (!caminho.canReach() && (fim == null || fim.asBlockPos().distSqr(alvo.blockPosition()) > 2.25)) {
+			return;
+		}
+		Vec3 de = this.h.position();
+		Vec3 destino = null;
+		boolean vaoLogo = false;
+		double andado = 0;
+		for (int i = caminho.getNextNodeIndex(); i < caminho.getNodeCount(); i++) {
+			BlockPos no = caminho.getNodePos(i);
+			Vec3 ponto = new Vec3(no.getX() + 0.5, WalkNodeEvaluator.getFloorLevel(level, no), no.getZ() + 0.5);
+			double trecho = ponto.distanceTo(de);
+			if (andado + trecho > avanco + 0.01
+					|| CinzaEspalhadaBlock.linhaPerto(level, no, 0) != null
+					|| Diretor.emZonaCalma(alvo, ponto.x, ponto.y, ponto.z)
+					|| ponto.distanceToSqr(alvo.position()) < 1.6 * 1.6) {
+				vaoLogo = destino != null && !this.h.cabeAbaixado(level, ponto);
+				break;
+			}
+			andado += trecho;
+			de = ponto;
+			destino = ponto;
+		}
+		if (destino == null || andado < 0.5) {
+			return;
+		}
+		this.h.getNavigation().stop();
+		this.h.snapTo(destino.x, destino.y, destino.z, this.h.getYRot(), 0.0F);
+		this.aoMudarDeLugar(level);
+		if (vaoLogo) {
+			this.h.definirDeQuatro(true);
+		}
+		this.h.olharPara(alvo);
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s piscar pelo caminho andou=%.1f corpo=%s",
+				this.h.getIdManifestacao(), andado, this.h.isDeQuatro() ? "DE_QUATRO" : "ABAIXADO"));
+	}
+
+	/** O chão de uma coluna a partir de um andar: nele, ou até três blocos abaixo. Nunca acima. */
+	@Nullable
+	private static BlockPos chaoNoAndar(ServerLevel level, double x, int andar, double z) {
+		for (int dy = 0; dy >= -3; dy--) {
+			BlockPos pos = BlockPos.containing(x, andar + dy, z);
+			if (Diretor.livre(level, pos) && Diretor.livre(level, pos.above()) && solido(level, pos.below())) {
+				return pos;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -442,6 +653,7 @@ final class Cacada {
 		}
 		this.h.getNavigation().stop();
 		this.h.snapTo(lugar.getX() + 0.5, lugar.getY(), lugar.getZ() + 0.5, this.h.getYRot(), 0.0F);
+		this.aoMudarDeLugar(level);
 		this.h.olharPara(alvo);
 		this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATALHO");
 		this.recargaAtalho = 200;
@@ -691,6 +903,7 @@ final class Cacada {
 		}
 		if (saida != null) {
 			this.h.snapTo(saida.getX() + 0.5, saida.getY(), saida.getZ() + 0.5, this.h.getYRot(), 0.0F);
+			this.aoMudarDeLugar(level);
 			this.h.olharPara(alvo);
 			this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATRAVESSOU");
 			// "Sair de perto resolve" tem de valer: ele aparece ao lado do bloco e fica um segundo e meio parado.
@@ -725,6 +938,9 @@ final class Cacada {
 			return;
 		}
 		Vec3 ponto = this.pontoDaBorda;
+		if (!percebido) {
+			this.ajustarCorpo(level, alvo, false);
+		}
 		if (percebido || ponto == null || this.h.position().distanceToSqr(ponto) < 2.25) {
 			this.h.pararEOlhar();
 		} else if (this.h.tickCount % 10 == 0) {
@@ -756,6 +972,7 @@ final class Cacada {
 		if (lugar != null) {
 			this.h.getNavigation().stop();
 			this.h.snapTo(lugar.getX() + 0.5, lugar.getY(), lugar.getZ() + 0.5, this.h.getYRot(), 0.0F);
+			this.aoMudarDeLugar(level);
 			this.h.olharPara(alvo);
 		}
 		ApoioCaca.somDeRecuo(alvo, this.h);
@@ -783,9 +1000,9 @@ final class Cacada {
 			return;
 		}
 		this.log(level, alvo, String.format(Locale.ROOT,
-				"CACA id=%s FIM motivo=%s duracao=%ds contato=%ds piscadas=%d atalhos=%d golpes=%d fingiu=%s",
+				"CACA id=%s FIM motivo=%s duracao=%ds contato=%ds piscadas=%d atalhos=%d golpes=%d fingiu=%s vaos=%d",
 				this.h.getIdManifestacao(), motivo, this.idade / 20, this.contato / 20, this.piscadas, this.atalhos,
-				this.golpes, this.fingiu ? "sim" : "nao"));
+				this.golpes, this.fingiu ? "sim" : "nao", this.vaos));
 		this.h.sumir(level, false, motivo);
 	}
 
@@ -793,8 +1010,8 @@ final class Cacada {
 		if (this.encerrada) {
 			return;
 		}
-		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s CAPTURA como=%s duracao=%ds contato=%ds",
-				this.h.getIdManifestacao(), como, this.idade / 20, this.contato / 20));
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s CAPTURA como=%s duracao=%ds contato=%ds vaos=%d",
+				this.h.getIdManifestacao(), como, this.idade / 20, this.contato / 20, this.vaos));
 		ApoioCaca.capturar(level, alvo, this.h);
 		this.h.sumir(level, false, "TOCOU");
 	}

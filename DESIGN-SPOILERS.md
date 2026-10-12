@@ -1881,3 +1881,100 @@ O jogador de mentira não tem os pés no chão para o jogo (`onGround` falso), e
 - Se a parede some "na cara" dele: a seis blocos, andando, ele pode estar olhando para ela quando ela se desfaz. Toda miragem do mod faz isso, e ele disse em 08/10 que perceber uma coisa piscando "é justamente isso que eu queria"; mas uma parede inteira é maior que uma tocha.
 - O caso em que a parede fica entre ele e a saída enquanto ele é surpreendido por outra coisa: a caçada não começa com perturbação em curso, mas uma que comece depois encontra a miragem ainda lá, até ele chegar a seis blocos.
 - Como soa a tampa (são os sons do próprio jogo).
+
+---
+# Versão 0.9.0-alpha24 — ele passa (pacote 4, primeira parte)
+
+O pacote 4 do plano ("ele passa, e ele guarda") é médio a grande e mexe na caçada, que é a parte mais instável do projeto. Entra em duas versões, como o pacote 3: esta é a da caçada (a ideia 2.7 do cardápio, com a página da 7.4); a "afronta" como estado de dias (2.8) fica para a alpha25.
+
+O que ele disse em 11/10: "quando ele apareceu mais fortemente na caverna e eu ataquei ele, ele estava preso num local", e pediu que ele se espremesse ou agachasse para passar por um ou dois blocos.
+
+## O que a falha de 11/10 era, e o que não era
+
+Na caçada de 11/10 (`M002`, aos 5520 s) a busca escreveu `CAMINHO_FALHOU` três vezes em sete segundos. O cardápio pedia para reproduzir isso no terreno de verdade antes de qualquer pose nova. Foi feito, e o resultado mudou o que entrou.
+
+- **Exportei a galeria** em que a caçada aconteceu (`src/gametest/resources/terrenos/galeria.txt`, 46 × 14 × 50 blocos, sem coordenadas) e pus a criatura onde o log diz que ela nasceu (a boca de um túnel, no alto). Atenção ao ler posições do log: `pos=(x,y,z)` arredonda o centro do bloco, e em coordenada positiva isso dá o bloco seguinte (o `z=248` do log era o bloco 247).
+- **Com o código da alpha23**, dos 881 lugares da galeria em que alguém fica de pé, só 38 a que um jogador chega andando ficaram sem caminho para ela, todos no fundo do corredor de baixo, a mais de 64 blocos **andando** (é o limite do jogo para o comprimento de um caminho, e vem do alcance de 64 da criatura); e mesmo ali ela chegou, porque o caminho parcial a leva para perto e a conta seguinte fecha. Com o jogador parado em onze lugares diferentes, a caçada chegou aos onze sem um `CAMINHO_FALHOU`. **Não reproduzi a falha.** Não era "ele não cabe".
+- **O que `CAMINHO_FALHOU` quer dizer, lido no código do jogo (26.2).** `PathNavigation.moveTo` devolve "não" em dois casos: quando não há como calcular (a criatura está no ar e fora d'água: `canUpdatePath`), e quando o caminho novo é **igual** ao que ela acabou de andar (`sameAs`), porque aí o caminho guardado, já terminado, não é trocado. O segundo caso é ele parado no ponto mais perto do alvo a que o corpo e os limites dele deixam chegar: um vão de um bloco no meio, uma queda de mais de três blocos (o jogo não deixa uma criatura planejar queda maior), mais de 64 blocos de caminhada, ou o orçamento de 1024 nós da conta. Três "não" seguidos e a busca vai investigar um ponto sorteado.
+- **Por que em 11/10 isso não teve resposta.** Era a primeira caçada da vida dele, e na primeira o atalho e o atravessar ficam desligados de propósito. E o "preso" que ele viu foi sobretudo a regra: ele o encarou, e encarado ele não anda (as três piscadas o trouxeram de 13,6 para 4,8 blocos). Ele não sabia a regra, e bateu.
+
+Como não reproduzi, **não mexi em nenhum limite** (queda, comprimento de caminho, orçamento). O log passou a dizer qual dos dois casos foi e onde (a linha `BUSCA ... sem_caminho`, abaixo), e o analisador abre com alerta quando for o segundo. Na próxima caçada dele em que isso acontecer, dá para conferir o lugar no mundo salvo.
+
+## De quatro (2.7)
+
+Ele tem um terceiro corpo: **0,7 × 0,9** (`HospedeEntity.CORPO_DE_QUATRO`). Com ele, um vão de um bloco deixa de ser parede.
+
+- **O caminho é medido de quatro.** O jogo calcula o caminho com o tamanho que a criatura tem na hora da conta. `NavegacaoDoHospede` (a navegação dele; é a de sempre com um método a mais) troca o tamanho que a conta lê, só durante a conta, por `fixupDimensions`: a caixa de colisão e o lugar dele não mudam, e nada vai para o cliente. Vale nos estágios da caçada em que ele anda (`PERSEGUE` e `ESPERA_VELA`); fora da caça a navegação é a de sempre.
+- **O corpo de verdade só muda onde o lugar pede** (`Cacada.ajustarCorpo`, a cada tick em que ele não está na tela): de quatro quando o corpo abaixado não cabe onde ele está, ou quando não cabe num dos dois próximos passos do caminho (a até dois blocos), ou quando o passo é um degrau para cima debaixo de teto baixo. Levanta-se um quarto de segundo depois de caber de novo.
+- **Ele nunca troca de corpo na tela.** Olhado, ele não anda nem muda: o jogador vê uma pose de cada vez. É a ideia do cardápio ("a cada piscada, uma pose"), e dispensa animar o rastejar.
+- **De quatro ele é lento:** 55% do passo (`LENTO_DE_QUATRO`). O Cave Dweller faz o mesmo (0,35 contra 0,5), e é no vão que o jogador tem tempo de vê-lo entrar.
+- **O aviso.** Um vão é a proteção de alguém quando está perto dele. Se a boca do vão está a até oito blocos do jogador (no chão), ele para ali de quatro por um segundo e meio a três, e algo se arrasta e arranha na boca (os sons `ARRASTO` e `ARRANHAR`, que já existiam, e um pouco de cinza), só para o alvo. É o papel da maçaneta atrás de uma porta: toda resposta dele avisa. Longe do jogador o vão é só caminho, sem aviso; quem vem de longe por um túnel de um bloco avisa quando o trecho que falta entra nos oito blocos. Não avisa de novo antes de dez segundos.
+- **Vale na primeira caçada.** A primeira caçada não tem atalho nem atravessar porque são exceções à regra. Entrar por um buraco aberto não é exceção: é andar.
+- **O desenho** (`HospedeModel.posarDeQuatro`): o tronco deitado, a cabeça erguida e torta olhando para a frente, um braço estendido adiante, o outro recolhido ao longo do corpo, as pernas arrastadas atrás. O braço da frente troca a cada bloco (pela paridade do lugar): entre uma olhada e outra, as poses parecem um rastejar. O topo da cabeça fica a uns 14 pixels do chão. O desenho é muito mais comprido que a caixa de colisão (uns quatro blocos e meio), então a caixa de corte da tela foi aumentada (`getBoundingBoxForCulling`).
+
+**Onde me afastei do cardápio.** Ele sugeria uma caixa de 0,6 × 0,9; usei 0,7 de largura, igual à dos outros corpos, para trocar de corpo nunca empurrá-lo para o lado (o jogo reposiciona quem cresce para os lados). E o cardápio falava em três poses escolhidas "pela altura livre da célula": de pé (3,0) continua não existindo na caça, que já era abaixada (1,9).
+
+## Duas brechas da caçada, fechadas
+
+A regra da caçada é fechar o que a encerra de graça. Achei duas ao testar, e a segunda existia sem vão nenhum.
+
+- **Encarar por um buraco.** O avanço do piscar ia em linha reta e parava em qualquer coisa com corpo. Com o caminho passando por uma fresta (ou dando a volta numa parede), quem o encarava o deixava parado do outro lado até o teto de dois minutos: havia caminho, então ele nunca atravessava, e a linha reta estava tampada, então ele nunca avançava. Agora, com a linha reta tampada e havendo caminho até o jogador, o piscar o traz **pelo caminho**, até três blocos de cada vez (`Cacada.avancarPeloCaminho`), parando antes de uma Linha de Cinza, da zona da vela e de encostar, como antes. O caminho só passa por onde ele cabe: o piscar continua não atravessando vidro nem parede. Onde o passo seguinte é um vão, ele já fica de quatro: é a pose que o jogador vê ao abrir os olhos.
+- **Encarar debaixo de um teto.** O avanço em linha reta procurava o chão do lugar de chegada de cima para baixo, a partir de cinco blocos acima dele. Debaixo de um teto de até cinco blocos de espessura (uma casa, uma caverna rasa, a copa de uma árvore) o "chão" achado era o lado de cima do teto, o avanço era recusado por desnível, e ele não saía do lugar. Vi isso num teste: 26 piscadas, todas a 11,0 blocos, até a caçada acabar. Na caverna funda de 11/10 o piscar funcionou porque havia muita pedra em cima. Agora o chão é o do andar em que o avanço chegou, ou até três blocos abaixo (`Cacada.chaoNoAndar`).
+
+## "Chegou" quando chegou
+
+Ao testar na galeria dele, num dos lugares a caçada levava 24 s ou 70 s conforme a sorte. A busca dava o último lugar conhecido por alcançado a 2,8 blocos em linha reta: a dois passos do jogador, com uma quina de pedra entre os dois, ele "chegava", parava, olhava em volta e saía procurando noutro lugar, com o caminho pela metade. Agora "chegou" é estar a 2,8 blocos **e enxergar o lugar**, ou não ter mais para onde andar (`HospedeBusca.enxerga`). Quem enxerga o lugar e não vê ninguém é que chegou e não achou. Nesse lugar a caçada passou a levar de 19 a 21 s, em seis execuções.
+
+## As páginas chegam depois (7.4)
+
+O diário já tinha páginas sobre a caçada (a 23, a 24 e a 25), mas só na ordem, perto do fim. Ele viveu a primeira caçada sem ter lido nenhuma.
+
+- **A página 23** ("olhar só compra tempo; use o tempo para andar para trás, até a luz": os dois verbos dele) é pedida depois da primeira caçada, seja qual for o fim dela. Vale para quem foi caçado antes desta versão: é o caso dele, e a página deve chegar nos primeiros minutos da próxima sessão.
+- **Uma página nova, a 29**, na mesma voz, conta o vão: chega depois da primeira vez em que ele avisa numa boca e entra (`caca_vaos` na Memoria). Sempre depois, nunca antes: a primeira vez é para ser vivida sem manual.
+- A entrega é a de toda página pedida (`Ensino.entregarPagina`): uma de cada vez, fora de qualquer aparição. O diário passa a ter 29 páginas.
+
+## Os testes
+
+- **Servidor** (`TestesDoVao`, sete testes; 94 no total):
+  - `eleEntraPeloVaoDeUmBloco`: fechado numa sala de pedra, de costas para um buraco de um bloco rente ao chão. Ele vem pelo buraco, de quatro, com menos de um bloco de altura; antes de entrar fica 28 ticks ou mais parado na boca, e o alvo recebe dois ou mais sons de arrastar vindos dali; nunca usa o atravessar; nunca fica dentro de um bloco.
+  - `encararPelaJanelaDeUmBlocoNaoVence`: a mesma sala com uma janela na altura dos olhos, e o jogador olhando para ele por ela o tempo todo. O piscar o traz pela janela, de quatro, e ele pega o jogador sem atravessar nada.
+  - `depoisDoVaoEleSeLevanta`: duas câmaras ligadas por um túnel de um por um, com o jogador longe. Ele entra de quatro, sai e se levanta; longe do jogador não há aviso.
+  - `peloTunelCompridoEleAvisaAoChegarPerto`: um túnel de um por um, de doze blocos, que desemboca na sala do jogador. Ele entra de quatro a quinze blocos, sem aviso, e avisa (parado, com os sons) quando o que falta entra nos oito blocos.
+  - `naGaleriaDeVerdadeACacadaChega`: a galeria do dono, ele nascendo onde nasceu, o jogador parado em três lugares. Chega aos três em menos de 45 s, sem a navegação desistir e sem ficar dentro de um bloco. **Não é a prova de que a falha de 11/10 acabou** (ela não acontecia com o jogador parado nem antes): é a guarda de que o corpo novo não estragou o que funcionava num terreno de verdade, e o teste do "chegou".
+  - `encararDebaixoDeTetoNaoVence`: debaixo de um teto de um bloco, três acima do chão, encarando. Ele avança a cada piscar e chega.
+  - `asPaginasDaCacadaChegamDepois`: quem nunca foi caçado não tem página pedida; quem foi (e viu o vão) recebe a 23 e depois a 29.
+- **Cliente** (`TestesDeCliente.deQuatro`, fotos 55 a 60): ele num buraco de um bloco, de frente, a cinco blocos e de perto; de lado em campo aberto, com cada um dos braços à frente; em cima de um bloco; e de cima. O teste confere que de quatro ele tem 0,9 de altura e cabe no buraco sem encostar em nada.
+- `Terreno.montar` passou a pôr pedra também **embaixo** da caixa: o chão do mundo de teste não é plano, e onde ele é mais baixo que o canto a caverna montada ficava com o fundo aberto.
+
+**Uma armadilha de teste que custou uma rodada:** a lista de colunas usadas que o `CLAUDE.md` ensinava a tirar não via os testes que montam terreno por função (`montarTunel(helper, dz)` e parecidas). Pus os testes novos em sete colunas que já tinham dono, e um deles achou no chão as páginas que outro tinha deixado. O `CLAUDE.md` agora manda listar todo número negativo terminado em 00.
+
+## As fotos (55 a 60)
+
+Abertas e conferidas, do job `fotos` do PR #45.
+
+- **55 e 56, no buraco, de frente** (a cinco blocos e a três). É a vista que importa, e é a que funciona: a cabeça, erguida e um pouco torta, enche o buraco de um bloco, com os dois pontos claros; um braço sai pelo chão na direção de quem olha, com a mão clara na ponta; o outro some para trás. Cabe sem atravessar a pedra em volta.
+- **60, de cima.** O corpo inteiro como foi desenhado: a cabeça, um braço adiante, o tronco, as duas pernas juntas para trás, o outro braço recolhido ao lado do tronco. Uns quatro blocos e meio de ponta a ponta.
+- **57, 58 e 59, de lado.** Um corpo comprido e chato no chão, com a cabeça de pé a um terço. De lado e em campo aberto ele parece mais um boneco deitado do que de frente; não é de onde ele vai ser visto (de quatro ele está dentro de um vão ou debaixo de um teto baixo), mas é a pose a rever se o dono disser que pareceu artificial. As primeiras fotos de lado saíram a uns 35 graus: ele nasce virado para o jogador e o corpo leva mais de um segundo para acabar de virar para o rumo pedido. Achei que faltavam as pernas e pedi as fotos 59 e 60 para tirar a dúvida; o desenho estava certo, a foto é que tinha sido tirada cedo. O teste agora espera três segundos.
+- **Um achado de passagem, que já existia:** o ombro esquerdo dele tem um quadrado claro em cima. Os dois pontos dos olhos usam, na textura, um canto que também é do braço esquerdo. De pé quase não se vê; de quatro e de cima, vê-se. Não mexi (mudar a textura é trabalho do gerador de texturas, e muda todas as fotos antigas).
+
+## O que ficou de fora, de propósito
+
+- **A afronta** (2.8) e a tabela dela no analisador: alpha25.
+- **Os limites da navegação** (queda de três blocos, 64 blocos de caminho, 1024 nós): sem a falha reproduzida, mexer neles seria palpite. O log novo diz quando forem a causa.
+- **O fiapo na passagem** (3.7), que dependia desta: um vestígio preso no vão por onde ele passou. Pequeno, e fica para quando houver uma caçada dele com vão para olhar.
+- Som novo para o arrastar. O ambiente de gerar sons continua sem existir nas duas pastas; os dois sons usados já estavam no mod.
+- A resposta dele na primeira caçada quando **não** há caminho nenhum (continua sem atalho e sem atravessar, como foi desenhada).
+
+## Medição
+
+A sessão sintética (uma hora, três jogadores de mentira em campo aberto) deu 30, 42 e 26 saídas por hora e 10, 9 e 8 aparições por hora (fase 2, fase 4, mundo novo). Na alpha22 tinham sido 30, 42 e 29, e 8, 10 e 10: a mistura não mudou, como se esperava de uma versão que só mexe na caçada. Nenhuma caçada aconteceu nessa hora; o que é novo aqui só os testes de servidor exercitam.
+
+## Não verificado por ninguém
+
+- **Se a pose convence.** As fotos mostram que desenha e que cabe; se assusta ou se parece um boneco deitado, só ele diz. É a primeira coisa a perguntar depois de uma caçada com vão.
+- **Como soa o aviso na boca do vão.** São dois sons que ele já ouviu noutros lugares do mod (o arrastar na Linha de Cinza, o arranhar do atravessar).
+- **Com a irmã ou os amigos olhando.** A regra "ele só anda quando não é olhado" é a do alvo. Outro jogador que esteja vendo enxerga a pose de quatro deslizando pelo chão, quase sem mexer os membros. É o mesmo limite que a caçada já tinha de pé (para quem não é o alvo ele anda normalmente), mas de quatro o deslizar aparece mais.
+- **Atalhos em caverna natural.** O caminho medido de quatro passa por frestas de um bloco que um jogador não atravessa. Na galeria dele isso não mudou nenhum dos três trajetos testados (ele não ficou de quatro nenhuma vez), mas numa caverna cheia de frestas ele pode chegar por um lado inesperado. É o efeito pedido; se parecer trapaça, é ali que se olha.
+- **O atalho no meio de um túnel.** A mais de dezesseis blocos e três segundos sem ser visto continua valendo o atalho da caçada (da segunda caçada em diante): ele some de dentro do túnel e reaparece a oito a doze blocos do jogador, fora da tela. Num teste isso o tirou de um túnel de dezoito blocos antes de ele chegar perto. É a regra de sempre, e o corpo se ajusta ao lugar novo; mas quer dizer que um túnel comprido de um bloco raramente será atravessado inteiro.
+- **Debaixo de folhagem baixa** ele também se abaixa de quatro (folha a um bloco do chão é teto). Não testei numa floresta.
+- **O piscar pelo caminho quando o caminho é uma volta comprida.** Encarado por uma janela de vidro com a porta aberta do outro lado da casa, ele agora vem pela porta, três blocos por piscada. É "fechar o que encerra de graça", mas é a mudança desta versão que mais muda a caçada dentro de uma casa.

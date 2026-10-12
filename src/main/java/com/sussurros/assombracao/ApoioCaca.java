@@ -127,6 +127,16 @@ public final class ApoioCaca {
 		m.salvar();
 	}
 
+	/** Ele avisou na boca de um vão e vai entrar por ele. É o que faz a página do diário sobre isso chegar depois. */
+	public static void contarVao(ServerPlayer p, HospedeEntity h) {
+		if (h.ehTeste()) {
+			return;
+		}
+		Memoria m = Memoria.de(p);
+		m.add(Memoria.CACA_VAOS, 1);
+		m.salvar();
+	}
+
 	/**
 	 * O aviso de que ele vai atravessar: batidas e arranhões abafados vindos de dentro de um bloco, e poeira
 	 * escura na face dele. É para o jogador entender "sai de perto daqui" com dois segundos de folga.
@@ -145,6 +155,19 @@ public final class ApoioCaca {
 			boolean batida = (level.getGameTime() / 10) % 2 == 0;
 			ModSons.tocarPara(p, x, y, z, batida ? ModSons.Som.PANCADA : ModSons.Som.ARRANHAR, 0.85F, 0.8F);
 		}
+	}
+
+	/**
+	 * O aviso de que ele vai entrar por um vão de um bloco (0.9.0-alpha24): algo se arrasta e arranha na boca do
+	 * buraco, e um pouco de pó cai dali. Só o alvo ouve e vê. É o mesmo papel da maçaneta atrás de uma porta: o
+	 * jogador fica sabendo por onde ele vem, com um segundo e meio a três de folga.
+	 */
+	public static void avisoNoVao(ServerLevel level, ServerPlayer p, BlockPos boca, boolean arrasta) {
+		double x = boca.getX() + 0.5;
+		double y = boca.getY() + 0.4;
+		double z = boca.getZ() + 0.5;
+		level.sendParticles(p, ParticleTypes.ASH, true, false, x, y, z, 8, 0.3, 0.25, 0.3, 0.0);
+		ModSons.tocarPara(p, x, y, z, arrasta ? ModSons.Som.ARRASTO : ModSons.Som.ARRANHAR, 0.8F, arrasta ? 1.1F : 0.75F);
 	}
 
 	/** Na fase 4, para quem já se apoiou muito na vela, ele pode soprá-la em vez de esperar. */
