@@ -991,7 +991,9 @@ public class TestesDeCliente implements FabricClientGameTest {
 			mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, chao.getX() + 0.5, chao.getY(), chao.getZ() + 5.0, 180, 12));
 			context.waitTicks(10);
 			mundo.getServer().runOnServer(server -> Diretor.deQuatroParaFoto(server.getPlayerList().getPlayers().get(0), chao, 90.0F));
-			context.waitTicks(20);
+			// Três segundos: ele nasce virado para o jogador, e o corpo leva mais de um segundo para acabar de
+			// virar para o rumo da pose (com um segundo de espera a foto "de perfil" saía a uns 35 graus).
+			context.waitTicks(60);
 			context.takeScreenshot(lado == 0 ? "57-de-quatro-de-perfil" : "58-de-quatro-de-perfil-o-outro-braco");
 		}
 		// De cima, para ver o corpo inteiro sem o chão na frente; e em cima de um bloco, de lado, para ver o que
@@ -1003,7 +1005,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.waitTicks(5);
 		mundo.getServer().runOnServer(server -> Diretor.deQuatroParaFoto(server.getPlayerList().getPlayers().get(0), alto.above(), 90.0F));
 		mundo.getServer().runCommand(String.format(Locale.ROOT, noLugar, alto.getX() + 0.5, alto.getY(), alto.getZ() + 5.0, 180, 0));
-		context.waitTicks(20);
+		context.waitTicks(60);
 		context.takeScreenshot("59-de-quatro-em-cima-de-um-bloco");
 		// De cima: o jogador em pé num bloco invisível, seis blocos acima dele, olhando para baixo.
 		mundo.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0).level()

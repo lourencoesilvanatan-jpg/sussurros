@@ -1943,10 +1943,19 @@ O diário já tinha páginas sobre a caçada (a 23, a 24 e a 25), mas só na ord
   - `naGaleriaDeVerdadeACacadaChega`: a galeria do dono, ele nascendo onde nasceu, o jogador parado em três lugares. Chega aos três em menos de 45 s, sem a navegação desistir e sem ficar dentro de um bloco. **Não é a prova de que a falha de 11/10 acabou** (ela não acontecia com o jogador parado nem antes): é a guarda de que o corpo novo não estragou o que funcionava num terreno de verdade, e o teste do "chegou".
   - `encararDebaixoDeTetoNaoVence`: debaixo de um teto de um bloco, três acima do chão, encarando. Ele avança a cada piscar e chega.
   - `asPaginasDaCacadaChegamDepois`: quem nunca foi caçado não tem página pedida; quem foi (e viu o vão) recebe a 23 e depois a 29.
-- **Cliente** (`TestesDeCliente.deQuatro`, fotos 55 a 58): ele num buraco de um bloco, de frente, a cinco blocos e de perto; e de perfil em campo aberto, com cada um dos braços à frente. O teste confere que de quatro ele tem 0,9 de altura e cabe no buraco sem encostar em nada.
+- **Cliente** (`TestesDeCliente.deQuatro`, fotos 55 a 60): ele num buraco de um bloco, de frente, a cinco blocos e de perto; de lado em campo aberto, com cada um dos braços à frente; em cima de um bloco; e de cima. O teste confere que de quatro ele tem 0,9 de altura e cabe no buraco sem encostar em nada.
 - `Terreno.montar` passou a pôr pedra também **embaixo** da caixa: o chão do mundo de teste não é plano, e onde ele é mais baixo que o canto a caverna montada ficava com o fundo aberto.
 
 **Uma armadilha de teste que custou uma rodada:** a lista de colunas usadas que o `CLAUDE.md` ensinava a tirar não via os testes que montam terreno por função (`montarTunel(helper, dz)` e parecidas). Pus os testes novos em sete colunas que já tinham dono, e um deles achou no chão as páginas que outro tinha deixado. O `CLAUDE.md` agora manda listar todo número negativo terminado em 00.
+
+## As fotos (55 a 60)
+
+Abertas e conferidas, do job `fotos` do PR #45.
+
+- **55 e 56, no buraco, de frente** (a cinco blocos e a três). É a vista que importa, e é a que funciona: a cabeça, erguida e um pouco torta, enche o buraco de um bloco, com os dois pontos claros; um braço sai pelo chão na direção de quem olha, com a mão clara na ponta; o outro some para trás. Cabe sem atravessar a pedra em volta.
+- **60, de cima.** O corpo inteiro como foi desenhado: a cabeça, um braço adiante, o tronco, as duas pernas juntas para trás, o outro braço recolhido ao lado do tronco. Uns quatro blocos e meio de ponta a ponta.
+- **57, 58 e 59, de lado.** Um corpo comprido e chato no chão, com a cabeça de pé a um terço. De lado e em campo aberto ele parece mais um boneco deitado do que de frente; não é de onde ele vai ser visto (de quatro ele está dentro de um vão ou debaixo de um teto baixo), mas é a pose a rever se o dono disser que pareceu artificial. As primeiras fotos de lado saíram a uns 35 graus: ele nasce virado para o jogador e o corpo leva mais de um segundo para acabar de virar para o rumo pedido. Achei que faltavam as pernas e pedi as fotos 59 e 60 para tirar a dúvida; o desenho estava certo, a foto é que tinha sido tirada cedo. O teste agora espera três segundos.
+- **Um achado de passagem, que já existia:** o ombro esquerdo dele tem um quadrado claro em cima. Os dois pontos dos olhos usam, na textura, um canto que também é do braço esquerdo. De pé quase não se vê; de quatro e de cima, vê-se. Não mexi (mudar a textura é trabalho do gerador de texturas, e muda todas as fotos antigas).
 
 ## O que ficou de fora, de propósito
 
