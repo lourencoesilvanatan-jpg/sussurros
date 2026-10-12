@@ -1691,3 +1691,45 @@ Tiradas no corredor sem saída dos testes (pedra, doze blocos, uma tocha no fund
 - **45, a tocha apagada:** a tela fica preta, só com a barra de itens. Era a única luz do corredor. É bem mais forte do que eu esperava de "uma tocha apaga por uns segundos": quando a tocha escolhida é a única por perto, o jogador fica de quatro a sete segundos no breu. Não mexi: é reversível, é curto, e é só para o alvo; mas é o primeiro ponto a perguntar a ele (sem dizer o quê) e o primeiro a rever se parecer defeito do jogo.
 
 O que as fotos não dizem: o movimento do pó caindo (são três punhados em um segundo) e o som.
+
+---
+# Versão 0.9.0-alpha21 — a primeira travessia, garantida (pacote 2)
+
+Segundo pacote do plano de 11/10/2026: a ideia 6.1 do cardápio. O fato a que responde: nenhuma visita ao Avesso em duas horas e meia de mundo, com o jogador na fase 4 e dormindo. É o maior pedaço do mod que o dono não viu, e ele perguntou por ele ("a dimensão é isso?", sobre o Véu).
+
+## O que faltava
+
+As duas portas eram sorteio: quinze em cem ao deitar, da fase 3 em diante, e trinta e cinco em cem das capturas, mas só depois de já ter ido uma vez. Quem dorme dez noites tem uma chance em cinco de nunca ter ido; quem dorme pouco, como ele, pode passar semanas.
+
+## A regra
+
+- Da fase 3 em diante, enquanto ele **nunca foi**, cada dia de jogo em que ele deita conta uma noite (`avesso_noites` na `Memoria`; deitar duas vezes na mesma noite conta uma só). O sorteio de quinze em cem continua valendo nas duas primeiras. **Na terceira ele vai, sem sorteio.**
+- Só a primeira visita. Da segunda em diante nada muda: três dias de jogo no mínimo, oito em cem, a carta `SONO` do baralho e a captura.
+- Se ele levanta antes dos dois segundos de olhos fechados, não é levado (como sempre), e a noite seguinte em que deitar leva.
+- **A garantia não é saída de graça de uma caçada.** Se ele deita sendo caçado na noite em que a garantia valeria, ela fica para a próxima (`AVESSO garantia adiada`). O sorteio e a carta continuam como eram nesse caso: "deitar na cama no meio da caçada" é uma das três decisões da caçada que ficaram para o dono, e eu não quis decidir por ele nem para um lado nem para o outro.
+- A decisão é uma função pura (`Avesso.decidir`), e o número do jogador só é gasto quando ela depende dele (`dependeDoSorteio`).
+
+**A carta `SONO`** não mudou. Ela continua sendo o jeito de ir antes da terceira noite e o jeito de voltar lá fora de hora; o relatório a citava entre o que este pacote "estende", e o que conferi é que ela convive com a garantia (a carta passa por cima de tudo, uma vez).
+
+**A primeira visita continua quieta** (de 45 a 75 segundos, só o lugar). O relatório sustenta isso ("you need to go in blind") e aponta o risco: ser lida como "é só isso?", a pergunta que ele já fez sobre o Véu. O que responde a esse risco é o pacote 8, não este.
+
+## O marco
+
+O relatório acrescenta à 6.1 a ideia de **marco vivido**: a primeira ida passa a ser o que abre o que vem depois (o pacote 6, o que fica na casa, só começa depois dela). O marco já existe na `Memoria`: `avesso_visitas >= 1`, que só sobe quando ele volta de uma visita de verdade. Não criei outra chave. Quem fizer o pacote 6 lê essa.
+
+## Os testes
+
+- **JUnit** (`AvessoTest`, cinco testes): quem nunca foi vai na terceira noite mesmo sem sorte; antes dela o sorteio continua valendo; a garantia é só da primeira visita; a carta passa por cima de tudo; o sorteio só é gasto quando vale.
+- **Servidor** (`TestesDoAvesso.aPrimeiraIdaFicaGarantidaNaTerceiraNoite`, 79 no total): a contagem na `Memoria` de um jogador de verdade. Antes da fase 3 a noite não conta; duas vezes no mesmo dia contam uma; a terceira noite dá `GARANTIDA`; depois da primeira visita, sem sorte, nada. O servidor de teste não carrega a dimensão: aqui ninguém é levado.
+- **Cliente** (`TestesDeCliente.primeiraIdaGarantida`, no job `fotos`): o caminho de verdade. Uma cama, três noites de jogo, o sorteio do jogador forçado para "sem sorte"; nas duas primeiras ele continua no mundo normal, na terceira está do outro lado, na visita 1, e a volta conta a visita. Sem foto nova: não há nada novo na tela. Roda antes de a casa das fotos ser montada, porque a volta apaga por uns minutos as luzes que houver por perto.
+
+## O analisador
+
+- Na seção "Caçadas, capturas e o outro lado": quantas vezes ele deitou antes da primeira ida, a que noite chegou, e as decisões.
+- Alerta novo: a garantia foi decidida e ele não chegou lá.
+
+## Não verificado por ninguém
+
+- Se três noites é o número certo. É o do cardápio, sem sessão.
+- Se a primeira visita, vindo cedo e com data marcada, parece um acontecimento ou parece "é só isso?".
+- O caso em que ele joga sem nunca dormir: a garantia depende de deitar. O analisador diz quando não há nenhuma linha `AVESSO deitou`.

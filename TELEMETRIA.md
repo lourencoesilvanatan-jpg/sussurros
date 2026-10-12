@@ -863,3 +863,19 @@ Para conferir depois de uma sessão: nenhum `FIM motivo=SEM_LUGAR`; `VEU abriu` 
 - `EXPOSICAO ... naMira=Nt visto=sim|nao`: agora toda aparição mede o que só o primeiro contato media. `naMira` são os ticks na mira do jogador, com luz; `visto=sim` é a definição única (`HospedeEntity.foiVistoDeVerdade`): seis ticks seguidos assim, ou dissolver com a mira em cima. É o que o analisador conta em "na mira" da alpha20 em diante (num log mais antigo ele continua usando `ENCAROU`).
 
 Para conferir depois de uma sessão (o analisador faz as contas na seção "Nada termina em nada"): nenhuma linha `SEM_LUGAR` ou `nao_coube` sem `planoB=`; `visto=sim` em pelo menos duas de cada três vezes que o mod quis mostrá-lo; o maior tempo sem vê-lo, da fase 3 em diante, perto de trinta minutos e não de uma hora; e os segundos de exposição por hora, que a cota não pode fazer subir.
+
+## 0.9.0-alpha21 — a primeira ida garantida
+
+```
+[5210s][Jogador] AVESSO deitou noite=1/3 decisao=NADA
+[9480s][Jogador] AVESSO deitou noite=2/3 decisao=SORTEIO
+[13120s][Jogador] AVESSO deitou noite=3/3 decisao=GARANTIDA
+[13122s][Jogador] AVESSO levado origem=SONO_GARANTIDO visita=1 teste=nao
+[13120s][Jogador] AVESSO garantia adiada motivo=CACADA
+```
+
+- `AVESSO deitou noite=N/3 decisao=...`: só enquanto ele nunca foi, da fase 3 em diante, a cada vez que deita. `N` é em quantos dias de jogo diferentes ele já deitou (duas vezes na mesma noite contam uma). `decisao`: `NADA`, `SORTEIO` (os quinze em cem de sempre), `CARTA` (a carta do baralho) ou `GARANTIDA` (chegou à terceira noite). Depois da primeira visita a linha deixa de sair.
+- `AVESSO levado origem=SONO_GARANTIDO`: a ida que veio pela garantia. `SONO` continua sendo o sorteio e a carta. A linha só sai dois segundos depois do `deitou`, e só se ele ainda estiver deitado: `decisao=GARANTIDA` sem `levado` em seguida quer dizer que ele levantou antes (a noite seguinte leva).
+- `AVESSO garantia adiada motivo=CACADA`: ele deitou no meio de uma caçada na noite em que a garantia valeria. Fica para a próxima vez que deitar.
+
+Para conferir depois de uma sessão: `AVESSO chegou visita=1` depois de, no máximo, três linhas `deitou` em dias diferentes. O analisador conta as noites na seção "Caçadas, capturas e o outro lado" e alerta se a garantia foi decidida e ele não chegou lá.

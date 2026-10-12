@@ -10,10 +10,13 @@ Você vai jogar várias versões de uma vez. Não precisa testar uma por uma: é
 |---|---|---|
 | alpha18 e alpha19 | Em casa, fora, e **um bom tempo debaixo da terra** (caverna ou mina) | Alguma coisa pareceu "de boneco", artificial? Alguma coisa pareceu perto demais? |
 | alpha20 | O mesmo. Vale ficar um tempo **parado num lugar apertado** (um canto de caverna, uma mina estreita) e jogar **mais de meia hora seguida** | Teve algum momento em que você sentiu que ia acontecer alguma coisa e não aconteceu nada? Você (ou a sua irmã) voltou a perguntar "cadê o bicho?" |
+| alpha21 | **Durma.** Deite numa cama, à noite, em pelo menos **três noites de jogo** (não precisam ser seguidas), e espere uns segundos deitado em vez de levantar logo | Teve alguma coisa nesta sessão que você nunca tinha visto? |
 
 De comando, só o `/sussurros debug on`, como sempre.
 
 ## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha21: **o segundo pacote do plano de conteúdo.** Não tem nada novo: uma parte grande do mod, que já existia e dependia só de sorte para acontecer pela primeira vez, passa a ter um prazo. Para testar, é o que está na lista acima: dormir normalmente, em pelo menos três noites de jogo.
 
 Versão 0.9.0-alpha20: **o primeiro pacote do plano de conteúdo** (o "pode todos" de 11/10). Não tem item nem lugar novo. São duas garantias: uma preparação do mod que não cabe no lugar em que você está deixa de terminar em nada, e nas fases em que você já está o mod passa a conferir se a parte principal dele chegou mesmo até você. Para testar, continue no **mesmo mundo**; as perguntas estão na lista acima.
 
@@ -121,7 +124,8 @@ Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abr
 Você não precisa repetir isto. Fica registrado para quem programa.
 
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
-- O que mudou nesta versão (alpha20) foi exercitado contra um jogador de mentira em nove situações, em lugares montados para isso, e o desfecho foi o esperado em todas. Uma delas confere que quem está ao seu lado não vê nem ouve o que é só seu.
+- O que mudou na alpha21 é uma regra só: ela é conferida em números (cinco casos), contra um jogador de mentira, e de ponta a ponta dentro do jogo de verdade, na máquina do GitHub.
+- O que mudou na alpha20 foi exercitado contra um jogador de mentira em nove situações, em lugares montados para isso, e o desfecho foi o esperado em todas. Uma delas confere que quem está ao seu lado não vê nem ouve o que é só seu.
 - O que mudou na alpha19 continua passando nas suas sete situações. Duas delas rodam em cima de um pedaço de caverna copiado do seu mundo (só pedra, ar e tochas, sem as coordenadas).
 - O que mudou na primeira hora (alpha14) continua passando nas suas seis situações.
 - Os itens e blocos continuam sendo usados por um jogador de mentira e fotografados dentro do jogo.
