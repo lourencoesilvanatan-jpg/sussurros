@@ -413,6 +413,45 @@ public final class Diretor {
 				h.isAbaixado() ? "ABAIXADO" : "DE_PE");
 	}
 
+	/**
+	 * Só para os testes: roda um evento como o Diretor rodaria por conta própria (conta para tudo: atenção,
+	 * pressão, a cota de corpo). O forcarEvento, de comando, não conta para nada, e por isso não serve para
+	 * testar o que depende de contar.
+	 */
+	public static boolean eventoDoDiretorParaTeste(ServerPlayer p, Evento ev) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		Memoria m = Memoria.de(p);
+		long tick = level.getGameTime();
+		boolean ok = executar(level, p, m, e, ev, tick / 20, tick);
+		m.salvar();
+		return ok;
+	}
+
+	/** Só para os testes: o que o último plano B deste jogador fez (PO, TOCHA, PASSOS, NENHUM; "-" se não houve). */
+	public static String planoBParaTeste(ServerPlayer p) {
+		return estado(p).planoBResumo;
+	}
+
+	/**
+	 * Só para os testes e para o comando de teste: faz agora o sinal do plano B, como se uma procura de lugar
+	 * tivesse acabado de falhar aqui. Roda a procura de lugar apertado só para saber o lado (ninguém aparece).
+	 */
+	public static String testarPlanoB(ServerPlayer p) {
+		ServerLevel level = p.level();
+		EstadoJogador e = estado(p);
+		long tick = level.getGameTime();
+		e.quaseLugar = null;
+		e.dePertoFalhouEm = -1;
+		Aparicao.DePerto achado = Aparicao.buscarDePerto(level, p, e, tick / 20, false);
+		if (achado != null) {
+			// Havia lugar: o lado é esse mesmo, fora da vista.
+			e.quaseLugar = new Aparicao.Quase(achado.chao(), "teste", false, tick);
+		}
+		e.falhasDeLugar.limpar();
+		return PlanoB.executar(level, p, e, "COMANDO", tick / 20, tick);
+	}
+
 	/** Só para os testes: o tipo de lugar em que o Diretor acha que este jogador está (CASA, SUBSOLO...). */
 	public static String contextoParaTeste(ServerPlayer p) {
 		return estado(p).contexto.name();
@@ -774,6 +813,15 @@ public final class Diretor {
 		if (!tregua) {
 			boolean antes = criaturaPresente;
 			PrimeiroContato.segundo(level, p, m, e, luz, noite, calma, seg, tick, rnd);
+			criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
+			contatoAgora = criaturaPresente && !antes;
+		}
+		// 0.9.0-alpha20: a cota de corpo. Depois do primeiro contato, da fase 3 em diante, ele é visto de verdade
+		// de tempos em tempos. O relógio anda sempre; a tentativa própria, como o contato, é regra e não sorteio.
+		Cota.contar(p, m, e, fase, seg);
+		if (!tregua && !contatoAgora) {
+			boolean antes = criaturaPresente;
+			Cota.segundo(level, p, m, e, fase, calma, seg, tick, rnd);
 			criaturaPresente = e.criatura != null && !e.criatura.isRemoved();
 			contatoAgora = criaturaPresente && !antes;
 		}
@@ -1560,6 +1608,13 @@ public final class Diretor {
 						Depuracao.log(p, seg, String.format(Locale.ROOT, "ISCA ignorada aprendida=sim atendidas=%d chance=%.2f", atendidas, chanceIgnorar));
 					}
 				}
+				// 0.9.0-alpha20: a cota de corpo. Há vinte minutos ou mais ele não é visto de verdade: esta presença
+				// usa a colocação mais fácil de ver, antes de todas as outras (menos da isca). Ver Cota.
+				boolean porCota = false;
+				if (!ok && !e.forcando && Cota.devendo(m)) {
+					ok = Cota.colocar(level, p, m, e, duracao, pedido, "DIRETOR", seg, rnd);
+					porCota = ok;
+				}
 				// 0.9.0-alpha19: debaixo da terra ele vem para perto antes de tudo (menos da isca, que é pedido do
 				// jogador). O rastro e a rota, numa mina, põem-no a trinta blocos, depois de duas curvas.
 				if (!ok && e.contexto == ContextoMundo.Tipo.SUBSOLO) {
@@ -1589,7 +1644,10 @@ public final class Diretor {
 							duracao, 1.0, true, HospedeEntity.DIST_SUMIR_PADRAO, true, pedido);
 				}
 				if (ok) {
-					anunciar(level, p, e.criatura);
+					// A da cota já vem com os dois passos que dizem o lado (ver Cota.colocar).
+					if (!porCota) {
+						anunciar(level, p, e.criatura);
+					}
 					escolherSaida(m, e);
 				}
 			}
@@ -2602,13 +2660,22 @@ public final class Diretor {
 	 */
 	static boolean invocarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
 			int duracao, double distSumir, PedidoManifestacao pedido) {
+		return invocarDePerto(level, p, e, modo, duracao, distSumir, pedido, false);
+	}
+
+	/** O mesmo. soComLuz: só num lugar com luz para ele ser visto (é o que a cota de corpo pede; ver Cota). */
+	static boolean invocarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, HospedeEntity.Modo modo,
+			int duracao, double distSumir, PedidoManifestacao pedido, boolean soComLuz) {
 		long tick = level.getGameTime();
 		if (e.dePertoFalhouEm == tick) {
 			return false; // a procura não sorteia nada: no mesmo tick daria a mesma resposta
 		}
-		Aparicao.DePerto achado = Aparicao.buscarDePerto(level, p, e, tick / 20);
+		Aparicao.DePerto achado = Aparicao.buscarDePerto(level, p, e, tick / 20, soComLuz);
 		if (achado == null) {
-			e.dePertoFalhouEm = tick;
+			// Sem lugar COM LUZ ainda pode haver lugar no escuro: só a procura sem exigência fecha o tick.
+			if (!soComLuz) {
+				e.dePertoFalhouEm = tick;
+			}
 			return false;
 		}
 		pedido = pedido.comNota("DE_PERTO " + achado.resumo());
@@ -3343,8 +3410,11 @@ public final class Diretor {
 		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, seg + 600);
 		mudarEstado(p, e, EstadoDiretor.RECUANDO, seg, rnd);
 		e.duracaoEstado = 180 + rnd.nextInt(121); // silêncio de verdade depois do pico
-		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s FIM motivo=%s obsessao=%.0f->%.0f",
-				e.ameacaId, motivo, antes, e.obsessao));
+		// 0.9.0-alpha20: a sequência que não achou onde pôr o corpo não acaba em silêncio (ver PlanoB).
+		String planoB = "SEM_LUGAR".equals(motivo)
+				? " planoB=" + PlanoB.executar(p.level(), p, e, "AMEACA", seg, p.level().getGameTime()) : "";
+		Depuracao.log(p, seg, String.format(Locale.ROOT, "CENA id=%s FIM motivo=%s obsessao=%.0f->%.0f%s",
+				e.ameacaId, motivo, antes, e.obsessao, planoB));
 		marcarSilencioDoRecuo(p, e, seg, "POS_AMEACA", e.ameacaId);
 	}
 
@@ -3802,11 +3872,16 @@ public final class Diretor {
 					criatura.getVezesPercebida(), criatura.getReposicoes()));
 			// Exposição: quanto tempo ela ficou na tela dele (em ticks), e quanto disso perto e iluminada.
 			// O que aparece demais deixa de assustar; isto é o que o analisador soma por hora.
-			Depuracao.log(p, p.level().getGameTime() / 20, String.format(Locale.ROOT, "EXPOSICAO id=%s modo=%s naTela=%dt perto=%dt",
-					criatura.getIdManifestacao(), criatura.getModo(), criatura.getTicksNaTela(), criatura.getTicksPertoEClaro()));
+			// 0.9.0-alpha20: e se ele foi visto de verdade (na mira, com luz; ver HospedeEntity.foiVistoDeVerdade).
+			Depuracao.log(p, p.level().getGameTime() / 20, String.format(Locale.ROOT, "EXPOSICAO id=%s modo=%s naTela=%dt perto=%dt naMira=%dt visto=%s",
+					criatura.getIdManifestacao(), criatura.getModo(), criatura.getTicksNaTela(), criatura.getTicksPertoEClaro(),
+					criatura.getTicksNaMira(), criatura.foiVistoDeVerdade() ? "sim" : "nao"));
 		}
 		tentarDeixarCinza(p, criatura, motivo);
 		EstadoJogador e = ESTADOS.get(p.getUUID());
+		if (e != null) {
+			Cota.aoSumir(p, e, criatura, motivo);
+		}
 		if (e != null && e.criatura == criatura) {
 			e.criatura = null;
 		}
@@ -4249,8 +4324,10 @@ public final class Diretor {
 				if (!p.isRemoved() && (e.criatura == null || e.criatura.isRemoved())) {
 					PedidoManifestacao pedido = PedidoManifestacao.deOrigem(HospedeEntity.Origem.OLHO, null);
 					if (!invocar(level, p, e, HospedeEntity.Modo.OBSERVAR, 100, 170, 26, 40, 20 * 20, 1.0, true, pedido)) {
-						Depuracao.log(p, level.getGameTime() / 20, "OLHO aparicao=nao_coube");
+						// O Olho disse que ele sentiu, e não havia onde pô-lo: algo acontece assim mesmo (ver PlanoB).
 						logarFaltaDeLugar(p, e, level.getGameTime() / 20);
+						Depuracao.log(p, level.getGameTime() / 20, "OLHO aparicao=nao_coube planoB="
+								+ PlanoB.executar(level, p, e, "OLHO", level.getGameTime() / 20, level.getGameTime()));
 					}
 				}
 			});

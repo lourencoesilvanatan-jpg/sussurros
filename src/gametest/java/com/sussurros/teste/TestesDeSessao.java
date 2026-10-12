@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import com.sussurros.Sussurros;
 import com.sussurros.assombracao.Atencao;
 import com.sussurros.assombracao.Diretor;
+import com.sussurros.assombracao.PrimeiroContato;
 import com.sussurros.rede.Rede;
 
 /**
@@ -61,6 +62,11 @@ public class TestesDeSessao {
 			Diretor.esquecer(jogadores[i]);
 			if (fases[i] > 0) {
 				Diretor.definirFase(jogadores[i], fases[i]);
+				// Quem já está na fase 2 ou 4 já viu a criatura pela primeira vez: é assim num mundo de verdade. Sem
+				// isto o jogador de mentira, que nunca mira em nada, passava a hora inteira recebendo tentativas de
+				// primeiro contato (oito por hora na alpha20), e a cota de corpo, que só vale depois do contato,
+				// nunca entrava na medição.
+				PrimeiroContato.darPorFeitoParaTeste(jogadores[i]);
 			}
 			centros[i] = jogadores[i].position();
 			saldoAnterior[i] = Atencao.saldoParaTeste(jogadores[i]);

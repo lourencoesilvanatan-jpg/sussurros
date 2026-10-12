@@ -1,8 +1,10 @@
 package com.sussurros.assombracao;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -138,6 +140,48 @@ final class Aparicao {
 		}
 	}
 
+	/**
+	 * O "quase lugar" (0.9.0-alpha20): onde a última procura que falhou quis pô-lo e não pôde. É o "lado em que
+	 * ele estaria" do plano B (ver PlanoB): quando uma construção acaba sem ninguém, o sinal físico acontece aqui.
+	 *
+	 * "aVista" diz se o jogador enxerga o lugar de onde está. O caso típico é o bolsão de caverna em que o único
+	 * espaço fica à frente dele: o lugar caiu por estar na tela (ele nunca nasce na tela), e é ali, à vista, que
+	 * alguma coisa acontece. Lugares que caíram pela zona da vela ou por uma Linha de Cinza não entram: ali nada
+	 * acontece mesmo.
+	 */
+	record Quase(BlockPos chao, String motivo, boolean aVista, long tick) {
+	}
+
+	/** Junta, durante uma procura, o melhor "quase lugar": primeiro o que está à vista, depois o mais perto. */
+	private static final class MelhorQuase {
+		@Nullable
+		private BlockPos chao;
+		private String motivo = "";
+		private boolean aVista;
+		private double distancia = Double.MAX_VALUE;
+
+		void ver(BlockPos c, String motivo, boolean aVista, double distancia) {
+			if (this.chao != null && (this.aVista && !aVista || this.aVista == aVista && distancia >= this.distancia)) {
+				return;
+			}
+			this.chao = c;
+			this.motivo = motivo;
+			this.aVista = aVista;
+			this.distancia = distancia;
+		}
+
+		/** Guarda no estado do jogador. No mesmo tick, uma procura só troca o da outra se o seu estiver à vista. */
+		void guardar(EstadoJogador e, long tick) {
+			if (this.chao == null) {
+				return;
+			}
+			Quase atual = e.quaseLugar;
+			if (atual == null || atual.tick() != tick || (this.aVista && !atual.aVista())) {
+				e.quaseLugar = new Quase(this.chao.immutable(), this.motivo, this.aVista, tick);
+			}
+		}
+	}
+
 	/** Procura um ponto ao redor do jogador. Não retorna um ponto dentro do FOV seguro atual. */
 	@Nullable
 	static Candidato buscarAoRedor(ServerLevel level, ServerPlayer p, EstadoJogador e, Config cfg) {
@@ -164,6 +208,11 @@ final class Aparicao {
 		int semCobertura = 0;
 		int exposto = 0;
 		int semVisao = 0;
+		// Para o plano B (ver Quase). Não sorteia nada; a linha de visão do que caiu na tela só é olhada se a
+		// procura inteira falhar.
+		MelhorQuase quase = new MelhorQuase();
+		List<BlockPos> naTelaChao = new ArrayList<>();
+		List<Double> naTelaDist = new ArrayList<>();
 
 		for (int i = 0; i < tentativas; i++) {
 			double sinal = cfg.alternarLado() ? (rnd.nextBoolean() ? 1.0 : -1.0) : (cfg.lado() < 0 ? -1.0 : 1.0);
@@ -187,16 +236,20 @@ final class Aparicao {
 
 			if (cfg.evitarTela() && naTela(p, chao)) {
 				caiuNaTela++;
+				naTelaChao.add(chao);
+				naTelaDist.add(distancia);
 				continue;
 			}
 
 			boolean cobertura = temCobertura(level, p, chao);
 			if (cfg.exigirCobertura() && !cobertura) {
 				semCobertura++;
+				quase.ver(chao, "semCobertura", false, distancia);
 				continue;
 			}
 			if (Diretor.expostoDemais(level, p, chao, cobertura)) {
 				exposto++;
+				quase.ver(chao, "exposto", false, distancia);
 				continue;
 			}
 
@@ -206,6 +259,7 @@ final class Aparicao {
 			boolean visivelPorLuz = distancia <= 20.0 || luz >= 4;
 			if (cfg.exigirVisivelAoVirar() && (!visivelAoVirar || !visivelPorLuz)) {
 				semVisao++;
+				quase.ver(chao, "semVisao", false, distancia);
 				continue;
 			}
 
@@ -241,6 +295,12 @@ final class Aparicao {
 			e.falhasDeLugar.registrar(cfg.exigirCobertura() ? "COBERTURA" : "NORMAL", "tentados", tentativas,
 					"semChao", semChao, "zona", naZona, "cinza", naCinza, "tela", caiuNaTela, "semCobertura", semCobertura,
 					"exposto", exposto, "semVisao", semVisao);
+			Vec3 olho = p.getEyePosition();
+			for (int i = 0; i < naTelaChao.size(); i++) {
+				BlockPos chao = naTelaChao.get(i);
+				quase.ver(chao, "tela", linhaLivre(level, olho, Vec3.atCenterOf(chao).add(0, 1.2, 0)), naTelaDist.get(i));
+			}
+			quase.guardar(e, level.getGameTime());
 		}
 		return melhor;
 	}
@@ -282,9 +342,12 @@ final class Aparicao {
 	 *
 	 * Não usa o sorteio do mundo: o desempate sai da posição e da "semente" (o segundo do jogo), para que o
 	 * mesmo corredor não dê sempre o mesmo lugar.
+	 *
+	 * soComLuz (0.9.0-alpha20): só aceita lugar com luz para ele ser visto. É o que a cota de corpo pede (ver
+	 * Cota): ali a aparição existe para ser vista, e no breu ele estaria lá sem ninguém ver.
 	 */
 	@Nullable
-	static DePerto buscarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente) {
+	static DePerto buscarDePerto(ServerLevel level, ServerPlayer p, EstadoJogador e, long semente, boolean soComLuz) {
 		BlockPos inicio = null;
 		for (int dy : new int[] {0, 1, -1, -2}) {
 			BlockPos c = p.blockPosition().above(dy);
@@ -310,9 +373,14 @@ final class Aparicao {
 		int semVisao = 0;
 		int exposto = 0;
 		int aberto = 0;
+		int semLuz = 0;
 		int candidatos = 0;
 		DePerto melhor = null;
 		double melhorNota = Double.NEGATIVE_INFINITY;
+		// Para o plano B (ver Quase): o que caiu na tela só tem a linha de visão olhada se a procura falhar.
+		MelhorQuase quase = new MelhorQuase();
+		List<BlockPos> naTelaChao = new ArrayList<>();
+		List<Double> naTelaDist = new ArrayList<>();
 
 		while (!fila.isEmpty() && celulas < DE_PERTO_CELULAS) {
 			BlockPos c = fila.poll();
@@ -347,24 +415,36 @@ final class Aparicao {
 			}
 			if (naTela(p, c)) {
 				caiuNaTela++;
+				if (naTelaChao.size() < 96) {
+					naTelaChao.add(c);
+					naTelaDist.add(distancia);
+				}
 				continue;
 			}
 			boolean abaixado = !Diretor.livre(level, c.above(2));
 			double altura = abaixado ? 1.9 : 3.0;
 			if (!enxergaCorpo(level, olho, c, altura)) {
 				semVisao++;
+				quase.ver(c, "semVisao", false, distancia);
 				continue;
 			}
 			if (Diretor.expostoDemais(level, p, c, temCobertura(level, p, c))) {
 				exposto++;
+				quase.ver(c, "exposto", false, distancia);
 				continue;
 			}
 			if (!fechado(level, c)) {
 				aberto++;
+				quase.ver(c, "aberto", false, distancia);
+				continue;
+			}
+			boolean luz = Diretor.temLuzParaVer(level, c);
+			if (soComLuz && !luz) {
+				semLuz++;
+				quase.ver(c, "semLuz", false, distancia);
 				continue;
 			}
 			candidatos++;
-			boolean luz = Diretor.temLuzParaVer(level, c);
 			boolean quina = umPassoEsconde(level, olho, c);
 			double meio = (DE_PERTO_MIN + DE_PERTO_MAX) / 2.0;
 			double nota = (luz ? 2.0 : 0.0) + (quina ? 1.5 : 0.0)
@@ -376,7 +456,12 @@ final class Aparicao {
 		}
 		if (melhor == null) {
 			e.falhasDeLugar.registrar("DE_PERTO", "celulas", celulas, "naFaixa", naFaixa, "zona", naZona, "cinza", naCinza,
-					"tela", caiuNaTela, "semVisao", semVisao, "exposto", exposto, "aberto", aberto);
+					"tela", caiuNaTela, "semVisao", semVisao, "exposto", exposto, "aberto", aberto, "semLuz", semLuz);
+			for (int i = 0; i < naTelaChao.size(); i++) {
+				BlockPos c = naTelaChao.get(i);
+				quase.ver(c, "tela", enxergaCorpo(level, olho, c, 1.9), naTelaDist.get(i));
+			}
+			quase.guardar(e, level.getGameTime());
 			return null;
 		}
 		return new DePerto(melhor.chao(), melhor.distancia(), melhor.luz(), melhor.quina(), melhor.abaixado(), candidatos);

@@ -161,10 +161,12 @@ public class HospedeEntity extends PathfinderMob {
 	private int fadeInicioCliente = -1;  // cliente: idade (ticks) em que começou a dissolver
 	private boolean avisaVigia = true;   // se esta manifestação é "sentida" quando olha de fora da tela
 	private boolean contato = false;     // é a aparição do primeiro contato (ver PrimeiroContato)
-	private int contatoMira = 0;         // contato: ticks seguidos na mira dele, com luz (cai um por tick fora dela)
-	private boolean contatoVisto = false; // contato: já esteve na mira por tempo bastante para valer
+	private int miraSeguida = 0;         // ticks seguidos na mira dele, com luz (cai um por tick fora dela)
+	private boolean vistoDeVerdade = false; // já esteve na mira por tempo bastante para valer (ver foiVistoDeVerdade)
 	private boolean dePerto = false;     // nasceu pela procura de lugar apertado, a poucos blocos (ver definirDePerto)
-	private int ticksNaMira = 0;         // contato, só para o log: quantos ticks ao todo esteve na mira, com luz
+	private int ticksNaMira = 0;         // só para o log: quantos ticks ao todo esteve na mira, com luz
+	private boolean cota = false;        // é uma aparição da cota de corpo (ver assombracao.Cota)
+	private boolean cotaDaRegra = false; // quem a pôs foi a própria cota, e não um evento do Diretor
 
 	// A saída (0.9.0-alpha17): isto é comportamento. Ver Saida.
 	private Saida saida = Saida.SOME;
@@ -326,7 +328,32 @@ public class HospedeEntity extends PathfinderMob {
 	 * conta; tê-lo no canto da tela não conta; olhar para onde ele está no breu não conta.
 	 */
 	public boolean contatoFoiVisto() {
-		return this.contatoVisto;
+		return this.vistoDeVerdade;
+	}
+
+	/**
+	 * A mesma definição, para qualquer aparição (0.9.0-alpha20): é o que a cota de corpo conta como "ele viu"
+	 * (ver assombracao.Cota) e o que a linha EXPOSICAO do log diz em "visto=". Não há outra.
+	 */
+	public boolean foiVistoDeVerdade() {
+		return this.vistoDeVerdade;
+	}
+
+	/**
+	 * Esta aparição veio pela cota de corpo. daRegra: quem a pôs foi a própria cota, e não um evento do Diretor
+	 * (o evento já pagou a sua atenção; a da regra só paga se for vista).
+	 */
+	public void marcarCota(boolean daRegra) {
+		this.cota = true;
+		this.cotaDaRegra = daRegra;
+	}
+
+	public boolean ehCota() {
+		return this.cota;
+	}
+
+	public boolean ehCotaDaRegra() {
+		return this.cotaDaRegra;
 	}
 
 	/** Só para o log. */
@@ -589,15 +616,15 @@ public class HospedeEntity extends PathfinderMob {
 		if (encarado) {
 			this.marcarEncarado();
 		}
-		if (this.contato) {
-			if (encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
-				this.ticksNaMira++;
-				if (++this.contatoMira >= MIRA_DO_CONTATO) {
-					this.contatoVisto = true;
-				}
-			} else {
-				this.contatoMira = Math.max(0, this.contatoMira - 1);
+		// "Visto de verdade": na mira dele por uns instantes seguidos, com luz. Até a alpha19 só o primeiro contato
+		// media isto; agora toda aparição mede, porque a cota de corpo conta o que ele viu, não o que foi criado.
+		if (encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
+			this.ticksNaMira++;
+			if (++this.miraSeguida >= MIRA_DO_CONTATO) {
+				this.vistoDeVerdade = true;
 			}
+		} else {
+			this.miraSeguida = Math.max(0, this.miraSeguida - 1);
 		}
 		if (percebido && !this.jaAvistada) {
 			this.jaAvistada = true;
@@ -768,7 +795,7 @@ public class HospedeEntity extends PathfinderMob {
 		// O primeiro contato só entra aqui depois de ter sido visto de verdade: uma virada de câmera que passa
 		// a mira por ele durante um tick não o manda embora (ele sumia sem ninguém ter visto, e contava).
 		if (this.foiEncarado && !percebido && this.foraDaTelaTicks >= 4 && this.ousadia < OUSADIA_FICA
-				&& (!this.contato || this.contatoVisto)) {
+				&& (!this.contato || this.vistoDeVerdade)) {
 			Diretor.criaturaFoiVista(this.alvo, this);
 			this.sumir(level, false, "SUMIU_NO_DESVIO");
 			return;
@@ -779,12 +806,12 @@ public class HospedeEntity extends PathfinderMob {
 		if (this.contarVisto(percebido, encarado, this.contato ? LIMITE_VISTO_NO_CONTATO : 12 + this.ousadia * 6)) {
 			// Quem o teve no canto da tela e pôs a mira nele bem na hora em que ele dissolve viu: a dissolução
 			// acontece no meio da tela dele, mesmo que a mira não tenha chegado a completar os seus instantes.
-			if (this.contato && encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
-				this.contatoVisto = true;
+			if (encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
+				this.vistoDeVerdade = true;
 			}
 			// O contato que dissolveu só de canto de olho não foi visto: não soma pressão nem ousadia, e
 			// continua devendo (ver PrimeiroContato.aoSumir).
-			if (!this.contato || this.contatoVisto) {
+			if (!this.contato || this.vistoDeVerdade) {
 				Diretor.criaturaFoiVista(this.alvo, this);
 			}
 			// A exceção ao relance: em vez de dissolver, ele vai embora andando (ver Saida).
@@ -875,6 +902,10 @@ public class HospedeEntity extends PathfinderMob {
 		if (percebido) {
 			this.naoVistoTicks = 0;
 			if (this.contarVisto(true, encarado, (this.dePerto ? 12 : 60) + this.ousadia * 6)) {
+				// A mesma regra da presença: quem tinha a mira nele na hora em que dissolve viu.
+				if (encarado && Diretor.temLuzParaVer(level, this.blockPosition())) {
+					this.vistoDeVerdade = true;
+				}
 				Diretor.criaturaFoiVista(this.alvo, this);
 				this.sumir(level, true, "VISTO_DEMAIS");
 			}

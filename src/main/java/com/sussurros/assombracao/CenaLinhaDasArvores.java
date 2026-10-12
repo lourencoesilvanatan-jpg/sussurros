@@ -94,8 +94,10 @@ final class CenaLinhaDasArvores {
 					e.cenaCampo = EstadoJogador.CenaCampo.OBSERVANDO_1;
 					e.cenaCampoDesde = seg;
 				} else if (seg - e.cenaCampoDesde > 35) {
-					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=PRIMEIRA SEM_LUGAR");
+					// 0.9.0-alpha20: a cena que não achou onde pô-lo não acaba em silêncio (ver PlanoB).
 					Diretor.logarFaltaDeLugar(p, e, seg);
+					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=PRIMEIRA SEM_LUGAR planoB="
+							+ PlanoB.executar(level, p, e, "CENA_CAMPO", seg, tick));
 					silencioCenaCampo(p, e, seg, rnd);
 				}
 			}
@@ -123,8 +125,10 @@ final class CenaLinhaDasArvores {
 					e.cenaCampo = EstadoJogador.CenaCampo.OBSERVANDO_2;
 					e.cenaCampoDesde = seg;
 				} else if (seg - e.cenaCampoDesde > 35) {
-					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=SEGUNDA SEM_LUGAR");
+					// 0.9.0-alpha20: a cena que não achou onde pô-lo não acaba em silêncio (ver PlanoB).
 					Diretor.logarFaltaDeLugar(p, e, seg);
+					Depuracao.log(p, seg, "CENA id=" + e.cenaCampoId + " etapa=SEGUNDA SEM_LUGAR planoB="
+							+ PlanoB.executar(level, p, e, "CENA_CAMPO", seg, tick));
 					silencioCenaCampo(p, e, seg, rnd);
 				}
 			}

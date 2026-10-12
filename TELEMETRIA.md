@@ -826,3 +826,40 @@ Ele tinha a saída andando, foi visto, e não achou para onde ir: some como semp
 - `OLHO aparicao=nao_coube`: o Olho chamou uma aparição e não havia lugar. Antes isto não deixava linha.
 
 Para conferir depois de uma sessão: nenhum `FIM motivo=SEM_LUGAR`; `VEU abriu` nunca com `porta=nao vidro=nao vulto=nao`; e, das linhas `criado` com o contexto `SUBSOLO`, quantas têm `motivoPosicao=DE_PERTO`. O analisador (`ferramentas/log/analisar.py`) faz as três contas e põe a primeira nos alertas.
+
+## 0.9.0-alpha20 — o plano B, a cota de corpo e o "visto de verdade"
+
+```
+[174s][Jogador] LUGAR falhou NORMAL[vezes=61 tentados=1220 tela=24 semVisao=1196] DE_PERTO[vezes=61 celulas=854 naFaixa=305 tela=305]
+[174s][Jogador] PLANO_B tipo=PO origem=AMEACA lado=QUASE_TELA pos=(x,y,z) dist=8.2 aVista=sim
+[174s][Jogador] CENA id=C006 FIM motivo=SEM_LUGAR obsessao=60->48 planoB=PO
+[159s][Jogador] CENA id=C003 etapa=PRESENCA SEM_LUGAR planoB=PASSOS
+[101s][Jogador] PLANO_B tipo=PASSOS origem=VEU lado=QUASE_SEMVISAO pos=(x,y,z) dist=12.5 aVista=nao
+[133s][Jogador] VEU vulto=nao_coube tentativas=18 planoB=PASSOS
+[410s][Jogador] OLHO aparicao=nao_coube planoB=TOCHA
+[88s][Jogador] CENA id=C002 etapa=PRESENCA PULADA motivo=FASE_2
+[3600s][Jogador] COTA devendo relogio=1200s
+[3811s][Jogador] COTA tentativa=1 origem=DIRETOR relogio=1411s dist=10.0 dePerto=sim manifestacao=M045
+[4205s][Jogador] COTA tentativa=2 origem=REGRA relogio=1801s dist=21.4 dePerto=nao manifestacao=M047
+[4245s][Jogador] COTA visto=nao motivo=TEMPO_ESGOTADO naTela=0t naMira=0t manifestacao=M047
+[4610s][Jogador] COTA visto=sim motivo=VISTO_DEMAIS naTela=7t naMira=7t manifestacao=M049
+[4611s][Jogador] COTA paga relogio=2207s tentativas=3
+[4610s][Jogador] EXPOSICAO id=M049 modo=OBSERVAR naTela=7t perto=7t naMira=7t visto=sim
+```
+
+- `PLANO_B tipo=... origem=... lado=... pos=... dist=... aVista=...`: o sinal que fecha uma construção que acabou sem ninguém (ver `PlanoB`).
+  - `tipo`: `PO` (pó caindo do teto, com um toque no bloco), `TOCHA` (uma tocha apagada por miragem, de quatro a sete segundos) ou `PASSOS` (dois passos que se afastam). `NENHUM` só com `motivo=ZONA_CALMA`: não havia lugar fora da zona da vela, e ali nada acontece.
+  - `origem`: `AMEACA`, `CENA_TUNEL`, `CENA_MARCO`, `CENA_CAMPO`, `CENA_CASA`, `VEU`, `OLHO`, ou `COMANDO` (`/sussurros teste planob`).
+  - `lado`: de onde saiu o lugar. `QUASE_TELA`, `QUASE_SEMVISAO`, `QUASE_EXPOSTO`, `QUASE_ABERTO`, `QUASE_SEMCOBERTURA`, `QUASE_SEMLUZ`: o lugar em que a procura que falhou quis pô-lo, com a exigência em que ele caiu; com `_PERTO` no fim, esse lugar ficava a mais de 14 blocos e o sinal veio do mesmo lado, a nove. `RASTRO`: um ponto por onde o jogador passou. `ATRAS`: seis, dez ou catorze blocos atrás dele.
+  - `aVista=sim`: o jogador enxerga o lugar de onde está (é o bolsão em que o único espaço fica à frente dele).
+- `planoB=`: no fim de `CENA ... FIM motivo=SEM_LUGAR`, de `CENA ... etapa=... SEM_LUGAR`, de `VEU vulto=nao_coube` e de `OLHO aparicao=nao_coube`. No Véu, `planoB=-` quer dizer que ele fechou antes da última tentativa do vulto (uma vela acesa), e aí não sai nada.
+- A ordem mudou nas cenas, no Véu e no Olho: `LUGAR falhou` sai **antes** da linha do `SEM_LUGAR` (como já era na sequência de ameaça), depois vem `PLANO_B`, depois a linha com `planoB=`.
+- `CENA ... etapa=PRESENCA PULADA motivo=FASE_2`: a cena do túnel, antes da fase 3, também diz que não mostrou ninguém de propósito (a de casa já dizia). É vazio por escolha.
+- `DE_PERTO[... semLuz=N]`: na linha `LUGAR falhou`, lugares que a procura de perto recusou por estarem no breu. Só existe quando quem pede é a cota.
+- `COTA devendo relogio=1200s`: fez vinte minutos de jogo sem uma aparição vista de verdade (depois do primeiro contato, da fase 3 em diante). Daqui até ser paga, a presença comum usa a colocação fácil.
+- `COTA tentativa=N origem=DIRETOR|REGRA relogio=... dist=... dePerto=... manifestacao=...`: uma aparição da cota. `DIRETOR`: era a presença comum que o Diretor escolheu (conta como `EVENTO PRESENCA`). `REGRA`: a cota tentou sozinha, aos trinta minutos ou mais. `N` conta as duas, desde a última vista.
+- `COTA visto=sim|nao motivo=... naTela=... naMira=... manifestacao=...`: como a aparição da cota acabou. Só `sim` paga.
+- `COTA paga relogio=... tentativas=...`: uma aparição foi vista de verdade com a cota devendo (qualquer uma, não só as dela), ou houve caçada. O relógio volta a zero. Com a cota em dia a mesma coisa acontece sem linha.
+- `EXPOSICAO ... naMira=Nt visto=sim|nao`: agora toda aparição mede o que só o primeiro contato media. `naMira` são os ticks na mira do jogador, com luz; `visto=sim` é a definição única (`HospedeEntity.foiVistoDeVerdade`): seis ticks seguidos assim, ou dissolver com a mira em cima. É o que o analisador conta em "na mira" da alpha20 em diante (num log mais antigo ele continua usando `ENCAROU`).
+
+Para conferir depois de uma sessão (o analisador faz as contas na seção "Nada termina em nada"): nenhuma linha `SEM_LUGAR` ou `nao_coube` sem `planoB=`; `visto=sim` em pelo menos duas de cada três vezes que o mod quis mostrá-lo; o maior tempo sem vê-lo, da fase 3 em diante, perto de trinta minutos e não de uma hora; e os segundos de exposição por hora, que a cota não pode fazer subir.

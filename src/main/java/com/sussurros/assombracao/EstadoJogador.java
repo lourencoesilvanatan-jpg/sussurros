@@ -153,6 +153,22 @@ final class EstadoJogador {
 	/** O tick em que a procura de lugar apertado falhou por último: no mesmo tick ela daria a mesma resposta. */
 	long dePertoFalhouEm = -1;
 
+	// --- O plano B (0.9.0-alpha20, ver PlanoB): o que acontece quando uma construção acaba sem ninguém ---
+	/** Onde a última procura que falhou quis pô-lo e não pôde. */
+	Aparicao.@Nullable Quase quaseLugar;
+	/** O último sinal que saiu: o seguinte, havendo escolha, é outro. */
+	PlanoB.@Nullable Tipo planoBUltimo;
+	/** Só para os testes: o que o último plano B fez ("-" se não houve nenhum). */
+	String planoBResumo = "-";
+	/** O vulto deste Véu não coube e o plano B já saiu no lugar dele. */
+	boolean veuPlanoB;
+
+	// --- A cota de corpo (0.9.0-alpha20, ver Cota) ---
+	/** Uma aparição foi vista de verdade (ou houve caçada). Quem zera o relógio na Memoria é o tick do Diretor. */
+	boolean cotaVisto;
+	/** Segundo a partir do qual a cota pode tentar por conta própria de novo. */
+	long cotaProximaTentativa;
+
 	// --- Ritmo e estados ---
 	double pressao;
 	EstadoDiretor estado = EstadoDiretor.CALMO;

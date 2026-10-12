@@ -19,7 +19,7 @@ Baixe no Modrinth as versões para **26.2** do Iris e do Sodium e coloque os .ja
 Coloque um shader pack (.zip) em `run/shaderpacks`. Ative em Opções > Vídeo > Shader Packs.
 
 ## Gerar o .jar final
-Gradle > Tasks > build > **build**. Sai em `build/libs/` (use o sussurros-0.9.0-alpha1.jar, NÃO o que termina em -sources).
+Gradle > Tasks > build > **build**. Sai em `build/libs/` (use o `sussurros-<versão>.jar`, NÃO o que termina em -sources).
 
 ## Som e tela
 - Deixe audíveis, no menu de som do jogo, "Criaturas hostis" e "Ambiente". Fone é melhor.

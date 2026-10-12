@@ -63,6 +63,7 @@ public class TestesDeCliente implements FabricClientGameTest {
 			sentidos(context, mundo);
 			saidaAndando(context, mundo);
 			dePerto(context, mundo);
+			planoB(context, mundo);
 			cacada(context, mundo);
 			capturaQueLeva(context, mundo);
 		}
@@ -678,6 +679,56 @@ public class TestesDeCliente implements FabricClientGameTest {
 		context.takeScreenshot("42-de-perto-com-teto-de-vidro");
 		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
 		mundo.getServer().runCommand("kill @e[type=sussurros:hospede]");
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
+		context.waitTicks(20);
+	}
+
+	/**
+	 * O plano B (0.9.0-alpha20): o sinal que fecha uma construção que acabou sem ninguém. Um corredor de pedra sem
+	 * saída, igual ao dos testes de servidor, com uma tocha no fundo: o jogador olha para o único lado que tem
+	 * espaço, a procura de lugar falha (ele nunca nasce na tela) e o sinal acontece ali, à vista. Primeiro o pó
+	 * que cai do teto; da segunda vez, a tocha do fundo apagada. As fotos são para ver se o pó aparece, e de que cor.
+	 */
+	private static void planoB(ClientGameTestContext context, TestSingleplayerContext mundo) {
+		BlockPos partida = mundo.getServer().computeOnServer(server -> server.getPlayerList().getPlayers().get(0).blockPosition());
+		// Longe do túnel das fotos de perto e de onde a caçada, a seguir, vai procurar lugar.
+		BlockPos pes = partida.offset(80, 0, 40);
+		mundo.getServer().runCommand("time set noon");
+		mundo.getServer().runCommand("execute as @p run sussurros cena parar");
+		mundo.getServer().runOnServer(server -> {
+			ServerLevel level = server.getPlayerList().getPlayers().get(0).level();
+			for (int x = -5; x <= 5; x++) {
+				for (int z = -5; z <= 15; z++) {
+					for (int y = 0; y <= 4; y++) {
+						level.setBlock(pes.offset(x, y, z), Blocks.STONE.defaultBlockState(), 3);
+					}
+				}
+			}
+			for (int z = 0; z <= 12; z++) {
+				for (int y = 0; y <= 1; y++) {
+					level.setBlock(pes.offset(0, y, z), Blocks.AIR.defaultBlockState(), 3);
+				}
+			}
+			level.setBlock(pes.offset(0, 0, 11), Blocks.TORCH.defaultBlockState(), 3);
+		});
+		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5));
+		context.waitTicks(40);
+		context.takeScreenshot("43-plano-b-o-corredor-antes");
+		mundo.getServer().runCommand("execute as @p run sussurros teste planob");
+		// O pó cai em três punhados (aos 0, 9 e 18 ticks): a foto pega os dois primeiros no ar.
+		context.waitTicks(14);
+		String primeiro = mundo.getServer().computeOnServer(server -> Diretor.planoBParaTeste(server.getPlayerList().getPlayers().get(0)));
+		conferir("PO".equals(primeiro), "no corredor sem saída, à vista e com teto, o sinal deveria ser o pó: " + primeiro);
+		context.takeScreenshot("44-plano-b-po-do-teto");
+		context.waitTicks(60);
+		mundo.getServer().runCommand("execute as @p run sussurros teste planob");
+		context.waitTicks(12);
+		String segundo = mundo.getServer().computeOnServer(server -> Diretor.planoBParaTeste(server.getPlayerList().getPlayers().get(0)));
+		conferir("TOCHA".equals(segundo), "da segunda vez seguida o sinal deveria ser a tocha: " + segundo);
+		boolean tochaDeVerdade = mundo.getServer().computeOnServer(server ->
+				server.getPlayerList().getPlayers().get(0).level().getBlockState(pes.offset(0, 0, 11)).is(Blocks.TORCH));
+		conferir(tochaDeVerdade, "a tocha apagada é miragem: o bloco de verdade tem de continuar no lugar");
+		context.takeScreenshot("45-plano-b-a-tocha-apagada");
 		mundo.getServer().runCommand(String.format(Locale.ROOT, "tp @p %.2f %d %.2f 0 0", partida.getX() + 0.5, partida.getY(), partida.getZ() + 0.5));
 		context.waitTicks(20);
 	}

@@ -12,6 +12,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.network.protocol.game.ClientboundLevelParticlesPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.level.ServerLevel;
@@ -92,6 +94,64 @@ public final class JogadorDeTeste {
 			}
 		}
 		return sons;
+	}
+
+	/**
+	 * O mesmo, separando o que chegou: [0] sons, [1] partículas, [2] blocos trocados (é assim que uma miragem chega).
+	 * Esvazia a fila, como sonsRecebidos: quem quer o total de um trecho soma as chamadas.
+	 */
+	public static int[] recebidos(ServerPlayer jogador) {
+		EmbeddedChannel canal = CANAIS.get(jogador.getUUID());
+		int[] n = new int[3];
+		Object pacote;
+		while (canal != null && (pacote = canal.readOutbound()) != null) {
+			if (pacote instanceof ClientboundSoundPacket || pacote instanceof ClientboundSoundEntityPacket) {
+				n[0]++;
+				// Que som foi, e de onde: um jogador de mentira também ouve o mundo (um bicho andando ali perto), e
+				// só pelo lugar dá para saber se um som era o que o teste procura.
+				if (pacote instanceof ClientboundSoundPacket som) {
+					java.util.ArrayDeque<SomOuvido> fila = ULTIMOS_SONS.computeIfAbsent(jogador.getUUID(), k -> new java.util.ArrayDeque<>());
+					fila.addLast(new SomOuvido(som.getSound().getRegisteredName(), som.getX(), som.getY(), som.getZ()));
+					while (fila.size() > 64) {
+						fila.removeFirst();
+					}
+				}
+			} else if (pacote instanceof ClientboundLevelParticlesPacket) {
+				n[1]++;
+			} else if (pacote instanceof ClientboundBlockUpdatePacket) {
+				n[2]++;
+			}
+		}
+		return n;
+	}
+
+	/** Um som que chegou a um jogador de mentira: qual, e de que ponto do mundo. */
+	public record SomOuvido(String nome, double x, double y, double z) {
+		@Override
+		public String toString() {
+			return String.format(java.util.Locale.ROOT, "%s@(%.1f,%.1f,%.1f)", this.nome, this.x, this.y, this.z);
+		}
+	}
+
+	private static final Map<UUID, java.util.ArrayDeque<SomOuvido>> ULTIMOS_SONS = new HashMap<>();
+
+	/**
+	 * Entre os últimos sons que "recebidos" contou para este jogador (até 64), quantos vieram de até "raio"
+	 * blocos deste ponto. É como um teste pergunta "ele ouviu AQUELE som?" sem se confundir com os sons do mundo.
+	 */
+	public static int sonsVindosDe(ServerPlayer jogador, Vec3 ponto, double raio) {
+		int n = 0;
+		for (SomOuvido s : ULTIMOS_SONS.getOrDefault(jogador.getUUID(), new java.util.ArrayDeque<>())) {
+			if (ponto.distanceToSqr(s.x(), s.y(), s.z()) <= raio * raio) {
+				n++;
+			}
+		}
+		return n;
+	}
+
+	/** Os mesmos sons, por extenso, para a mensagem de um teste que falha. */
+	public static String ultimosSons(ServerPlayer jogador) {
+		return String.valueOf(ULTIMOS_SONS.getOrDefault(jogador.getUUID(), new java.util.ArrayDeque<>()));
 	}
 
 	public static ServerPlayer criar(GameTestHelper helper, GameType modo, double x, double y, double z) {

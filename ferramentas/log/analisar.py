@@ -15,7 +15,9 @@ O que ele responde:
   - o que os itens e a Conta fizeram;
   - caçadas, capturas, visitas ao outro lado;
   - o que não coube (seleção que falhou, falta de lugar), e por quê: quantos lugares cada procura tentou e
-    em que exigência eles caíram.
+    em que exigência eles caíram;
+  - o que acabou sem ninguém, separando o vazio por falha (com o plano B que saiu no lugar) do vazio por
+    escolha, e o que a cota de corpo fez (0.9.0-alpha20).
 
 Só usa a biblioteca padrão do Python.
 """
@@ -44,6 +46,9 @@ PERCEPTIVEIS = [
     ('conta', re.compile(r'^CONTA aviso=(\d)/3')),
     ('cacada', re.compile(r'^PRENUNCIO real=sim')),
     ('contato', re.compile(r'^CONTATO tentativa=(\d+)')),
+    # 0.9.0-alpha20: a tentativa da própria cota (a que vem pelo Diretor já conta como evento) e o plano B.
+    ('cota', re.compile(r'^COTA tentativa=(\d+) origem=REGRA')),
+    ('plano B', re.compile(r'^PLANO_B tipo=(?!NENHUM)(\S+)')),
     ('captura', re.compile(r'^CAPTURA inicio .*teste=nao')),
     ('avesso', re.compile(r'^AVESSO levado origem=(\S+) .*teste=nao')),
 ]
@@ -149,11 +154,21 @@ def percentil(valores, p):
 COM_CORPO = ('PRESENCA', 'ATRAS', 'VULTO', 'TUMULO', 'CACA', 'ESPERA', 'ESPREITA')
 
 # Uma construção inteira que acabou sem ninguém: a sequência de ameaça, uma cena, o vulto do Véu, o Olho.
+# É o vazio por FALHA. Da alpha20 em diante cada uma dessas linhas termina em "planoB=<o que saiu>".
 SEM_NINGUEM = [
     ('sequência de ameaça', re.compile(r'^CENA id=\S+ FIM motivo=SEM_LUGAR')),
     ('cena', re.compile(r'^CENA id=\S+ etapa=\S+ SEM_LUGAR')),
     ('vulto do Véu', re.compile(r'^VEU vulto=nao_coube')),
     ('Olho', re.compile(r'^OLHO aparicao=nao_coube')),
+]
+PLANO_B = re.compile(r' planoB=(\S+)')
+
+# O vazio por ESCOLHA: o mod prepara e, de propósito, não entrega. Faz parte do ritmo (esperar e não receber
+# mantém o alerta) e tem de continuar existindo: o plano B e a cota acabam com o vazio por falha, não com este.
+VAZIO_ESCOLHIDO = [
+    ('falso aviso de caçada', re.compile(r'^PRENUNCIO real=nao')),
+    ('sensação de ser olhado, sem ninguém', re.compile(r'^VIGIA falsa')),
+    ('cena que não mostra ninguém antes da fase 3', re.compile(r'^CENA id=\S+ etapa=PRESENCA PULADA')),
 ]
 
 
@@ -487,6 +502,9 @@ def analisar(linhas, jogador, caminho):
     # e quem a aplica é o mod: aqui ela vale pela linha CONTATO visto=sim, não pelo primeiro tick de ENCAROU.
     # Assim o relatório e o jogo nunca dizem coisas diferentes sobre o mesmo contato.
     do_contato = set(m.group(1) for m in (re.match(r'^CONTATO tentativa=.* manifestacao=(\S+)', texto) for _, texto in linhas) if m)
+    # 0.9.0-alpha20: toda aparição mede o "visto de verdade" (na mira por uns instantes, com luz), e a linha
+    # EXPOSICAO diz. Num log de antes disso vale o primeiro tick de ENCAROU, como era.
+    mede_visto = any(re.match(r'^EXPOSICAO .* visto=', texto) for _, texto in linhas)
     for t, texto in linhas:
         m = re.match(r'^HOSPEDE id=(\S+) criado origem=(\S+) evento=(\S+) modo=(\S+)', texto)
         if m:
@@ -495,7 +513,7 @@ def analisar(linhas, jogador, caminho):
             if m.group(2) != 'COMANDO':
                 do_mod += 1
             continue
-        m = re.match(r'^HOSPEDE id=(\S+) ENCAROU', texto)
+        m = re.match(r'^EXPOSICAO id=(\S+) .* visto=sim', texto) if mede_visto else re.match(r'^HOSPEDE id=(\S+) ENCAROU', texto)
         if m and origem_de.get(m.group(1), 'COMANDO') != 'COMANDO' and m.group(1) not in do_contato:
             na_mira.append((t, forma_de.get(m.group(1), '?')))
             continue
@@ -504,7 +522,7 @@ def analisar(linhas, jogador, caminho):
             na_mira.append((t, forma_de.get(m.group(1), '?') + ' (contato)'))
     # 0.9.0-alpha19: "tentei" e "ele viu" são contas diferentes. Uma construção que acabou sem ninguém (a
     # sequência de ameaça que esperou um minuto por um lugar, uma cena, o vulto do Véu) é uma tentativa perdida.
-    sem_ninguem = []    # (t, o quê, por quê)
+    sem_ninguem = []    # (t, o quê, por quê, plano B ou None)
     ultimo_lugar = None
     for t, texto in linhas:
         if texto.startswith('LUGAR falhou '):
@@ -513,8 +531,15 @@ def analisar(linhas, jogador, caminho):
         for nome, expr in SEM_NINGUEM:
             if expr.match(texto):
                 motivo = ultimo_lugar[1] if ultimo_lugar is not None and 0 <= t - ultimo_lugar[0] <= 1 else ''
-                sem_ninguem.append((t, nome, motivo))
+                plano = PLANO_B.search(texto)
+                sem_ninguem.append((t, nome, motivo, plano.group(1) if plano else None))
                 break
+    # Sem plano B: a linha não tem "planoB=" (log de antes da alpha20, ou defeito), ou tem e não saiu nada
+    # ("-": o Véu fechou antes; "NENHUM": não havia lugar fora da zona da vela).
+    sem_plano = [s for s in sem_ninguem if s[3] in (None, '-', 'NENHUM')]
+    com_plano = collections.Counter(s[3] for s in sem_ninguem if s[3] not in (None, '-', 'NENHUM'))
+    tem_plano_b = any(s[3] is not None for s in sem_ninguem) or any(texto.startswith('PLANO_B ') for _, texto in linhas)
+    escolhidos = [(nome, sum(1 for _, texto in linhas if expr.match(texto))) for nome, expr in VAZIO_ESCOLHIDO]
     corpo_falhou = collections.Counter(m.group(1) for m in (re.match(r'^SELECAO falhou evento=(\S+)', texto) for _, texto in linhas)
                                        if m and m.group(1) in COM_CORPO)
     tentativas = sum(1 for _, texto in linhas if texto.startswith('CONTATO tentativa='))
@@ -562,6 +587,51 @@ def analisar(linhas, jogador, caminho):
             horas_sem_forte.append(fase1_j)
     parte_conta = fontes.get('conta', 0) / float(len(saidas)) if saidas else 0.0
 
+    # ----- a cota de corpo e o plano B (0.9.0-alpha20) -----
+    out.append('## Nada termina em nada: o plano B e a cota de corpo')
+    out.append('')
+    out.append('Vazio por falha (uma construção que não achou onde pôr o corpo): **%d**%s.' % (
+        len(sem_ninguem), '' if not sem_ninguem else ' (%s)' % ', '.join(
+            '%s %d' % q for q in collections.Counter(s[1] for s in sem_ninguem).most_common())))
+    out.append('')
+    if sem_ninguem:
+        out.append('Com o sinal do plano B no lugar: %d%s. **Sem sinal nenhum: %d**%s.' % (
+            sum(com_plano.values()), ' (%s)' % ', '.join('%s %d' % c for c in com_plano.most_common()) if com_plano else '',
+            len(sem_plano), '' if not sem_plano else ' (%s)' % ', '.join(
+                '%s aos %s%s' % (s[1], hms(s[0] - inicio), '' if s[3] is None else ', planoB=' + s[3]) for s in sem_plano[:6])))
+        out.append('')
+    lados = collections.Counter(m.group(1) for m in (re.match(r'^PLANO_B tipo=(?!NENHUM)\S+ origem=\S+ lado=(\S+)', texto) for _, texto in linhas) if m)
+    if lados:
+        a_vista = sum(1 for _, texto in linhas if re.match(r'^PLANO_B tipo=(?!NENHUM).* aVista=sim', texto))
+        out.append('De que lado veio o sinal: ' + ', '.join('%s %d' % l for l in lados.most_common()) + '. À vista dele: %d de %d.' % (
+            a_vista, sum(lados.values())))
+        out.append('')
+    out.append('Vazio por escolha (o mod prepara e não entrega, de propósito): **%d**%s.' % (
+        sum(n for _, n in escolhidos), '' if not any(n for _, n in escolhidos) else ' (%s)' % ', '.join('%s %d' % e for e in escolhidos if e[1])))
+    out.append('')
+    cota_tent = collections.Counter(m.group(1) for m in (re.match(r'^COTA tentativa=\d+ origem=(\S+)', texto) for _, texto in linhas) if m)
+    cota_vista = collections.Counter(m.group(1) for m in (re.match(r'^COTA visto=(\S+)', texto) for _, texto in linhas) if m)
+    cota_paga = [int(m.group(1)) for m in (re.match(r'^COTA paga relogio=(\d+)s', texto) for _, texto in linhas) if m]
+    cota_deveu = sum(1 for _, texto in linhas if texto.startswith('COTA devendo'))
+    if cota_tent or cota_deveu or cota_paga:
+        out.append('Cota de corpo: ficou devendo %d vez(es) (vinte minutos sem ele ser visto de verdade). Tentativas: %d%s; vistas %d, não vistas %d. '
+                   'Paga %d vez(es)%s.' % (
+                       cota_deveu, sum(cota_tent.values()), ' (%s)' % ', '.join('%s %d' % c for c in cota_tent.most_common()) if cota_tent else '',
+                       cota_vista.get('sim', 0), cota_vista.get('nao', 0), len(cota_paga),
+                       ', com o relógio em ' + ', '.join(hms(s) for s in cota_paga) if cota_paga else ''))
+    else:
+        out.append('Cota de corpo: não ficou devendo nenhuma vez (ele foi visto de verdade a cada vinte minutos, a sessão foi curta, '
+                   'está antes da fase 3 ou o log é de antes da alpha20).')
+    out.append('')
+    # O maior tempo de jogo, da fase 3 em diante, sem uma aparição vista de verdade: é o que a cota existe para limitar.
+    fase3_em = fase_em.get(3, inicio if fase_de.get(inicio, 0) >= 3 else None)
+    maior_sem_ver = None
+    if fase3_em is not None and mede_visto:
+        marcos = [jogado_ate(trechos, fase3_em)] + sorted(jogado_ate(trechos, t) for t, _ in na_mira if t >= fase3_em) + [jogado]
+        maior_sem_ver = max(b - a for a, b in zip(marcos, marcos[1:]))
+        out.append('Maior tempo de jogo, da fase 3 em diante, sem uma aparição vista de verdade: **%s** (a cota tenta sozinha aos 30 minutos).' % hms(maior_sem_ver))
+        out.append('')
+
     out.append('## A primeira hora: os critérios')
     out.append('')
     out.append('Trocam o que se conta: o que esteve na mira do jogador, e não o que foi criado; sinais seguidos de algo '
@@ -601,14 +671,28 @@ def analisar(linhas, jogador, caminho):
         alertas.append('**Mundo novo e nenhuma aparição na mira dele até os 30 minutos de jogo** (o prazo do primeiro contato é aos 25, '
                        'com cinco de folga). Houve %d tentativa(s).' % tentativas)
     if sem_ninguem:
-        quais = collections.Counter(nome for _, nome, _ in sem_ninguem)
-        alertas.append('**%d construção(ões) acabaram sem ninguém (SEM_LUGAR): %s.** É o "cadê o bicho?". %s' % (
+        quais = collections.Counter(s[1] for s in sem_ninguem)
+        alertas.append('**%d construção(ões) acabaram sem ninguém (SEM_LUGAR): %s.** É o "cadê o bicho?". %s %s' % (
             len(sem_ninguem), ', '.join('%s %d' % q for q in quais.most_common()),
+            'Com o sinal do plano B: %d.' % sum(com_plano.values()) if tem_plano_b else 'O log é de antes do plano B (alpha20).',
             'A última, aos %s: `%s`.' % (hms(sem_ninguem[-1][0] - inicio), sem_ninguem[-1][2]) if sem_ninguem[-1][2]
             else 'O log não tem a linha `LUGAR falhou` junto delas (versão anterior à alpha19).'))
-    if do_mod + len(sem_ninguem) >= 4 and len(na_mira) * 2 < do_mod + len(sem_ninguem):
-        alertas.append('**Ele teve a criatura na mira em %d de %d vezes que o mod quis mostrá-la** (%d criadas, %d sem lugar). '
-                       'Referência: duas em cada três.' % (len(na_mira), do_mod + len(sem_ninguem), do_mod, len(sem_ninguem)))
+    if tem_plano_b and sem_plano:
+        alertas.append('**%d construção(ões) acabaram sem ninguém E sem o sinal do plano B** (%s). Da alpha20 em diante isto só deveria '
+                       'acontecer com o Véu fechado antes da hora (`planoB=-`) ou dentro da zona da vela (`NENHUM`).' % (
+                           len(sem_plano), ', '.join('%s: %s' % (s[1], 'sem planoB=' if s[3] is None else 'planoB=' + s[3]) for s in sem_plano[:6])))
+    # A prova do pacote "nada termina em nada": duas em cada três. Abaixo disso, o alerta.
+    if do_mod + len(sem_ninguem) >= 4 and len(na_mira) * 3 < 2 * (do_mod + len(sem_ninguem)):
+        alertas.append('**Ele %s em %d de %d vezes que o mod quis mostrá-la** (%d criadas, %d sem lugar). '
+                       'Referência: duas em cada três.' % (
+                           'viu a criatura de verdade (na mira, com luz)' if mede_visto else 'teve a criatura na mira',
+                           len(na_mira), do_mod + len(sem_ninguem), do_mod, len(sem_ninguem)))
+    if maior_sem_ver is not None and maior_sem_ver > 40 * 60:
+        alertas.append('**%s de jogo, da fase 3 em diante, sem ele ver a criatura de verdade.** A cota de corpo deveria ter resolvido aos 30 minutos: '
+                       'veja as linhas `COTA` (não achou lugar com luz? ele ficou em casa, na vela ou em trégua?).' % hms(maior_sem_ver))
+    if tempo_fase.get(3, 0) + tempo_fase.get(4, 0) >= 60 * 60 and not any(n for _, n in escolhidos):
+        alertas.append('Nenhum vazio por escolha (falso aviso, vigia falsa) em mais de uma hora de fase 3 ou 4: o mod está entregando '
+                       'tudo o que prepara, e é a espera sem entrega que mantém o alerta. Veja se algum peso zerou.')
     if sum(corpo_falhou.values()) >= 6:
         alertas.append('A seleção de um evento com corpo falhou %d vezes (%s): veja a seção "Por que não achou lugar".' % (
             sum(corpo_falhou.values()), ', '.join('%s %d' % c for c in corpo_falhou.most_common())))

@@ -46,7 +46,7 @@ public class TestesDePerto {
 	 * Tudo dentro de um bloco maciço de pedra, com três blocos de teto: lá dentro não chega luz do céu.
 	 * Devolve onde ficam os pés do jogador.
 	 */
-	private static BlockPos montarTunel(GameTestHelper helper, int dz) {
+	static BlockPos montarTunel(GameTestHelper helper, int dz) {
 		BlockPos pes = JogadorDeTeste.chao(helper, 4, dz);
 		ServerLevel level = helper.getLevel();
 		for (int x = -3; x <= 11; x++) {
@@ -70,7 +70,7 @@ public class TestesDePerto {
 		return pes;
 	}
 
-	private static ServerPlayer jogadorNoTunel(GameTestHelper helper, BlockPos pes) {
+	static ServerPlayer jogadorNoTunel(GameTestHelper helper, BlockPos pes) {
 		Vec3 relativo = helper.relativeVec(new Vec3(pes.getX() + 0.5, pes.getY(), pes.getZ() + 0.5));
 		ServerPlayer jogador = JogadorDeTeste.criar(helper, GameType.SURVIVAL, relativo.x, relativo.y, relativo.z);
 		Diretor.esquecer(jogador);
@@ -78,18 +78,18 @@ public class TestesDePerto {
 	}
 
 	/** Roda a ação em todo tick, agendando só o tick seguinte de cada vez (ver TestesDeSessao). */
-	private static void cadaTick(GameTestHelper helper, Runnable acao) {
+	static void cadaTick(GameTestHelper helper, Runnable acao) {
 		helper.runAfterDelay(1, () -> {
 			acao.run();
 			cadaTick(helper, acao);
 		});
 	}
 
-	private static void olharParaOSul(ServerPlayer jogador) {
+	static void olharParaOSul(ServerPlayer jogador) {
 		jogador.lookAt(EntityAnchorArgument.Anchor.EYES, jogador.getEyePosition().add(0, 0, 8));
 	}
 
-	private static boolean naCurva(HospedeEntity h, BlockPos pes) {
+	static boolean naCurva(HospedeEntity h, BlockPos pes) {
 		return h.blockPosition().equals(pes.offset(0, 0, CURVA));
 	}
 
