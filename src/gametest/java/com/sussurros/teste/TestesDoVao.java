@@ -42,13 +42,11 @@ public class TestesDoVao {
 		}
 	}
 
-	/** Não é a primeira caçada da vida dele: atravessar já valeria, e o teste confere que não foi por aí. */
+	/** Atravessar já valeria (ele já usou o truque em duas caçadas), e o teste confere que não foi por aí. */
 	private static ServerPlayer jogadorJaCacado(GameTestHelper helper, BlockPos pes) {
 		ServerPlayer jogador = TestesDePerto.jogadorNoTunel(helper, pes);
 		Diretor.definirFase(jogador, 4);
-		Memoria m = Memoria.de(jogador);
-		m.set(Memoria.CACADAS, 1);
-		m.salvar();
+		TestesDaCacada.jaUsouOTruque(jogador);
 		return jogador;
 	}
 

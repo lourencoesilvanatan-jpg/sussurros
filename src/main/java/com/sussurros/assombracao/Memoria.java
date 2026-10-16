@@ -85,6 +85,9 @@ public final class Memoria {
 	public static final String CACA_DEVIDA = "caca_devida"; // 1: ele saiu do jogo ou fugiu para longe no meio de uma caçada; ela volta
 	public static final String CACA_ATRAVESSOU = "caca_atravessou"; // vezes que ele precisou atravessar (pilar, buraco, muro): cada uma encurta o aviso
 	public static final String CACA_VAOS = "caca_vaos";             // vezes que ele avisou na boca de um vão de um bloco e entrou por ele
+	// 0.9.0-alpha26: o que destranca os saltos da caçada é o truque que o jogador repete (ver Cacada.Liberacao)
+	public static final String CACA_FUGAS = "caca_fugas";           // caçadas em que ele fugiu para longe: de duas em diante vale o atalho de longe
+	public static final String CACA_TRUQUES = "caca_truques";       // caçadas em que ele ficou onde não havia caminho e ali não foi alcançado
 	public static final String AMEACA_LIBERADA_EM = "ameaca_liberada_em"; // segundo do mundo a partir do qual pode haver outra sequência de ameaça
 
 	// 0.9: os itens

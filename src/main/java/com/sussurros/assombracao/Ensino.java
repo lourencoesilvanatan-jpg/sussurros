@@ -78,6 +78,14 @@ public final class Ensino {
 	/** 0.9.0-alpha25: a página da afronta, depois da primeira vez em que ele veio por causa dela (ver Afronta). */
 	private static final String TEVE_VISITA = "teve_visita";
 	private static final int PAGINA_DA_AFRONTA = 29;
+	/**
+	 * 0.9.0-alpha26: a página da captura, depois da primeira vez em que ele foi pego. Ela já existia, e chegava só
+	 * na ordem, perto do fim: o dono foi pego duas vezes em 12/10/2026 sem saber que a marca tem cura, nem que a
+	 * chama pálida é a luz que a página dos dois verbos chama de "a luz" (ele carregava tochas). Vale também para
+	 * quem foi pego antes desta versão.
+	 */
+	private static final String TEVE_CAPTURA = "teve_captura";
+	private static final int PAGINA_DA_CAPTURA = 24;
 
 	/** A página chega um pouco depois de ele pegar o item, nunca na mesma hora. */
 	private static final int ESPERA_DA_PAGINA = 20;
@@ -107,6 +115,9 @@ public final class Ensino {
 			pedirUmaVez(p, m, seg, TEVE_CACADA, PAGINA_DA_CACADA, "CACADA");
 			if (m.get(Memoria.CACA_VAOS) >= 1) {
 				pedirUmaVez(p, m, seg, TEVE_VAO, PAGINA_DO_VAO, "VAO");
+			}
+			if (m.get(Memoria.CAPTURAS) >= 1) {
+				pedirUmaVez(p, m, seg, TEVE_CAPTURA, PAGINA_DA_CAPTURA, "CAPTURA");
 			}
 		}
 		if (m.get(Afronta.VISITAS) >= 1) {

@@ -33,9 +33,14 @@ public final class ApoioCaca {
 	private ApoioCaca() {
 	}
 
-	/** O jogador nunca foi caçado: a primeira caçada ensina a regra sem as exceções (sem atalho, sem atravessar). */
-	public static boolean primeiraCacada(ServerPlayer p) {
-		return Memoria.de(p).get(Memoria.CACADAS) == 0;
+	/**
+	 * O que está destrancado para a caçada que começa agora, pelo que a memória do jogador conta (0.9.0-alpha26; ver
+	 * Saltos). Quem nunca foi caçado não tem nada destrancado: a primeira caçada ensina a regra sem as exceções.
+	 */
+	public static Saltos.Liberacao liberacao(ServerPlayer p) {
+		Memoria m = Memoria.de(p);
+		return Saltos.liberacao(m.get(Memoria.CACADAS), m.get(Memoria.CACA_FUGAS), m.get(Memoria.CACA_TRUQUES),
+				m.get(Memoria.CACA_ATRAVESSOU));
 	}
 
 	/**

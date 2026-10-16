@@ -2065,3 +2065,86 @@ A sessão sintética (uma hora, três jogadores de mentira em campo aberto) deu 
 - **Vira botão?** "Deixa eu bater para ver." É aceitável nas primeiras vezes (é ele testando a regra), e a visita é uma por noite. Se virar rotina, o analisador mostra: muitos `BATEU` e muitas visitas.
 - **Somado com a Conta e com a obsessão**, pode ficar difícil saber por que uma coisa aconteceu. Por isso toda linha `AFRONTA` diz o motivo, e a visita e a cobrança têm linha própria.
 - **Com amigos:** a afronta é de quem fez. A visita à janela é uma aparição de verdade: quem estiver na casa vê.
+
+# Versão 0.9.0-alpha26 — a caçada com chance de verdade
+
+Não é pacote do plano de dez: é o ajuste que a sessão do dono de 12/10/2026 pediu, antes do pacote 5 (seções 0.10 e 0.11 da passagem). Palavras dele: "mas po o bicho teleporta, arranca coração de vida". O log deu razão: duas sequências de ameaça em 58 minutos, **as duas com captura, 14 e 22 segundos depois do aviso**; três saltos no meio (dois atalhos e uma travessia) e um golpe dele que o pôs **nas costas** do jogador, que foi tocado dois segundos depois; e, quatro minutos e meio depois da primeira captura, ele morreu para um zumbi, com cinco corações. A segunda o largou com três corações, no escuro, no fundo de uma mina, e ele saiu pelo modo espectador.
+
+A tese, da pesquisa sobre a IA de Alien: Isolation (`pesquisa/2026-10-15-analise-das-ideias-de-fora.md`): o jogador tem de se sentir impotente e, ao mesmo tempo, achar que é mais esperto que o bicho. Teletransporte é exceção (duas vezes numa campanha inteira, lá). O "aprender" é ilusão: partes do comportamento começam trancadas e **destrancam pelo que o jogador faz**, nunca por morte dele.
+
+As contas estão numa classe pura, `assombracao/Saltos` (JUnit em `SaltosTest`); quem as usa é a `Cacada`.
+
+## Os saltos destrancam pelo truque que ele repete
+
+"Salto" é toda vez que ele muda de lugar sem andar, perto do jogador: o atalho, o atravessar e o recuo de quem foi ferido.
+
+- **O atalho de longe** (o jogador a mais de dezesseis blocos) só vale depois de **duas caçadas em que o jogador fugiu para longe**. Fugir é ficar a vinte e quatro blocos ou mais dele e a doze ou mais do mais perto em que já esteve, no aviso ou na perseguição (`Saltos.fugiu`). O que o dono fez em 12/10 (de 19 para 33 blocos no aviso) conta.
+- **Atravessar** (sem caminho, a até oito blocos) e **o atalho do anel** (sem caminho, de oito a dezesseis) só valem depois de **duas caçadas em que o jogador ficou onde não havia caminho e funcionou** (pilar, muro, buraco, anel). As travessias de antes desta versão contam como truque (o dono tem uma).
+- **Seis caçadas destrancam tudo** de qualquer jeito: é o gatilho de segurança do Alien, que dá a incerteza sem parecer arbitrário.
+- Na primeira caçada da vida dele nada está destrancado, como antes. Até a alpha25 era só isso: da segunda em diante valia tudo.
+- O que ele fez numa caçada fica guardado quando ela acaba (`Diretor.cacadaTerminou`, chaves `caca_fugas` e `caca_truques`), uma vez por caçada. **Captura não destranca nada.**
+- Para ele, isto dá a regra legível: "aquilo que eu sempre faço deixou de funcionar".
+
+Hoje o dono tem três caçadas, nenhuma fuga anotada e uma travessia: o atalho de longe só volta depois de duas fugas ou de mais três caçadas; atravessar, depois de mais um truque.
+
+## Nenhum salto nos quinze segundos depois do aviso
+
+É quando o jogador decide entre correr, se esconder ou encarar. Vale para o atalho e para atravessar. O recuo de quem bateu nele não conta: é resposta a um golpe.
+
+## Onde ele cai, e quanto espera
+
+- **Nunca nas costas.** "Costas" é a menos de sessenta graus do ponto bem atrás de para onde o jogador está virado (só o plano do chão). Com o jogador parado, até a alpha25 o lugar do salto era **atrás dele**; agora é dos lados, entre a borda da tela e o começo das costas, de onde virar a cabeça o encontra. Com o jogador andando, continua "à frente de para onde ele vai, fora da tela", sem as costas.
+- **O atalho de longe cai de doze a dezesseis blocos** (era de oito a doze). O do anel continua de oito a doze: é o lado de dentro de um muro, e a doze ele cairia do lado de fora de novo. A espera cobre a diferença.
+- **Depois de qualquer salto ele fica parado**, olhando para o jogador, um tempo que é **maior quanto mais perto ele caiu**: a janela que se quer até o primeiro toque possível é de quatro segundos e meio, e a espera é o que falta para isso depois de descontar o tempo de chegar andando, entre dois e três segundos (`Saltos.esperaDepois`). O som de pano do atalho continua sendo o aviso de onde ele está.
+- **A travessia que não acha ninguém** ("sair de perto resolve") usava um segundo e meio fixo; agora usa a mesma espera (perto do jogador, quase sempre três segundos).
+- Toda mudança de lugar sem andar zera o embalo dele: o teste do salto pegou que ele chegava escorregando uns vinte centímetros na direção em que andava antes.
+
+## Bater nele compra tempo
+
+Nas duas primeiras vezes em que é ferido numa caçada, ele **sai da caçada** (estágio novo, `FERIDO`): some e reaparece de dezesseis a vinte e quatro blocos, fora da tela, nunca nas costas, de preferência onde o jogador não o enxerga, e fica ali parado **de seis a nove segundos**. Nos dois últimos segundos os passos dele se ouvem de onde ele está, e só então volta a perseguir, sabendo mais ou menos onde o jogador está. É o "volta para os dutos" do Alien. O que ele estava fazendo fica para trás (um piscar marcado, um vão, uma porta, um aviso de travessia). Da terceira vez em diante, nada acontece, como antes.
+
+Até a alpha25 o recuo era de dez a catorze blocos, atrás de quem estava parado, e ele voltava a andar no tick seguinte.
+
+Se na hora do golpe não há lugar longe (um quarto fechado), ele tenta de novo a cada segundo em que o jogador não está olhando; se não conseguir, a espera de um salto vem depois da volta, para quem ficou perto dele também ter como sair.
+
+## A captura pesa, mas não larga para morrer
+
+- **A vida não fica abaixo da metade** do que ele pode ter (já com a marca nova). Continuam saindo oito pontos de quem tem mais que isso; quem já estava abaixo da metade não piora. Até a alpha25 o piso era de dois corações. O caso da segunda captura de 12/10 (14 de vida, 14 de máximo): ficou com 6; agora ficaria com 7.
+- **Onde ele acorda:** de preferência um lugar por onde já passou, a vinte a quarenta blocos, **com luz e sem monstro a doze blocos**. Até a alpha25 era o contrário: o lugar mais escuro, e as luzes em volta eram apagadas por um minuto. Um ponto do caminho dele sem monstro ganha sempre; se todos os do caminho têm monstro, os chãos quaisquer da faixa concorrem.
+- Continuam: o item da mão fica caído onde ele foi pego, a marca (um coração de vida máxima, até três), a distância, o silêncio e o acordar devagar.
+
+## O que salva tem de estar dito
+
+- **A página 23** (os dois verbos) dizia "use o tempo para andar para trás, até a luz", e o dono carregava tochas. Agora diz "até a chama pálida de uma vela. Tocha não segura ele." Ele já leu a 23; isto vale para quem lê depois.
+- **A página 25** (a da captura) existia e só chegava na ordem, perto do fim. Agora é pedida **depois da primeira captura** (`Ensino`, chave `teve_captura`), também para quem foi pego antes desta versão: é a que vai chegar para ele nos primeiros minutos da próxima sessão. Ela já dizia que a marca passa dormindo com a vela pálida acesa; ganhou uma frase que liga a chama pálida à caçada ("devia ter acendido uma assim que o mundo ficou mudo") e perdeu "no escuro" (ele não acorda mais no escuro).
+- Ele já teve uma Vela (11/10) e leu a página dela. Não chegou a usar na caçada.
+
+## Uma linha por caçada
+
+Toda caçada, como quer que acabe, deixa `CACA id=... resumo` no log (TELEMETRIA.md), e o analisador junta numa tabela na seção "Caçadas, capturas e o outro lado": quando começou, do aviso ao fim, os saltos (com o segundo de cada um), a menor janela que um salto deu, do último salto ao fim, como acabou e o que estava destrancado. A tabela sai também de logs antigos (sem as duas colunas que só a linha nova tem). Dois alertas novos: salto nos quinze segundos depois do aviso, e captura a menos de três segundos de um salto (a travessia não conta: o aviso no bloco é a janela dela). **No log de 12/10 os dois aparecem**: atalho aos 4 s e aos 11 s e travessia aos 14 s do aviso; captura 2 s depois do golpe.
+
+## O que não mudou, de propósito
+
+- A frequência das caçadas (uma a cada 25 a 40 minutos de fase 4), o teto de tempo (dois minutos), o aviso de oito a dez segundos, a velocidade, o piscar, a vela, o vão, a porta. A passagem pedia para não mexer nisso antes de ver uma caçada dele com esta versão.
+- O som da caçada. A voz é a alpha27, e a música que varia por encontro também fica para lá (é áudio).
+- A resposta da afronta quando ele bate sem tocha por perto (`SILENCIO`, invisível no meio de uma caçada, que já está muda). Agora bater tem uma consequência que se vê (ele some e volta longe); a resposta da afronta fica como está.
+- **A alpha26 e a alpha27 são o marco.** Até o dono jogar uma caçada com as duas, nada mais mexe na caçada.
+
+## Os testes
+
+- **JUnit** (`SaltosTest`, nove): o que destranca e o que não destranca, as travessias antigas contando, as seis caçadas, a espera maior quanto mais perto e sempre de dois a três segundos, a janela do atalho de longe nunca abaixo de quatro segundos na velocidade máxima, as costas (inclusive a borda de 120 graus dos dois lados), a fuga (com o caso de 12/10), e a vida depois da captura (com o caso de 12/10).
+- **Servidor** (`TestesDosSaltos`, cinco; 105 no total):
+  - `oSaltoNuncaCaiNasCostasEDaTempo`: seis saltos seguidos com o jogador parado; nenhum nas costas, nenhum na tela, nenhum a menos de onze blocos (a conta do lugar é pelo olho, a do teste pelos pés), ele parado nos dois segundos seguintes; e do último salto ao toque, três segundos ou mais.
+  - `baterNeleCompraTempoEAVoltaTemPassos`: golpe a três blocos; ele reaparece a quinze ou mais, não nas costas, fica fora pelo menos seis segundos sem tocar ninguém, e os passos dele chegam ao jogador, vindos de onde ele está, antes da volta.
+  - `oPilarFuncionaDuasVezes`: numa caçada de verdade, em cima do pilar, com um truque já anotado: nenhuma travessia, ninguém pego, e o truque fica anotado (dois). Na caçada seguinte ele atravessa, e só quinze segundos ou mais depois do aviso.
+  - `fugirParaLongeFicaAnotado`: cinquenta blocos no aviso; ao fim da caçada, uma fuga e nenhum truque.
+  - `aCapturaNaoLargaNoEscuro`: tochas de um lado só; a captura o leva para lá, com luz onde ele acorda, nenhuma tocha apagada em volta, e a vida na metade (estava em 12).
+- Os testes antigos que precisavam de atravessar ou do atalho (`pilarNaoSegura`, os três do pilar, o da caixa de vidro, o de andar para longe no aviso, os do vão) passaram a pôr na memória os truques já feitos (`TestesDaCacada.jaUsouOTruque` e `jaFugiu`), em vez de só "não é a primeira caçada".
+- **Não há foto nova.** O que muda na tela é onde ele está depois de um salto, e o teste de servidor mede isso melhor que uma foto. A foto 35 (onde ele acorda depois da captura) pode mudar: era a que mostrava o escuro.
+
+## Não verificado por ninguém
+
+- **Se assusta menos.** O risco desta versão é o contrário do de 12/10: com os saltos trancados, as próximas duas caçadas dele podem parecer fáceis de vencer correndo. É o que se quer (a terceira não), mas só ele diz se a perseguição ficou boa.
+- **Se ele percebe que "o truque parou de funcionar".** É a tese; não há como testar sem ele.
+- **Os números** (duas repetições, seis caçadas, quinze segundos, doze blocos, quatro segundos e meio, seis a nove fora, a metade da vida): ponto de partida, cada um com linha no log.
+- **Os passos da volta**: o som é o passo do bloco em que ele pisa, só para o alvo. Ninguém ouviu.

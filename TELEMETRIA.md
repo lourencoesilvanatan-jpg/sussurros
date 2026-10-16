@@ -960,3 +960,27 @@ Para conferir depois de uma sessão (o analisador soma na seção "Caçadas, cap
 - `ENSINO primeiro=AFRONTA pagina=30`: a página do diário sobre isso foi pedida, depois da primeira visita.
 
 Para conferir depois de uma sessão (seção "A afronta" do analisador): o que ele fez e quantas vezes; o maior valor; se a visita veio na noite seguinte a ele passar dos 40; e as batidas e portas por hora com o número alto e baixo. Se ele bateu e a resposta foi `SILENCIO`, não havia tocha a doze blocos: é o caso em que ele pode não ter percebido nada.
+
+## 0.9.0-alpha26 — os saltos, o ferido e o resumo de cada caçada
+
+```
+[10253s][Jogador] CACA id=M006 fugiu dist=33 menor=19 estagio=AVISO
+[10272s][Jogador] CACA id=M006 atalho n=1 de=29 para=14 espera=44t janela=4.5s costas=nao
+[10280s][Jogador] CACA id=M006 ferido n=1 recuou=sim dist=20.1 fora=144t costas=nao
+[10280s][Jogador] CACA id=M006 PERSEGUE -> FERIDO motivo=FERIDO
+[10287s][Jogador] CACA id=M006 FERIDO -> PERSEGUE motivo=VOLTOU dist=20 espera=0t
+[10301s][Jogador] CACA id=M006 resumo fim=TOCOU duracao=48s perseguiu=38s atalhos=1 travessias=0 golpes=1 menorJanela=4.5s desdeOSalto=14.0s liberado=longe:sim,semCaminho:nao fugiu=sim truque=nao
+[10301s][Jogador] CACA terminou motivo=TOCOU cacadas=4 proximaAmeacaEm=1775s fugas=1 truques=0
+[10400s][Jogador] ENSINO primeiro=CAPTURA pagina=25 nova=sim
+[12440s][Jogador] CACA id=M011 truque=SEM_CAMINHO trancado dist=5.3
+```
+
+- `CACA id=... fugiu dist=D menor=M estagio=...`: nesta caçada o jogador fugiu para longe (a D blocos dele, depois de ter estado a M). Uma vez por caçada. É o que, em duas caçadas, destranca o atalho de longe.
+- `CACA id=... truque=SEM_CAMINHO|ANEL trancado dist=...`: o jogador ficou onde não havia caminho (a até oito blocos, ou num anel de oito a dezesseis), e a resposta ainda estava trancada: desta vez funcionou. Uma vez por caçada. Em duas caçadas, destranca atravessar e o atalho do anel.
+- `CACA id=... atalho n=N de=A para=B espera=Et janela=Js costas=sim|nao`: o atalho. `de` e `para` são as distâncias até o jogador antes e depois; `espera` é quanto ele fica parado depois (40 a 60 ticks, maior quanto mais perto); `janela` é a espera mais o tempo de chegar andando até o toque. `costas=sim` não deveria aparecer nunca: é a garantia conferida. (`atalho_teste` é o mesmo salto, chamado por um teste.)
+- `CACA id=... ferido n=N recuou=sim|nao dist=D fora=Ft costas=...`: o jogador bateu nele. `recuou=nao` é que não havia lugar longe (ele tenta de novo a cada segundo; quando consegue, `CACA id=... ferido afastou dist=...`). `fora` é quanto tempo ele fica fora da caçada (120 a 180 ticks). Vem com `PERSEGUE -> FERIDO`, e a volta com `FERIDO -> PERSEGUE motivo=VOLTOU dist=... espera=...` (`espera` só não é zero quando ele voltou ainda perto).
+- `CACA id=... resumo fim=... duracao=Ns perseguiu=Ns atalhos=N travessias=N golpes=N menorJanela=Xs|- desdeOSalto=Xs|- liberado=longe:sim|nao,semCaminho:sim|nao fugiu=sim|nao truque=sim|nao`: uma por caçada, como quer que ela acabe (`fim` é o motivo do sumiço: `TOCOU`, `TETO_CONTATO`, `VELA`, `ZONA_CALMA`, `SEM_ALVO`...). `perseguiu` conta do fim do aviso. `menorJanela` é a menor janela que um salto deu (a de uma travessia é o próprio aviso no bloco). `desdeOSalto` é medido: do último salto até o fim. `liberado` é o que estava destrancado quando a caçada começou; `fugiu` e `truque`, o que ela deixa anotado.
+- `CACA terminou ...` ganhou `fugas=N truques=N`: o total guardado na memória do jogador, já com esta caçada.
+- `ENSINO primeiro=CAPTURA pagina=25`: depois da primeira captura, a página 25 foi pedida.
+
+Para conferir depois de uma sessão (o analisador monta a tabela "Uma linha por caçada" na seção "Caçadas, capturas e o outro lado"): quanto durou cada caçada depois do aviso, quantos saltos e quando, a menor janela, e como acabou. Os alertas "Salto nos primeiros quinze segundos depois do aviso" e "Captura a menos de três segundos de um salto" não deveriam aparecer num log da alpha26 em diante. Se as caçadas dele acabarem quase todas em `TETO_CONTATO` ou `TETO_TOTAL` sem ninguém pego, os saltos trancados estão deixando fácil demais: olhe `liberado` e quantas fugas e truques ele já tem.
