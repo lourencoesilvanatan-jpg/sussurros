@@ -18,8 +18,10 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.Sussurros;
@@ -37,11 +39,16 @@ import com.sussurros.registro.ModSons;
  *
  *  - tudo emudece e a tela fecha;
  *  - o que estava na mão fica caído onde ele foi pego (voltar para buscar é a segunda cena);
- *  - ele acorda a 20-40 blocos, num lugar escuro por onde já passou, com a vida reduzida (nunca abaixo de
- *    dois corações) e as luzes em volta apagadas;
+ *  - ele acorda a 20-40 blocos, num lugar por onde já passou, com a vida reduzida (nunca abaixo da metade);
  *  - fica a MARCA: um coração a menos de vida máxima por captura (até três), até dormir com uma vela acesa.
  *
- * Depois vem um descanso longo. Numa versão seguinte, parte das capturas leva ao Avesso em vez de deslocar.
+ * Depois vem um descanso longo. Parte das capturas leva ao Avesso em vez de deslocar.
+ *
+ * 0.9.0-alpha26: pesada, mas sem largar para morrer. Até a alpha25 ele acordava no lugar mais escuro que havia,
+ * com as luzes em volta apagadas, e com até dois corações: na sessão de 12/10/2026 o dono morreu para um zumbi
+ * quatro minutos e meio depois da primeira captura, e saiu da segunda (três corações, no escuro, no fundo de uma
+ * mina) pelo modo espectador. Agora o lugar preferido é o que tem luz e nenhum monstro por perto, nada é apagado
+ * em volta, e a vida não fica abaixo da metade do que ele pode ter.
  */
 public final class Captura {
 	private static final Identifier MARCA = Sussurros.id("marca");
@@ -104,13 +111,7 @@ public final class Captura {
 			p.stopRiding();
 			p.teleportTo(level, destino.getX() + 0.5, destino.getY(), destino.getZ() + 0.5, Set.of(),
 					SORTE.nextFloat() * 360.0F, 10.0F, true);
-			ApoioCaca.apagarLuzPerto(level, p, destino, 8, 20 * 60, 8);
-		}
-
-		// Nunca mata, nunca deixa abaixo de dois corações. Quem já estava pior que isso não piora.
-		float vida = p.getHealth();
-		if (vida > 4.0F) {
-			p.setHealth(Math.max(4.0F, vida - 8.0F));
+			// (Até a alpha25 as luzes em volta eram apagadas aqui, por um minuto. Ver o comentário da classe.)
 		}
 
 		if (!teste) {
@@ -122,6 +123,14 @@ public final class Captura {
 			m.salvar();
 			aplicarMarca(p, m.get(Memoria.MARCAS));
 			Diretor.depoisDaCaptura(p);
+		}
+
+		// Nunca mata, e nunca deixa abaixo da metade da vida que ele pode ter (já com a marca nova). Quem já estava
+		// pior que isso não piora. Até a alpha25 o piso era de dois corações.
+		float vida = p.getHealth();
+		float depois = Saltos.vidaDepoisDaCaptura(vida, p.getMaxHealth());
+		if (depois != vida) {
+			p.setHealth(depois);
 		}
 
 		Depuracao.log(p, seg, String.format(Locale.ROOT, "CAPTURA deslocou de=%s para=%s dist=%.0f vida=%.0f marcas=%d",
@@ -146,12 +155,13 @@ public final class Captura {
 
 	/**
 	 * Para onde ele é levado: de preferência um ponto do próprio Rastro (um lugar que ele reconhece), a
-	 * 20-40 blocos, escuro. Sem isso, um chão qualquer nessa faixa. Sem isso também, ele fica onde está.
+	 * 20-40 blocos, com luz e sem monstro por perto. Sem isso, um chão qualquer nessa faixa. Sem isso também, ele
+	 * fica onde está.
 	 */
 	@Nullable
 	private static BlockPos escolherDestino(ServerLevel level, ServerPlayer p, EstadoJogador e, long seg) {
 		BlockPos melhor = null;
-		double melhorNota = -1;
+		double melhorNota = -Double.MAX_VALUE;
 		List<Rastro.Ponto> pontos = new ArrayList<>(e.rastro.comIdade(seg, 20, 100000));
 		for (Rastro.Ponto pt : pontos) {
 			double d = Math.sqrt(p.distanceToSqr(pt.x(), pt.y(), pt.z()));
@@ -168,11 +178,13 @@ public final class Captura {
 				melhor = chao;
 			}
 		}
-		if (melhor != null) {
+		// Um ponto do caminho dele sem monstro por perto ganha sempre (a nota passa de 1). Com monstro em todos, os
+		// chãos quaisquer da faixa também concorrem.
+		if (melhor != null && melhorNota > 1.0) {
 			return melhor;
 		}
 		// Primeiro a faixa pedida (20 a 40 blocos); só se nada servir, mais perto (10 a 20).
-		for (int faixa = 0; faixa < 2 && melhor == null; faixa++) {
+		for (int faixa = 0; faixa < 2 && (faixa == 0 || melhor == null); faixa++) {
 			double min = faixa == 0 ? 20 : 10;
 			double largura = faixa == 0 ? 20 : 10;
 			for (int i = 0; i < 20; i++) {
@@ -192,11 +204,15 @@ public final class Captura {
 		return melhor;
 	}
 
-	/** Quanto mais escuro, melhor. */
+	/**
+	 * Quanto mais luz, melhor, e monstro por perto pesa contra (0.9.0-alpha26). Até a alpha25 era o contrário:
+	 * quanto mais escuro, melhor.
+	 */
 	private static double notaDoLugar(ServerLevel level, BlockPos chao) {
 		int luz = level.getBrightness(LightLayer.BLOCK, chao);
 		int ceu = Diretor.ehNoite(level) ? 0 : level.getBrightness(LightLayer.SKY, chao);
-		return 1.0 - Math.max(luz, ceu) / 15.0;
+		boolean monstro = !level.getEntitiesOfClass(Monster.class, new AABB(chao).inflate(12.0, 6.0, 12.0), Monster::isAlive).isEmpty();
+		return Math.max(luz, ceu) / 15.0 - (monstro ? 1.5 : 0.0);
 	}
 
 	/** Chão firme, sem líquido, com dois blocos de ar em cima. */

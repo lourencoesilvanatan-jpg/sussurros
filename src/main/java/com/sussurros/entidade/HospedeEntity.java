@@ -1051,12 +1051,32 @@ public class HospedeEntity extends PathfinderMob {
 		this.cacada.tick(level, this.alvo, percebido, distSqr);
 	}
 
-	/** A caçada acabou (ele sumiu, por qualquer motivo): o Diretor é avisado uma vez só. */
+	/** A caçada acabou (ele sumiu, por qualquer motivo): o resumo vai para o log e o Diretor é avisado, uma vez só. */
 	private void avisarFimDaCacada(String motivo) {
 		if (this.cacada != null && !this.cacada.encerrada() && this.alvo != null) {
-			this.cacada.marcarEncerrada();
+			if (this.level() instanceof ServerLevel level) {
+				this.cacada.terminar(level, this.alvo, motivo);
+			} else {
+				this.cacada.marcarEncerrada();
+			}
 			Diretor.cacadaTerminou(this.alvo, this, motivo);
 		}
+	}
+
+	/** Na caçada que acabou de terminar, o jogador fugiu para longe (0.9.0-alpha26: é o que destranca o atalho de longe). */
+	public boolean jogadorFugiuNaCaca() {
+		return this.cacada != null && this.cacada.fugiu();
+	}
+
+	/** Na caçada que acabou de terminar, o jogador ficou onde não havia caminho, e funcionou. */
+	public boolean jogadorUsouTruqueNaCaca() {
+		return this.cacada != null && this.cacada.usouTruque();
+	}
+
+	/** Só para os testes: o salto do atalho agora, sem as travas de quando ele pode acontecer. */
+	public boolean saltarParaTeste() {
+		return this.modo == Modo.CACAR && this.cacada != null && this.alvo != null && this.level() instanceof ServerLevel level
+				&& this.cacada.saltarParaTeste(level, this.alvo);
 	}
 
 	/** Vira o corpo e a cabeça para a entidade. Público porque o Diretor usa depois de reposicionar. */
@@ -1117,7 +1137,8 @@ public class HospedeEntity extends PathfinderMob {
 		if (source.getEntity() instanceof ServerPlayer jogador && jogador == this.alvo && !this.ehTeste()) {
 			Diretor.criaturaFerida(jogador, this);
 		}
-		// Na caça, bater não o manda embora: nas duas primeiras vezes ele recua, depois nem isso.
+		// Na caça, bater não o manda embora: nas duas primeiras vezes ele sai da caçada por uns segundos e volta
+		// (0.9.0-alpha26; ver Cacada.aoSerFerido), depois nem isso.
 		if (this.modo == Modo.CACAR && this.cacada != null && this.alvo != null && this.fadeRestante == 0) {
 			if (source.getEntity() == this.alvo) {
 				this.cacada.aoSerFerido(level, this.alvo);

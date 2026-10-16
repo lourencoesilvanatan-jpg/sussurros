@@ -238,6 +238,47 @@ def falhas_de_lugar(texto):
     return achado
 
 
+def por_cacada(linhas):
+    """Cada caçada, pelo id da criatura: quando começou, quando o aviso acabou, os saltos, como e quando acabou.
+
+    Vale para logs antigos (as linhas de atalho, ferido, travessia e captura existem desde a alpha16); a linha
+    "resumo" (0.9.0-alpha26) acrescenta a menor janela e o que estava destrancado.
+    """
+    cacadas = collections.OrderedDict()
+    for t, texto in linhas:
+        m = re.match(r'^HOSPEDE id=(\S+) criado .*modo=CACAR', texto)
+        if m:
+            cacadas[m.group(1)] = {'inicio': t, 'perseguiu': None, 'saltos': [], 'fim': None, 'como': None, 'resumo': None}
+            continue
+        m = re.match(r'^HOSPEDE id=(\S+) sumiu motivo=(\S+)', texto)
+        if m and m.group(1) in cacadas and cacadas[m.group(1)]['fim'] is None:
+            cacadas[m.group(1)]['fim'] = t
+            cacadas[m.group(1)]['como'] = m.group(2)
+            continue
+        m = re.match(r'^CACA id=(\S+) (.*)', texto)
+        if not m or m.group(1) not in cacadas:
+            continue
+        c = cacadas[m.group(1)]
+        resto = m.group(2)
+        if resto.startswith('AVISO -> PERSEGUE') and c['perseguiu'] is None:
+            c['perseguiu'] = t
+        elif re.match(r'^atalho(_teste)? n=', resto):
+            c['saltos'].append((t, 'atalho'))
+        elif resto.startswith('ferido n='):
+            c['saltos'].append((t, 'ferido'))
+        elif 'PERSEGUE -> ATRAVESSA' in resto:
+            c['saltos'].append((t, 'travessia'))
+        elif resto.startswith('CAPTURA como='):
+            c['fim'] = t
+            c['como'] = 'captura (%s)' % resto.split()[1].split('=')[1]
+        elif resto.startswith('FIM motivo=') and c['fim'] is None:
+            c['fim'] = t
+            c['como'] = resto.split()[1].split('=')[1]
+        elif resto.startswith('resumo '):
+            c['resumo'] = dict(par.split('=', 1) for par in resto.split()[1:] if '=' in par)
+    return cacadas
+
+
 def tabela(cabecalho, linhas):
     saida = ['| ' + ' | '.join(cabecalho) + ' |', '|' + '|'.join(['---'] * len(cabecalho)) + '|']
     for linha in linhas:
@@ -481,6 +522,27 @@ def analisar(linhas, jogador, caminho):
     out.append('')
     if devidas:
         out.append('Caçadas que ficaram devendo: ' + ', '.join('%s %d' % d for d in devidas.most_common()) + '.')
+        out.append('')
+    # 0.9.0-alpha26: uma linha por caçada. Os tempos saem das linhas que existem desde a alpha16 (então logs antigos
+    # também dão a tabela, para comparar); a menor janela e o que estava destrancado só existem na linha "resumo".
+    cacadas = por_cacada(linhas)
+    if cacadas:
+        out.append('Uma linha por caçada (segundos contados do fim do aviso; "salto" é atalho, travessia ou recuo de ferido):')
+        out.append('')
+        linhas_tab = []
+        for ident, c in cacadas.items():
+            r = c['resumo'] or {}
+            base = c['perseguiu'] if c['perseguiu'] is not None else c['inicio']
+            saltos = ', '.join('%s aos %ds' % (tipo, t - base) for t, tipo in c['saltos']) or '-'
+            fim = c['fim']
+            ultimo = c['saltos'][-1][0] if c['saltos'] else None
+            linhas_tab.append((ident, hms(c['inicio'] - linhas[0][0]),
+                               '%ds' % (fim - base) if fim is not None else '?',
+                               saltos, r.get('menorJanela', '-'),
+                               '%ds' % (fim - ultimo) if fim is not None and ultimo is not None else '-',
+                               c['como'] or r.get('fim', '?'), r.get('liberado', '(antes da alpha26)')))
+        out += tabela(['Caçada', 'Começou aos', 'Do aviso ao fim', 'Saltos', 'Menor janela', 'Do último salto ao fim', 'Como acabou', 'Destrancado'],
+                      linhas_tab)
         out.append('')
     # 0.9.0-alpha24: o vão de um bloco, o piscar pelo caminho, e por que a navegação desistiu.
     de_quatro = collections.Counter(m.group(1) for m in (re.match(r'^CACA id=\S+ corpo=DE_QUATRO motivo=(\S+)', texto) for _, texto in linhas) if m)
@@ -951,6 +1013,21 @@ def analisar(linhas, jogador, caminho):
         alertas.append('**Numa caçada ele parou %d vez(es) no ponto mais perto do alvo a que conseguia chegar** (CAMINHO_FALHOU, caminho=MESMO). '
                        'Há um lugar a que o jogador chega e ele não. As linhas `sem_caminho` dizem onde ele estava e onde o alvo estava: confira no mundo '
                        'com `ler_mundo.py` (queda de mais de três blocos? mais de 64 blocos andando? água?) antes de mexer em qualquer coisa.' % mesmo_caminho)
+    # 0.9.0-alpha26: as duas garantias de tempo da caçada (ver Saltos). Num log de antes dela, os alertas mostram o que
+    # a versão quis consertar. O recuo de quem foi ferido não conta para os quinze segundos: é resposta a um golpe.
+    cedo = [(i, t - c['perseguiu']) for i, c in cacadas.items() if c['perseguiu'] is not None
+            for t, tipo in c['saltos'] if tipo != 'ferido' and 0 <= t - c['perseguiu'] < 15]
+    if cedo:
+        alertas.append('**Salto nos primeiros quinze segundos depois do aviso** (%s). Da alpha26 em diante isto não deveria acontecer.' % (
+            ', '.join('%s aos %ds' % s for s in cedo)))
+    # A captura por travessia não conta: o aviso no bloco (um segundo e meio a dois e meio) é a janela dela, e quem
+    # sai de perto não é pego.
+    colada = [(i, c['fim'] - c['saltos'][-1][0]) for i, c in cacadas.items()
+              if c['saltos'] and c['fim'] is not None and (c['como'] or '').startswith('captura')
+              and c['como'] != 'captura (ATRAVESSOU)' and c['fim'] - c['saltos'][-1][0] < 3]
+    if colada:
+        alertas.append('**Captura a menos de três segundos de um salto** (%s): o jogador não teve tempo de reagir. Veja a tabela das caçadas.' % (
+            ', '.join('%s, %ds depois' % s for s in colada)))
     bloco += ['- ' + alerta for alerta in alertas] if alertas else ['Nenhum.']
     bloco.append('')
     corte = out.index('## Fases e estados')

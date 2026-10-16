@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha26
+
+Resposta ao que você disse depois da sessão de 12/10 ("o bicho teleporta, arranca coração de vida"). Mexe no momento mais forte das fases avançadas: ele continua pesado, mas passa a deixar você reagir, e o que vem depois dele deixa de ser tão cruel. Uma página do diário foi corrigida e outra passa a chegar na hora certa. Não entra item nem lugar novo. Junto com a próxima (alpha27, o som desse momento), é a versão para jogar e contar como foi.
+
 ## 0.9.0-alpha25
 
 Quarto pacote do plano de conteúdo, segunda parte. É a resposta ao que você pediu em 11/10 ("ações que podem irritar"): o que você faz com ele passa a ficar guardado por um tempo e a ter consequência, na hora e nos dias seguintes. Vale para os dois lados: há coisas que pioram e coisas que acalmam. Não entra item nem lugar novo, e quem não mexe com ele não muda nada.

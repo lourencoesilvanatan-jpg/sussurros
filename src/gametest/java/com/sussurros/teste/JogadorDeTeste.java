@@ -172,6 +172,17 @@ public final class JogadorDeTeste {
 		return n;
 	}
 
+	/** O mesmo, contando os sons cujo nome tem este trecho (por exemplo ".step", para qualquer passo). */
+	public static int sonsVindosDeQueTem(ServerPlayer jogador, Vec3 ponto, double raio, String trecho) {
+		int n = 0;
+		for (SomOuvido s : ULTIMOS_SONS.getOrDefault(jogador.getUUID(), new java.util.ArrayDeque<>())) {
+			if (s.nome().contains(trecho) && ponto.distanceToSqr(s.x(), s.y(), s.z()) <= raio * raio) {
+				n++;
+			}
+		}
+		return n;
+	}
+
 	/**
 	 * Entre os últimos sons que "recebidos" contou para este jogador, quantos NÃO são de bicho (os do jogo cujo
 	 * nome começa por "entity."). No gramado do mundo de teste há cavalos e vacas andando, e o som deles chega a

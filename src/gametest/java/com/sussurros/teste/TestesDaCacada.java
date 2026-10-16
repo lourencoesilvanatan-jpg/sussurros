@@ -24,6 +24,7 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Memoria;
+import com.sussurros.assombracao.Saltos;
 import com.sussurros.entidade.HospedeEntity;
 
 /**
@@ -233,10 +234,8 @@ public class TestesDaCacada {
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
 		helper.setTime(18000);
-		// Não é a primeira caçada da vida dele: na primeira, o pilar ainda funciona.
-		Memoria m = Memoria.de(jogador);
-		m.set(Memoria.CACADAS, 1);
-		m.salvar();
+		// Ele já usou o pilar em duas caçadas: nelas o pilar funcionou, nesta não funciona mais.
+		jaUsouOTruque(jogador);
 		Vec3 inicio = jogador.position();
 		boolean[] atravessou = new boolean[1];
 		int[] relogio = new int[1];
@@ -304,7 +303,26 @@ public class TestesDaCacada {
 
 	// ===== 0.9.0-alpha16: os truques que encerravam a caçada de graça (pesquisa/2026-10-10-a-cacada.md) =====
 
-	/** Um pilar de cinco blocos, com o jogador em cima. Não é a primeira caçada da vida dele. */
+	/**
+	 * 0.9.0-alpha26: atravessar (e o atalho de quem fica num anel sem caminho) só vale depois de o jogador ter ficado
+	 * onde não havia caminho em duas caçadas (ver Saltos). Os testes que conferem a resposta a isso partem daí.
+	 */
+	static void jaUsouOTruque(ServerPlayer jogador) {
+		Memoria m = Memoria.de(jogador);
+		m.set(Memoria.CACADAS, Saltos.REPETICOES);
+		m.set(Memoria.CACA_TRUQUES, Saltos.REPETICOES);
+		m.salvar();
+	}
+
+	/** O mesmo para quem já fugiu para longe em duas caçadas: o atalho de longe vale. */
+	static void jaFugiu(ServerPlayer jogador) {
+		Memoria m = Memoria.de(jogador);
+		m.set(Memoria.CACADAS, Saltos.REPETICOES);
+		m.set(Memoria.CACA_FUGAS, Saltos.REPETICOES);
+		m.salvar();
+	}
+
+	/** Um pilar de cinco blocos, com o jogador em cima, que já usou o truque em duas caçadas. */
 	private static ServerPlayer noPilar(GameTestHelper helper, int dz, String nome) {
 		BlockPos base = JogadorDeTeste.chao(helper, 4, dz);
 		for (int y = 0; y < 5; y++) {
@@ -315,9 +333,7 @@ public class TestesDaCacada {
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
 		helper.setTime(18000);
-		Memoria m = Memoria.de(jogador);
-		m.set(Memoria.CACADAS, 1);
-		m.salvar();
+		jaUsouOTruque(jogador);
 		return jogador;
 	}
 
@@ -476,10 +492,8 @@ public class TestesDaCacada {
 		JogadorDeTeste.acompanhar(helper, jogador, "longe-no-aviso");
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
-		// Não é a primeira caçada da vida dele: sabendo onde o jogador está, ele pode usar o atalho.
-		Memoria memoria = Memoria.de(jogador);
-		memoria.set(Memoria.CACADAS, 1);
-		memoria.salvar();
+		// Ele já fugiu para longe em duas caçadas: sabendo onde o jogador está, pode usar o atalho.
+		jaFugiu(jogador);
 		boolean[] andou = new boolean[1];
 		boolean[] chegou = new boolean[1];
 		helper.runAfterDelay(5, () -> comecar(helper, jogador, false));
@@ -525,9 +539,7 @@ public class TestesDaCacada {
 		Diretor.esquecer(jogador);
 		Diretor.definirFase(jogador, 4);
 		helper.setTime(18000);
-		Memoria m = Memoria.de(jogador);
-		m.set(Memoria.CACADAS, 1);
-		m.salvar();
+		jaUsouOTruque(jogador);
 		boolean[] atravessou = new boolean[1];
 		double[] maisPertoAntes = {Double.MAX_VALUE};
 		helper.runAfterDelay(5, () -> comecar(helper, jogador, false));

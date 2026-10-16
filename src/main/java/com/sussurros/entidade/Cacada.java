@@ -9,18 +9,21 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import com.sussurros.assombracao.ApoioCaca;
 import com.sussurros.assombracao.Depuracao;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Percepcao;
+import com.sussurros.assombracao.Saltos;
 import com.sussurros.bloco.CinzaEspalhadaBlock;
 
 /**
@@ -40,6 +43,12 @@ import com.sussurros.bloco.CinzaEspalhadaBlock;
  * 0.9.0-alpha24: ele passa por vão de um bloco. O caminho é medido com o corpo de quatro (NavegacaoDoHospede), o
  * corpo de verdade muda só onde o lugar pede (ajustarCorpo), e antes de entrar num vão perto do jogador ele para
  * na boca e avisa. Um vão aberto é caminho, não exceção: vale também na primeira caçada.
+ *
+ * 0.9.0-alpha26: a caçada com chance de verdade (as contas estão em assombracao/Saltos). Os saltos (atalho e
+ * atravessar) destrancam pelo truque que o jogador repete, nunca por captura; nenhum acontece nos quinze segundos
+ * depois do aviso; o atalho nunca cai nas costas, e depois de qualquer salto ele fica parado um tempo maior quanto
+ * mais perto caiu. Ser ferido o tira da caçada por uns segundos, longe, e a volta é anunciada por passos. Cada
+ * caçada deixa uma linha de resumo no log.
  */
 final class Cacada {
 	enum Estagio {
@@ -47,7 +56,8 @@ final class Cacada {
 		PERSEGUE,    // anda quando não é visto; procura quando perde o rastro
 		ESPERA_VELA, // o alvo está na zona da vela: espera na borda, por tempo limitado
 		FINGE,       // fingiu que desistiu: calado, fora de vista, prestes a voltar
-		ATRAVESSA    // sem caminho até o alvo: avisa num bloco e passa por ele
+		ATRAVESSA,   // sem caminho até o alvo: avisa num bloco e passa por ele
+		FERIDO       // o jogador o feriu: longe, parado, por uns segundos; volta anunciado por passos
 	}
 
 	/** Relógio de contato: só anda com ele fora da tela e sabendo onde o alvo está. */
@@ -78,8 +88,12 @@ final class Cacada {
 	private final HospedeBusca busca;
 	/** Sorteios da caçada. Não usa o gerador do mundo, para não mudar os sorteios do Diretor. */
 	private final RandomSource sorte = RandomSource.create();
-	/** Primeira caçada da vida do jogador: sem atalho e sem atravessar. Ele aprende a regra antes das exceções. */
-	private final boolean primeira;
+	/**
+	 * O que está destrancado nesta caçada, pelo que o jogador fez nas anteriores (ver Saltos). Na primeira caçada da
+	 * vida dele nada está: ele aprende a regra antes das exceções. Até a alpha25 era isso e só isso, e da segunda
+	 * em diante valia tudo.
+	 */
+	private final Saltos.Liberacao liberacao;
 	/** Quanto o Diretor quer que ele seja mais rápido que o normal (cresce cada vez que o jogador o fere). */
 	private final double fatorDoDiretor;
 
@@ -136,11 +150,28 @@ final class Cacada {
 	/** Ticks seguidos em que o corpo abaixado já cabe: ele só se levanta depois de alguns, para não ficar trocando. */
 	private int cabendo;
 
+	/** Quando (na idade da caçada) ele começou a perseguir: nenhum salto nos quinze segundos seguintes. -1 no aviso. */
+	private int persegueDesde;
+	/** O mais perto que o jogador esteve dele, e se depois disso o jogador fugiu para longe (é uma das táticas). */
+	private double menorDist = Double.MAX_VALUE;
+	private boolean fugiu;
+	/** O jogador ficou onde não havia caminho, e a resposta a isso ainda estava trancada: desta vez funcionou. */
+	private boolean truque;
+	/** Ticks que ele ainda fica fora da caçada, depois de ser ferido. */
+	private int feridoRestante;
+	/** Só para o log: quantas vezes atravessou, quando foi o último salto e a menor janela que um salto deu (ticks). */
+	private int travessias;
+	private int ultimoSalto = -1;
+	private int menorJanela = Integer.MAX_VALUE;
+
 	Cacada(HospedeEntity h, HospedeBusca busca, ServerPlayer alvo, double fatorDoDiretor, boolean comAviso) {
 		this.h = h;
 		this.busca = busca;
 		this.fatorDoDiretor = Math.max(0.9, Math.min(1.2, fatorDoDiretor));
-		this.primeira = ApoioCaca.primeiraCacada(alvo) && !h.ehTeste();
+		// A origem da criatura ainda não está definida aqui (o Diretor a marca depois de configurar): uma caçada de
+		// comando segue a memória do jogador como uma de verdade, e é isso que os testes usam.
+		this.liberacao = ApoioCaca.liberacao(alvo);
+		this.persegueDesde = comAviso ? -1 : 0;
 		this.avisoRestante = comAviso ? 160 + this.sorte.nextInt(41) : 0;
 		this.estagio = comAviso ? Estagio.AVISO : Estagio.PERSEGUE;
 		this.proximoPiscar = 80 + this.sorte.nextInt(41);
@@ -163,6 +194,36 @@ final class Cacada {
 	/** Chamado quando a criatura some por qualquer motivo, para o fim ser contado uma vez só. */
 	void marcarEncerrada() {
 		this.encerrada = true;
+	}
+
+	/**
+	 * A caçada acabou, por qualquer motivo (HospedeEntity chama uma vez só, antes de avisar o Diretor): a linha de
+	 * resumo do log, que o analisador junta numa tabela. A menor janela é a que um salto deu, em conta (parado mais
+	 * o tempo de chegar andando); "desdeOSalto" é medido, do último salto até o fim.
+	 */
+	void terminar(ServerLevel level, ServerPlayer alvo, String motivo) {
+		if (this.encerrada) {
+			return;
+		}
+		this.encerrada = true;
+		this.log(level, alvo, String.format(Locale.ROOT,
+				"CACA id=%s resumo fim=%s duracao=%ds perseguiu=%ds atalhos=%d travessias=%d golpes=%d menorJanela=%s desdeOSalto=%s liberado=%s fugiu=%s truque=%s",
+				this.h.getIdManifestacao(), motivo, this.idade / 20,
+				this.persegueDesde < 0 ? 0 : (this.idade - this.persegueDesde) / 20,
+				this.atalhos, this.travessias, this.golpes,
+				this.menorJanela == Integer.MAX_VALUE ? "-" : String.format(Locale.ROOT, "%.1fs", this.menorJanela / 20.0),
+				this.ultimoSalto < 0 ? "-" : String.format(Locale.ROOT, "%.1fs", (this.idade - this.ultimoSalto) / 20.0),
+				this.liberacao.paraLog(), this.fugiu ? "sim" : "nao", this.truque ? "sim" : "nao"));
+	}
+
+	/** O jogador fugiu para longe nesta caçada (o Diretor guarda na memória quando ela acaba). */
+	boolean fugiu() {
+		return this.fugiu;
+	}
+
+	/** O jogador ficou onde não havia caminho, e funcionou (o Diretor guarda na memória quando ela acaba). */
+	boolean usouTruque() {
+		return this.truque;
 	}
 
 	/** O quanto o jogador deve "sentir" a caçada agora, de 0 a 1 (ver Sentidos). */
@@ -190,6 +251,16 @@ final class Cacada {
 		if (this.recargaAtalho > 0) {
 			this.recargaAtalho--;
 		}
+		// Fugir para longe é uma das táticas que ele aprende (ver Saltos.fugiu): conta no aviso e na perseguição,
+		// não enquanto ele mesmo está longe por outro motivo (fingindo, ferido).
+		if (this.estagio == Estagio.AVISO || this.estagio == Estagio.PERSEGUE) {
+			this.menorDist = Math.min(this.menorDist, dist);
+			if (!this.fugiu && Saltos.fugiu(dist, this.menorDist)) {
+				this.fugiu = true;
+				this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s fugiu dist=%.0f menor=%.0f estagio=%s",
+						this.h.getIdManifestacao(), dist, this.menorDist, this.estagio));
+			}
+		}
 
 		switch (this.estagio) {
 			case AVISO -> {
@@ -199,9 +270,11 @@ final class Cacada {
 					// jogador está. Sem isto ele saía atrás do lugar de oito a dez segundos antes, e bastava andar
 					// para longe durante o aviso (a mais de 42 blocos ele não ouve) para a caçada acabar sozinha.
 					this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "FIM_DO_AVISO");
+					this.persegueDesde = this.idade;
 					this.mudar(level, alvo, Estagio.PERSEGUE, "FIM_DO_AVISO");
 				}
 			}
+			case FERIDO -> this.tickFerido(level, alvo, percebido, dist);
 			case FINGE -> {
 				this.h.getNavigation().stop();
 				if (--this.fingeRestante <= 0) {
@@ -307,12 +380,10 @@ final class Cacada {
 			this.desistir(level, alvo, "TETO_BUSCA");
 			return;
 		}
-		// Na luz forte ele é mais lento. É por isso que apaga as luzes por onde passa.
-		boolean claro = level.getBrightness(LightLayer.BLOCK, this.h.blockPosition().above()) >= 12;
-		double passo = this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0) * (this.h.isDeQuatro() ? LENTO_DE_QUATRO : 1.0);
+		double passo = this.passoAgora(level);
 		this.busca.definirVelocidade(modificadorPara(passo));
 
-		if (this.tentarAtalho(level, alvo, dist, sabe)) {
+		if (this.tentarAtalho(level, alvo, dist, sabe, passo)) {
 			return;
 		}
 
@@ -449,9 +520,14 @@ final class Cacada {
 		}
 	}
 
-	/** Ele acabou de mudar de lugar sem andar (o piscar, o atalho, atravessar): o corpo é o que cabe ali. */
+	/**
+	 * Ele acabou de mudar de lugar sem andar (o piscar, o atalho, atravessar, o recuo): o corpo é o que cabe ali, e o
+	 * embalo de antes fica para trás. Sem zerar o embalo, ele chegava escorregando uns vinte centímetros na direção em
+	 * que andava antes do salto (achado pelo teste do salto, na alpha26).
+	 */
 	private void aoMudarDeLugar(ServerLevel level) {
 		this.h.definirDeQuatro(!this.h.cabeAbaixado(level, this.h.position()));
+		this.h.setDeltaMovement(Vec3.ZERO);
 		this.cabendo = 0;
 	}
 
@@ -459,6 +535,12 @@ final class Cacada {
 		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s corpo=%s motivo=%s pos=%s dist=%.1f",
 				this.h.getIdManifestacao(), this.h.isDeQuatro() ? "DE_QUATRO" : "ABAIXADO", motivo,
 				HospedeBusca.pos(this.h.blockPosition()), Math.sqrt(this.h.distanceToSqr(alvo))));
+	}
+
+	/** O passo dele agora, em blocos por segundo. Na luz forte ele é mais lento: é por isso que apaga as luzes por onde passa. */
+	private double passoAgora(ServerLevel level) {
+		boolean claro = level.getBrightness(LightLayer.BLOCK, this.h.blockPosition().above()) >= 12;
+		return this.velocidade * this.fatorDoDiretor * (claro ? 0.85 : 1.0) * (this.h.isDeQuatro() ? LENTO_DE_QUATRO : 1.0);
 	}
 
 	/** Modificador de navegação que dá a velocidade pedida, em blocos por segundo. */
@@ -633,22 +715,54 @@ final class Cacada {
 	}
 
 	/**
-	 * Atalho fora de vista: três segundos sem ser visto e longe (ou sem caminho), ele reaparece a 8-12 blocos,
-	 * fora da tela, de preferência à frente de para onde o jogador está indo. Nunca perto, nunca na tela.
+	 * Atalho fora de vista: três segundos sem ser visto e longe (ou sem caminho), ele reaparece fora da tela, de
+	 * preferência à frente de para onde o jogador está indo. Nunca na tela, nunca nas costas, e depois fica parado,
+	 * com o som de pano, o bastante para o jogador poder reagir (ver Saltos).
 	 */
-	private boolean tentarAtalho(ServerLevel level, ServerPlayer alvo, double dist, boolean sabe) {
-		if (this.primeira || this.recargaAtalho > 0 || this.foraDaTela < 60 || !sabe) {
+	private boolean tentarAtalho(ServerLevel level, ServerPlayer alvo, double dist, boolean sabe, double passo) {
+		if (this.recargaAtalho > 0 || this.foraDaTela < 60 || !sabe) {
 			return false;
 		}
 		// Só de longe. De perto e sem caminho vale a outra regra: atravessar, com aviso. Entre as duas (de 8 a 16
 		// blocos, sem caminho) não valia nenhuma: um anel fechado em volta do jogador o deixava parado do lado
 		// de fora até a caçada acabar. Três segundos assim, e o atalho vale também ali.
-		if (dist <= 16 && this.semCaminhoLonge < 60) {
+		boolean anel = dist <= 16;
+		if (anel && this.semCaminhoLonge < 60) {
 			return false;
 		}
-		BlockPos lugar = this.lugarForaDaTela(level, alvo, 8, 12, true);
-		if (lugar == null) {
+		// 0.9.0-alpha26: cada um destranca pelo truque a que responde. O de longe, depois de duas caçadas em que o
+		// jogador fugiu para longe; o do anel, depois de duas em que ele ficou onde não havia caminho.
+		if (anel ? !this.liberacao.semCaminho() : !this.liberacao.deLonge()) {
+			if (anel) {
+				this.anotarTruque(level, alvo, "ANEL");
+			}
+			return false;
+		}
+		if (this.cedo()) {
+			return false;
+		}
+		// O de longe cai a pelo menos doze blocos. O do anel é o lado de dentro de um muro e continua de 8 a 12 (a
+		// doze ele cairia do lado de fora de novo): a espera, que é maior quanto mais perto ele cai, cobre a diferença.
+		boolean saltou = anel
+				? this.saltarPara(level, alvo, dist, passo, 8, 12, "atalho")
+				: this.saltarPara(level, alvo, dist, passo, Saltos.DISTANCIA_MINIMA, Saltos.DISTANCIA_MINIMA + 4, "atalho");
+		if (!saltou) {
 			this.recargaAtalho = 40;
+			return false;
+		}
+		this.recargaAtalho = 200;
+		this.semCaminhoLonge = 0;
+		return true;
+	}
+
+	/**
+	 * O salto do atalho: um lugar fora da tela entre distMin e distMax, e a espera parada que a distância pede. Sem
+	 * lugar, não salta. Sempre com som (era em metade das vezes): ele acabou de mudar de lugar sem andar, e o jogador
+	 * tem de ter como saber de que lado ele está agora.
+	 */
+	private boolean saltarPara(ServerLevel level, ServerPlayer alvo, double dist, double passo, double distMin, double distMax, String oQue) {
+		BlockPos lugar = this.lugarForaDaTela(level, alvo, distMin, distMax, true, false);
+		if (lugar == null) {
 			return false;
 		}
 		this.h.getNavigation().stop();
@@ -656,34 +770,77 @@ final class Cacada {
 		this.aoMudarDeLugar(level);
 		this.h.olharPara(alvo);
 		this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATALHO");
-		this.recargaAtalho = 200;
-		this.semCaminhoLonge = 0;
 		this.atalhos++;
-		// Sempre com som (era em metade das vezes): ele acabou de mudar de lugar sem andar, e o jogador tem de
-		// ter como saber de que lado ele está agora.
 		ApoioCaca.somDePano(alvo, this.h);
-		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s atalho n=%d de=%.0f para=%.0f",
-				this.h.getIdManifestacao(), this.atalhos, dist, Math.sqrt(this.h.distanceToSqr(alvo))));
+		double para = Math.sqrt(this.h.distanceToSqr(alvo));
+		// Parado, olhando para o jogador: o "barrado" é a mesma espera de quando uma linha o segura.
+		this.barrado = Saltos.esperaDepois(para, passo, ALCANCE_TOQUE);
+		int janela = Saltos.janela(this.barrado, para, passo, ALCANCE_TOQUE);
+		this.saltou(janela);
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s %s n=%d de=%.0f para=%.0f espera=%dt janela=%.1fs costas=%s",
+				this.h.getIdManifestacao(), oQue, this.atalhos, dist, para, this.barrado, janela / 20.0,
+				this.nasCostasDe(alvo) ? "sim" : "nao"));
 		return true;
 	}
 
+	/** Só para os testes: o salto do atalho agora, sem as travas de quando ele pode acontecer. */
+	boolean saltarParaTeste(ServerLevel level, ServerPlayer alvo) {
+		double dist = Math.sqrt(this.h.distanceToSqr(alvo));
+		return this.saltarPara(level, alvo, dist, this.passoAgora(level), Saltos.DISTANCIA_MINIMA, Saltos.DISTANCIA_MINIMA + 4, "atalho_teste");
+	}
+
+	/** Nos quinze segundos depois do aviso não há salto: é quando o jogador decide o que fazer. */
+	private boolean cedo() {
+		return this.persegueDesde < 0 || this.idade - this.persegueDesde < Saltos.SEM_SALTO_DEPOIS_DO_AVISO;
+	}
+
+	/** Um salto aconteceu agora, e deu esta janela (ticks) até o primeiro toque possível. Só para o resumo do log. */
+	private void saltou(int janela) {
+		this.ultimoSalto = this.idade;
+		this.menorJanela = Math.min(this.menorJanela, janela);
+	}
+
+	/** O jogador ficou onde não havia caminho, e a resposta ainda estava trancada: desta vez funciona (uma vez por caçada). */
+	private void anotarTruque(ServerLevel level, ServerPlayer alvo, String qual) {
+		if (this.truque) {
+			return;
+		}
+		this.truque = true;
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s truque=%s trancado dist=%.1f",
+				this.h.getIdManifestacao(), qual, Math.sqrt(this.h.distanceToSqr(alvo))));
+	}
+
+	/** Ele está nas costas do jogador (para o log, que confere a garantia)? */
+	private boolean nasCostasDe(ServerPlayer alvo) {
+		Vec3 virado = Vec3.directionFromRotation(0.0F, alvo.getYRot());
+		return Saltos.nasCostas(virado.x, virado.z, this.h.getX() - alvo.getX(), this.h.getZ() - alvo.getZ());
+	}
+
 	/**
-	 * Um chão livre entre distMin e distMax do jogador, fora da tela dele e fora da vela.
+	 * Um chão livre entre distMin e distMax do jogador, fora da tela dele, fora da vela e nunca nas costas.
 	 * aFrente: prefere os lados da direção em que ele está andando ("ele estava me esperando").
+	 * escondido: prefere o lugar que o jogador não enxerga de onde está.
+	 *
+	 * Até a alpha25, com o jogador parado, o lugar era atrás dele: na sessão de 12/10/2026 o recuo de quem o feriu
+	 * caiu a dez blocos nas costas do jogador, e dois segundos depois ele o tocou. Agora é dos lados, entre a borda
+	 * da tela e o começo das costas, de onde virar a cabeça o encontra.
 	 */
 	@Nullable
-	private BlockPos lugarForaDaTela(ServerLevel level, ServerPlayer alvo, double distMin, double distMax, boolean aFrente) {
+	private BlockPos lugarForaDaTela(ServerLevel level, ServerPlayer alvo, double distMin, double distMax, boolean aFrente, boolean escondido) {
 		Vec3 movimento = alvo.getKnownMovement();
 		boolean andando = movimento.horizontalDistanceSqr() > 0.004;
 		Vec3 olhar = alvo.getViewVector(1.0F);
-		double base = andando && aFrente
-				? Math.atan2(movimento.z, movimento.x)
-				: Math.atan2(-olhar.z, -olhar.x); // parado: atrás dele
+		Vec3 virado = Vec3.directionFromRotation(0.0F, alvo.getYRot());
+		boolean pelaFrente = andando && aFrente;
+		double base = pelaFrente ? Math.atan2(movimento.z, movimento.x) : Math.atan2(virado.z, virado.x);
 		double cone = Percepcao.coneSeguro(alvo);
+		double ladoMaximo = 180.0 - Saltos.COSTAS_GRAUS;
 		BlockPos melhor = null;
 		double melhorNota = -1;
-		for (int i = 0; i < 16; i++) {
-			double abertura = andando && aFrente ? Math.toRadians(35 + this.sorte.nextDouble() * 75) : this.sorte.nextDouble() * Math.toRadians(70);
+		for (int i = 0; i < 24; i++) {
+			double abertura = pelaFrente
+					? Math.toRadians(35 + this.sorte.nextDouble() * 75)
+					: Math.toRadians(55 + this.sorte.nextDouble() * (ladoMaximo - 55));
 			double ang = base + (this.sorte.nextBoolean() ? abertura : -abertura);
 			double r = distMin + this.sorte.nextDouble() * (distMax - distMin);
 			BlockPos chao = HospedeBusca.acharChao(level, alvo.getX() + Math.cos(ang) * r, alvo.getY() + 2, alvo.getZ() + Math.sin(ang) * r);
@@ -698,13 +855,23 @@ final class Cacada {
 			if (olhar.dot(ponto.subtract(alvo.getEyePosition()).normalize()) > cone) {
 				continue;
 			}
-			double nota = this.sorte.nextDouble() + (Math.abs(chao.getY() - alvo.getY()) < 2 ? 1.0 : 0.0);
+			if (Saltos.nasCostas(virado.x, virado.z, ponto.x - alvo.getX(), ponto.z - alvo.getZ())) {
+				continue;
+			}
+			double nota = this.sorte.nextDouble() + (Math.abs(chao.getY() - alvo.getY()) < 2 ? 1.0 : 0.0)
+					+ (escondido && !enxerga(level, alvo, ponto) ? 1.5 : 0.0);
 			if (nota > melhorNota) {
 				melhorNota = nota;
 				melhor = chao;
 			}
 		}
 		return melhor;
+	}
+
+	/** O jogador enxerga este ponto de onde está? Pela forma que se vê: vidro não esconde. */
+	private static boolean enxerga(ServerLevel level, ServerPlayer p, Vec3 ponto) {
+		return level.clip(new ClipContext(p.getEyePosition(), ponto, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, p))
+				.getType() == HitResult.Type.MISS;
 	}
 
 	/**
@@ -807,13 +974,21 @@ final class Cacada {
 			return;
 		}
 		this.semCaminho += 20;
-		if (this.primeira || noChao > 8) {
+		if (noChao > 8) {
 			return;
 		}
 		// A cada vez que o jogador usa o mesmo truque, ele espera menos (de 10 s até 4 s).
 		int usos = ApoioCaca.vezesAtravessou(alvo);
 		if (this.semCaminho >= Math.max(80, 200 - 40 * usos)) {
-			this.iniciarAtravessar(level, alvo, usos);
+			// 0.9.0-alpha26: nas duas primeiras caçadas em que o jogador fica onde não há caminho, isso funciona (até
+			// a alpha25, só na primeira caçada da vida dele, fosse qual fosse o truque). E nunca logo depois do aviso.
+			if (!this.liberacao.semCaminho()) {
+				this.anotarTruque(level, alvo, "SEM_CAMINHO");
+				return;
+			}
+			if (!this.cedo()) {
+				this.iniciarAtravessar(level, alvo, usos);
+			}
 		}
 	}
 
@@ -855,6 +1030,9 @@ final class Cacada {
 		this.avisoAtravessar = Math.max(30, 50 - 5 * usos);
 		this.h.getNavigation().stop();
 		ApoioCaca.contarAtravessou(alvo, this.h);
+		this.travessias++;
+		// A janela de quem está em cima do bloco é o próprio aviso: o tempo de sair de perto.
+		this.saltou(this.avisoAtravessar);
 		this.mudar(level, alvo, Estagio.ATRAVESSA, "SEM_CAMINHO bloco=" + escolhido.toShortString());
 	}
 
@@ -906,9 +1084,13 @@ final class Cacada {
 			this.aoMudarDeLugar(level);
 			this.h.olharPara(alvo);
 			this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATRAVESSOU");
-			// "Sair de perto resolve" tem de valer: ele aparece ao lado do bloco e fica um segundo e meio parado.
-			// Sem a pausa, quem tinha saído a dois ou três blocos era tocado no tick seguinte.
-			this.barrado = 30;
+			// "Sair de perto resolve" tem de valer: ele aparece ao lado do bloco e fica parado. Sem a pausa, quem
+			// tinha saído a dois ou três blocos era tocado no tick seguinte. Até a alpha25 era um segundo e meio
+			// fixo; agora é a espera de qualquer salto, maior quanto mais perto (aqui, quase sempre três segundos).
+			double d = Math.sqrt(this.h.distanceToSqr(alvo));
+			double passo = this.passoAgora(level);
+			this.barrado = Saltos.esperaDepois(d, passo, ALCANCE_TOQUE);
+			this.saltou(Saltos.janela(this.barrado, d, passo, ALCANCE_TOQUE));
 		}
 		this.mudar(level, alvo, Estagio.PERSEGUE, saida != null ? "ATRAVESSOU_VAZIO" : "NAO_COUBE");
 	}
@@ -960,15 +1142,20 @@ final class Cacada {
 	// ===== Ser ferido =====
 
 	/**
-	 * O jogador bateu nele durante a caçada. Nas duas primeiras vezes ele recua (some e reaparece fora da
-	 * tela); da terceira em diante, nada acontece. Bater deixou de encerrar a caçada.
+	 * O jogador bateu nele durante a caçada. Nas duas primeiras vezes ele sai da caçada por uns segundos (some e
+	 * reaparece longe, fora da tela, nunca nas costas, de preferência onde o jogador não o vê) e volta anunciado por
+	 * passos; da terceira em diante, nada acontece. Bater deixou de encerrar a caçada.
+	 *
+	 * Até a alpha25 o recuo era de dez a catorze blocos, atrás de quem estava parado, e ele voltava a andar no tick
+	 * seguinte: na sessão de 12/10/2026, dois segundos depois do golpe ele tocou o jogador. Bater não pode ser erro
+	 * fatal; é a coisa que compra tempo (é o "volta para os dutos" do Alien).
 	 */
 	void aoSerFerido(ServerLevel level, ServerPlayer alvo) {
-		if (this.golpes >= 2) {
+		if (this.golpes >= 2 || this.estagio == Estagio.FERIDO) {
 			return;
 		}
 		this.golpes++;
-		BlockPos lugar = this.lugarForaDaTela(level, alvo, 10, 14, false);
+		BlockPos lugar = this.lugarForaDaTela(level, alvo, 16, 24, false, true);
 		if (lugar != null) {
 			this.h.getNavigation().stop();
 			this.h.snapTo(lugar.getX() + 0.5, lugar.getY(), lugar.getZ() + 0.5, this.h.getYRot(), 0.0F);
@@ -977,8 +1164,61 @@ final class Cacada {
 		}
 		ApoioCaca.somDeRecuo(alvo, this.h);
 		this.recargaAtalho = Math.max(this.recargaAtalho, 100);
-		this.log(level, alvo, "CACA id=" + this.h.getIdManifestacao() + " ferido n=" + this.golpes
-				+ " recuou=" + (lugar != null ? "sim" : "nao"));
+		// Seis a nove segundos fora. O que ele estava fazendo fica para trás: um piscar marcado, a boca de um vão,
+		// uma porta, o aviso de atravessar.
+		this.feridoRestante = 120 + this.sorte.nextInt(61);
+		this.piscarEm = -1;
+		this.vaoEspera = 0;
+		this.vaoBoca = null;
+		this.porta = null;
+		this.avisoBloco = null;
+		this.barrado = 0;
+		this.h.getNavigation().stop();
+		double dist = Math.sqrt(this.h.distanceToSqr(alvo));
+		this.menorDist = dist;
+		this.saltou(Saltos.janela(this.feridoRestante, dist, this.passoAgora(level), ALCANCE_TOQUE));
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s ferido n=%d recuou=%s dist=%.1f fora=%dt costas=%s",
+				this.h.getIdManifestacao(), this.golpes, lugar != null ? "sim" : "nao", dist, this.feridoRestante,
+				this.nasCostasDe(alvo) ? "sim" : "nao"));
+		this.mudar(level, alvo, Estagio.FERIDO, "FERIDO");
+	}
+
+	/**
+	 * Ferido: parado, longe, olhando. Nos dois últimos segundos os passos dele anunciam a volta, e só então ele
+	 * persegue de novo, sabendo mais ou menos onde o jogador está. Se na hora do golpe não havia lugar longe (um
+	 * quarto fechado), ele tenta de novo a cada segundo em que o jogador não está olhando; se não conseguir, a
+	 * espera de qualquer salto vem depois, para quem ficou perto dele também ter como sair.
+	 */
+	private void tickFerido(ServerLevel level, ServerPlayer alvo, boolean percebido, double dist) {
+		this.h.getNavigation().stop();
+		this.h.pararEOlhar();
+		if (dist < Saltos.DISTANCIA_MINIMA && !percebido && this.feridoRestante % 20 == 0) {
+			BlockPos lugar = this.lugarForaDaTela(level, alvo, Saltos.DISTANCIA_MINIMA, 24, false, true);
+			if (lugar != null) {
+				this.h.snapTo(lugar.getX() + 0.5, lugar.getY(), lugar.getZ() + 0.5, this.h.getYRot(), 0.0F);
+				this.aoMudarDeLugar(level);
+				this.h.olharPara(alvo);
+				this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s ferido afastou dist=%.1f",
+						this.h.getIdManifestacao(), Math.sqrt(this.h.distanceToSqr(alvo))));
+			}
+		}
+		if (this.feridoRestante <= 40 && this.feridoRestante % 8 == 0) {
+			ApoioCaca.passo(level, alvo, this.h);
+		}
+		if (--this.feridoRestante > 0) {
+			return;
+		}
+		double agora = Math.sqrt(this.h.distanceToSqr(alvo));
+		if (this.persegueDesde < 0) {
+			this.persegueDesde = this.idade; // ferido ainda no aviso: a perseguição começa agora
+		}
+		this.recargaAtalho = Math.max(this.recargaAtalho, 200);
+		this.busca.ouvirAcao(level, this.h, alvo.position(), 0.8, "VOLTOU_FERIDO");
+		this.barrado = agora < Saltos.DISTANCIA_MINIMA ? Saltos.esperaDepois(agora, this.passoAgora(level), ALCANCE_TOQUE) : 0;
+		this.naTela = 0;
+		this.foraDaTela = 0;
+		this.menorDist = agora;
+		this.mudar(level, alvo, Estagio.PERSEGUE, String.format(Locale.ROOT, "VOLTOU dist=%.0f espera=%dt", agora, this.barrado));
 	}
 
 	// ===== Desfechos =====

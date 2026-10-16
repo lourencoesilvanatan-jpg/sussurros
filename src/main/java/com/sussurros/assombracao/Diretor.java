@@ -3933,11 +3933,20 @@ public final class Diretor {
 		}
 		Memoria m = Memoria.de(p);
 		m.add(Memoria.CACADAS, 1);
+		// 0.9.0-alpha26: o que o jogador fez nesta caçada fica guardado, uma vez por caçada. É o que destranca os
+		// saltos das seguintes (ver Saltos): o truque que ele repete deixa de funcionar.
+		if (h.jogadorFugiuNaCaca()) {
+			m.add(Memoria.CACA_FUGAS, 1);
+		}
+		if (h.jogadorUsouTruqueNaCaca()) {
+			m.add(Memoria.CACA_TRUQUES, 1);
+		}
 		m.salvar();
 		// Caçada é rara: a próxima sequência de ameaça só daqui a 25-40 minutos.
 		e.ameacaLiberadaEm = Math.max(e.ameacaLiberadaEm, tick / 20 + 1500 + sorte.nextInt(901));
 		Depuracao.log(p, tick / 20, "CACA terminou motivo=" + motivo + " cacadas=" + m.get(Memoria.CACADAS)
-				+ " proximaAmeacaEm=" + (e.ameacaLiberadaEm - tick / 20) + "s");
+				+ " proximaAmeacaEm=" + (e.ameacaLiberadaEm - tick / 20) + "s"
+				+ " fugas=" + m.get(Memoria.CACA_FUGAS) + " truques=" + m.get(Memoria.CACA_TRUQUES));
 	}
 
 	/** Depois de pegar o jogador, ele some por um bom tempo. O Diretor não pode emendar outra coisa. */
