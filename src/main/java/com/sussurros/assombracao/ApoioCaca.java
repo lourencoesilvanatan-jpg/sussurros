@@ -109,6 +109,14 @@ public final class ApoioCaca {
 		ModSons.tocarPara(p, h.getX(), h.getY() + 1.0, h.getZ(), ModSons.Som.PANO, 0.9F, 0.85F);
 	}
 
+	/**
+	 * A voz dele na caçada (0.9.0-alpha27; ver VozDaCacada): de onde ele está, só o alvo ouve. A de longe é abafada;
+	 * o volume acima de 1 só aumenta o alcance, não a força.
+	 */
+	public static void voz(ServerPlayer p, HospedeEntity h, boolean longe, float volume, float altura) {
+		ModSons.tocarPara(p, h.getX(), h.getEyeY(), h.getZ(), longe ? ModSons.Som.VOZ_LONGE : ModSons.Som.VOZ_PERTO, volume, altura);
+	}
+
 	public static void somDeRecuo(ServerPlayer p, HospedeEntity h) {
 		ModSons.tocarPara(p, p.getX(), p.getY() + 1.0, p.getZ(), ModSons.Som.GRAVE, 0.45F, 1.05F);
 	}

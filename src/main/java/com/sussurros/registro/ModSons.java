@@ -59,6 +59,8 @@ public final class ModSons {
 		TIGELA,      // cerâmica raspando
 		GIZ,         // giz na pedra
 		SONHO,       // a passagem para o sonho
+		VOZ_PERTO,   // a voz dele na caçada, de perto: seca e curta (0.9.0-alpha27, de gravação CC0)
+		VOZ_LONGE,   // a voz dele na caçada, de longe: abafada, com sala
 
 		// --- 0.9: camadas em loop, tocadas pelo cliente (ver TrilhaCliente) ---
 		FUNDO_GRAVE,

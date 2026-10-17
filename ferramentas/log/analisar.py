@@ -248,7 +248,8 @@ def por_cacada(linhas):
     for t, texto in linhas:
         m = re.match(r'^HOSPEDE id=(\S+) criado .*modo=CACAR', texto)
         if m:
-            cacadas[m.group(1)] = {'inicio': t, 'perseguiu': None, 'saltos': [], 'fim': None, 'como': None, 'resumo': None}
+            cacadas[m.group(1)] = {'inicio': t, 'perseguiu': None, 'saltos': [], 'fim': None, 'como': None, 'resumo': None,
+                                   'vozes': []}
             continue
         m = re.match(r'^HOSPEDE id=(\S+) sumiu motivo=(\S+)', texto)
         if m and m.group(1) in cacadas and cacadas[m.group(1)]['fim'] is None:
@@ -274,6 +275,10 @@ def por_cacada(linhas):
         elif resto.startswith('FIM motivo=') and c['fim'] is None:
             c['fim'] = t
             c['como'] = resto.split()[1].split('=')[1]
+        elif resto.startswith('voz='):
+            # 0.9.0-alpha27: a voz dele (de perto ou de longe) e em que momento.
+            partes = dict(par.split('=', 1) for par in resto.split() if '=' in par)
+            c['vozes'].append((t, partes.get('momento', '?'), partes.get('voz', '?').lower()))
         elif resto.startswith('resumo '):
             c['resumo'] = dict(par.split('=', 1) for par in resto.split()[1:] if '=' in par)
     return cacadas
@@ -536,12 +541,14 @@ def analisar(linhas, jogador, caminho):
             saltos = ', '.join('%s aos %ds' % (tipo, t - base) for t, tipo in c['saltos']) or '-'
             fim = c['fim']
             ultimo = c['saltos'][-1][0] if c['saltos'] else None
+            vozes = ', '.join('%s %s' % (momento, onde) for _, momento, onde in c['vozes']) or '-'
             linhas_tab.append((ident, hms(c['inicio'] - linhas[0][0]),
                                '%ds' % (fim - base) if fim is not None else '?',
-                               saltos, r.get('menorJanela', '-'),
+                               saltos, vozes, r.get('menorJanela', '-'),
                                '%ds' % (fim - ultimo) if fim is not None and ultimo is not None else '-',
                                c['como'] or r.get('fim', '?'), r.get('liberado', '(antes da alpha26)')))
-        out += tabela(['Caçada', 'Começou aos', 'Do aviso ao fim', 'Saltos', 'Menor janela', 'Do último salto ao fim', 'Como acabou', 'Destrancado'],
+        out += tabela(['Caçada', 'Começou aos', 'Do aviso ao fim', 'Saltos', 'Vozes', 'Menor janela', 'Do último salto ao fim', 'Como acabou',
+                       'Destrancado'],
                       linhas_tab)
         out.append('')
     # 0.9.0-alpha24: o vão de um bloco, o piscar pelo caminho, e por que a navegação desistiu.
