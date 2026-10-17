@@ -260,5 +260,21 @@
         "stream": true
       }
     ]
+  },
+  "voz_perto": {
+    "subtitle": "subtitles.sussurros.voz_perto",
+    "sounds": [
+      "sussurros:voz_perto_1",
+      "sussurros:voz_perto_2",
+      "sussurros:voz_perto_3"
+    ]
+  },
+  "voz_longe": {
+    "subtitle": "subtitles.sussurros.voz_longe",
+    "sounds": [
+      "sussurros:voz_longe_1",
+      "sussurros:voz_longe_2",
+      "sussurros:voz_longe_3"
+    ]
   }
 }

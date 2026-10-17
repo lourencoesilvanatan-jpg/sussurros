@@ -984,3 +984,16 @@ Para conferir depois de uma sessão (seção "A afronta" do analisador): o que e
 - `ENSINO primeiro=CAPTURA pagina=25`: depois da primeira captura, a página 25 foi pedida.
 
 Para conferir depois de uma sessão (o analisador monta a tabela "Uma linha por caçada" na seção "Caçadas, capturas e o outro lado"): quanto durou cada caçada depois do aviso, quantos saltos e quando, a menor janela, e como acabou. Os alertas "Salto nos primeiros quinze segundos depois do aviso" e "Captura a menos de três segundos de um salto" não deveriam aparecer num log da alpha26 em diante. Se as caçadas dele acabarem quase todas em `TETO_CONTATO` ou `TETO_TOTAL` sem ninguém pego, os saltos trancados estão deixando fácil demais: olhe `liberado` e quantas fugas e truques ele já tem.
+
+## 0.9.0-alpha27 — a voz
+
+```
+[10253s][Jogador] CACA id=M006 voz=LONGE momento=INICIO dist=24.3 n=1
+[10265s][Jogador] CACA id=M006 voz=PERTO momento=FERIDO dist=2.9 n=2
+[10301s][Jogador] CACA id=M006 resumo fim=TOCOU ... truque=nao vozes=2
+```
+
+- `CACA id=... voz=PERTO|LONGE momento=INICIO|FERIDO|REENCONTRO dist=D n=N`: ele usou a voz. `LONGE` a partir de 14 blocos (a abafada). `INICIO` é o fim do aviso; `FERIDO`, o primeiro golpe do jogador (a voz sai de onde ele foi ferido, antes de sumir); `REENCONTRO`, ele voltou a ver o jogador depois de oito segundos sem saber dele. `n` é quantas nesta caçada (no máximo duas).
+- O resumo da caçada ganhou `vozes=N` no fim.
+
+Para conferir depois de uma sessão: a coluna "Vozes" da tabela "Uma linha por caçada". Nenhuma caçada com mais de duas; e, se ele disser que a voz cobriu alguma coisa, o segundo da linha `voz=` mostra o que estava acontecendo.

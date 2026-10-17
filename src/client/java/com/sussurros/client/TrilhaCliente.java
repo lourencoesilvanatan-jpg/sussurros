@@ -21,6 +21,12 @@ import com.sussurros.registro.ModSons;
  *
  * As três camadas da perseguição têm a mesma duração e começam juntas, para ficarem sincronizadas.
  * O batimento é um som curto repetido, e o intervalo encurta com a proximidade.
+ *
+ * 0.9.0-alpha27: cada perseguição soa um pouco diferente da anterior. Quando as três camadas começam juntas,
+ * sorteia-se (no cliente, sem tocar no sorteio do mundo) um andamento e um tom para as três (a mesma altura nas
+ * três, para continuarem juntas: 0,94, 1 ou 1,06, ou seja, um semitom abaixo, o normal ou um acima, e o andamento
+ * junto) e a ordem em que as duas de cima entram (as cordas antes dos sinos, ou os sinos antes das cordas). Nunca o
+ * mesmo par duas vezes seguidas.
  */
 final class TrilhaCliente {
 	private enum Camada {
@@ -45,6 +51,9 @@ final class TrilhaCliente {
 
 	private static int ateBatimento;
 	private static int ateCortarMusica;
+	/** A variação da perseguição em curso (0.9.0-alpha27): 0 a 5, altura = ALTURAS[v / 2], sinos antes se ímpar. */
+	private static final float[] ALTURAS = {0.94F, 1.0F, 1.06F};
+	private static int variacao = 2;
 
 	private TrilhaCliente() {
 	}
@@ -59,11 +68,17 @@ final class TrilhaCliente {
 		ALVOS[Camada.VIGIA.ordinal()] = vigia * 0.55F;
 		// Baixas de propósito: a informação que importa na caçada são os passos dele, e música alta os cobre.
 		ALVOS[Camada.PULSO.ordinal()] = suave(caca, 0.12F, 0.5F) * 0.5F;
-		ALVOS[Camada.CORDAS.ordinal()] = suave(caca, 0.45F, 0.85F) * 0.4F;
-		ALVOS[Camada.TEMA.ordinal()] = suave(caca, 0.7F, 1.0F) * 0.3F;
+		boolean sinosAntes = variacao % 2 == 1;
+		ALVOS[Camada.CORDAS.ordinal()] = (sinosAntes ? suave(caca, 0.7F, 1.0F) : suave(caca, 0.45F, 0.85F)) * 0.4F;
+		ALVOS[Camada.TEMA.ordinal()] = (sinosAntes ? suave(caca, 0.45F, 0.85F) : suave(caca, 0.7F, 1.0F)) * 0.3F;
 		ALVOS[Camada.AVESSO.ordinal()] = SentidosCliente.noAvesso() ? 0.75F : 0.0F;
 
 		boolean perseguicao = ALVOS[Camada.PULSO.ordinal()] > 0.0F;
+		if (perseguicao && ATIVAS[Camada.PULSO.ordinal()] == null && ATIVAS[Camada.CORDAS.ordinal()] == null
+				&& ATIVAS[Camada.TEMA.ordinal()] == null) {
+			// Uma perseguição nova: outro andamento e outra ordem, nunca os mesmos da anterior.
+			variacao = (variacao + 1 + SORTE.nextInt(5)) % 6;
+		}
 		for (Camada c : CAMADAS) {
 			int i = c.ordinal();
 			Laco laco = ATIVAS[i];
@@ -78,7 +93,7 @@ final class TrilhaCliente {
 			if (laco == null && precisa) {
 				SoundEvent evento = ModSons.evento(c.som);
 				if (evento != null) {
-					laco = new Laco(evento, i);
+					laco = new Laco(evento, i, daPerseguicao ? ALTURAS[variacao / 2] : 1.0F);
 					ATIVAS[i] = laco;
 					mc.getSoundManager().play(laco);
 				}
@@ -131,14 +146,14 @@ final class TrilhaCliente {
 		private int mudoHa;
 		int idade;
 
-		Laco(SoundEvent evento, int indice) {
+		Laco(SoundEvent evento, int indice, float altura) {
 			// "Criaturas hostis", e não "ambiente": o silêncio do mod corta o ambiente do jogo, e a trilha ficaria muda.
 			super(evento, SoundSource.HOSTILE, SoundInstance.createUnseededRandom());
 			this.indice = indice;
 			this.looping = true;
 			this.delay = 0;
 			this.volume = 0.001F;
-			this.pitch = 1.0F;
+			this.pitch = altura;
 			this.relative = true;
 			this.attenuation = SoundInstance.Attenuation.NONE;
 		}

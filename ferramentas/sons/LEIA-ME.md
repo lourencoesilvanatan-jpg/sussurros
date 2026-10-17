@@ -1,6 +1,6 @@
 # Sons e trilha do Sussurros
 
-Todo som novo do mod sai de `gerar_sons.py`: ruído filtrado, ressonâncias e envelopes. Não há gravação nem amostra de terceiros. A semente é fixa, então rodar de novo gera os mesmos arquivos, byte a byte.
+Todo som novo do mod sai de `gerar_sons.py`: ruído filtrado, ressonâncias e envelopes. A exceção é a voz da caçada (`voz_perto` e `voz_longe`, desde a 0.9.0-alpha27): ela sai de três gravações de domínio público (CC0) guardadas em `fontes/`, com título, autor, página, licença e `sha1` de cada uma em `fontes/ORIGENS.md`. O script as trabalha (mais devagar, uma oitava abaixo por baixo, aspereza; as de longe abafadas e com sala) e põe as duas famílias no mesmo nível: o RMS do trecho com som em -21 dBFS, o pico nunca acima de -6. Gravação nova só entra se for CC0 e anotada ali. A semente é fixa, então rodar de novo gera os mesmos arquivos, byte a byte.
 
 Os doze sons antigos (`pano`, `respiracao`, `madeira`, `arrasto`, `estalo`, `grave`) não são gerados aqui e o script não mexe neles.
 
@@ -18,7 +18,7 @@ Não precisa de ffmpeg. A pasta `.venv/` fica fora do git.
 ## Rodar
 
 ```bash
-# gera os 46 arquivos, atualiza o sounds.json e confere (cerca de um minuto)
+# gera os 52 arquivos, atualiza o sounds.json e confere (cerca de um minuto)
 ferramentas/sons/.venv/Scripts/python ferramentas/sons/gerar_sons.py
 
 # gera só alguns
@@ -53,6 +53,7 @@ Nos loops a emenda é medida de três jeitos: o **salto** do último valor para 
 - As três camadas de perseguição têm exatamente 19,2 s (846.720 amostras, 32 tempos a 100 bpm) e começam juntas. O primeiro tempo cai **20 ms depois** do início do arquivo, nas três: assim a emenda fica no respiro antes do tempo forte.
 - As outras camadas em loop são giradas para a emenda cair no seu momento mais calmo.
 - Cada som novo ainda precisa ser registrado em `ModSons.java` e ganhar a legenda `subtitles.sussurros.<nome>` nos arquivos de `lang/`.
+- **Não rode o script inteiro só para acrescentar um som.** Ele reescreve o `sounds.json` a partir do catálogo, e as entradas das camadas em loop e da `caixa_gasta` estão diferentes do catálogo de propósito desde a alpha1 (as camadas não têm legenda): `--conferir` acusa essas sete diferenças desde então. Para um som novo, rode `--so <nome>` (não mexe no `sounds.json`) e acrescente a entrada à mão.
 
 ## Tabela de sons
 
@@ -68,6 +69,8 @@ Nos loops a emenda é medida de três jeitos: o **salto** do último valor para 
 | `pancada` | `pancada_1.ogg` a `_2.ogg` | mono | 0,5 / 0,5 | batida pesada e surda numa parede (madeira; pedra) |
 | `sussurro_voz` | `sussurro_voz_1.ogg` a `_6.ogg` | mono | 1,5 / 1,4 / 1,4 / 1,9 / 1,8 / 2,4 | frases sussurradas sem sentido, de 3 a 7 sílabas |
 | `chamado` | `chamado_1.ogg` a `_2.ogg` | mono | 3,0 / 3,0 | um chamado distante, entre bicho e gente |
+| `voz_perto` | `voz_perto_1.ogg` a `_3.ogg` | mono | 2,5 / 2,3 / 1,4 | a voz dele de perto: rosnado seco (1, 2) e grito curto com rosnado (3); de gravação CC0 (ver fontes/) |
+| `voz_longe` | `voz_longe_1.ogg` a `_3.ogg` | mono | 4,2 / 4,1 / 3,8 | a voz dele de longe: grito abafado, com sala (1, 2) e rosnado que vira grito (3); de gravação CC0 |
 | `sino_longe` | `sino_longe_1.ogg` a `_2.ogg` | mono, stream | 6,0 / 5,6 | um sino tocando longe (grande, uma badalada; rachado, duas) |
 | `vento_oco` | `vento_oco_1.ogg` a `_3.ogg` | mono, stream | 6,0 / 5,0 / 7,0 | rajada de vento numa fresta, com ressonância oca |
 | `zumbido` | `zumbido_1.ogg` | estéreo | 4,0 | zumbido de ouvido, bem baixo |

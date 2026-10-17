@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha27
+
+O som do mesmo momento que a alpha26 mexeu: entra o que você pediu ("música e gritos"), do jeito que você respondeu em 16/10 (volume normal, sem estouro, raro e variado). A música desse momento também passa a variar de uma vez para outra. É a primeira coisa do mod feita a partir de gravações de verdade (livres, de domínio público). Não entra item nem lugar novo. **Com a alpha26, é a versão para jogar e me contar como foi.**
+
 ## 0.9.0-alpha26
 
 Resposta ao que você disse depois da sessão de 12/10 ("o bicho teleporta, arranca coração de vida"). Mexe no momento mais forte das fases avançadas: ele continua pesado, mas passa a deixar você reagir, e o que vem depois dele deixa de ser tão cruel. Uma página do diário foi corrigida e outra passa a chegar na hora certa. Não entra item nem lugar novo. Junto com a próxima (alpha27, o som desse momento), é a versão para jogar e contar como foi.

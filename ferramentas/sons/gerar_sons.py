@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 """Gera a biblioteca de sons e a trilha do Sussurros.
 
-Tudo aqui é sintetizado por código (ruído filtrado, ressonâncias, envelopes).
-Não há gravação nem amostra de terceiros. A semente é fixa: rodar de novo gera
-exatamente os mesmos arquivos.
+Quase tudo aqui é sintetizado por código (ruído filtrado, ressonâncias, envelopes).
+A exceção é a voz da caçada (voz_perto, voz_longe, desde a 0.9.0-alpha27), que sai
+de três gravações CC0 guardadas em fontes/ (origem em fontes/ORIGENS.md). A semente
+é fixa: rodar de novo gera exatamente os mesmos arquivos.
 
 Uso (com o ambiente virtual de ferramentas/sons/.venv):
 
@@ -951,6 +952,105 @@ def gerar_sussurro_voz(v, rng):
 
 
 # ---------------------------------------------------------------------------
+# A voz da caçada (0.9.0-alpha27): a única coisa feita de gravação
+# ---------------------------------------------------------------------------
+#
+# O dono pediu vozes de "gravações livres e bibliotecas de sons" (10/10/2026) e, em 16/10, sim a um grito ou
+# rugido na caçada, em volume normal, sem pico, raro, variado e mudando com a distância. As gravações são três,
+# CC0, de vozes de homem (rosnados e gritos); ficam em ferramentas/sons/fontes/, com a origem em ORIGENS.md.
+# O trabalho é o que faz uma voz de gente virar a de uma coisa grande demais para ser gente: tocar mais devagar
+# (mais grave e mais comprida), uma segunda cópia uma oitava abaixo por baixo (o peito que um homem não tem), e um
+# pouco de aspereza. De longe, o ar e as paredes comem os agudos e sobra sala; de perto, é seco e curto.
+#
+# Volume: as duas famílias saem no MESMO nível (o RMS do trecho com som em -21 dBFS, o pico nunca acima de -6),
+# que é o dos sons do mod que já tocam na caçada (arranhar, pano). "Mais urgente de perto" é timbre e duração,
+# não volume: no jogo, quem fica mais baixo de longe é a distância.
+
+PASTA_FONTES = Path(__file__).resolve().parent / "fontes"
+RMS_VOZ_DB = -21.0
+PICO_VOZ_DB = -6.0
+_FONTES = {}
+
+
+def fonte(ident):
+    """Uma gravação de fontes/, em mono e na taxa do script. Lida uma vez só."""
+    if ident not in _FONTES:
+        x, sr = sf.read(str(PASTA_FONTES / f"freesound_{ident}.ogg"), always_2d=True, dtype="float64")
+        x = x.mean(axis=1)
+        if sr != SR:
+            x = signal.resample_poly(x, SR, sr)
+        _FONTES[ident] = x
+    return _FONTES[ident]
+
+
+def recorte(ident, de, ate):
+    return fonte(ident)[amostras(de):amostras(ate)].copy()
+
+
+def mais_devagar(x, fator):
+    """Toca a gravação a 'fator' da velocidade: 0,8 deixa quase quatro semitons mais grave e um quarto mais comprida."""
+    return signal.resample_poly(x, int(round(1000.0 / fator)), 1000)
+
+
+def aspereza(x, k):
+    """Saturação suave: arredonda os picos e engrossa a voz, sem quebrar (k perto de 1 quase não muda nada)."""
+    return np.tanh(k * x / max(float(np.max(np.abs(x))), 1e-9)) / np.tanh(k)
+
+
+def garganta(x, fator, aspero=1.6, peito_db=-12.0):
+    """A voz devagar, mais uma cópia uma oitava abaixo por baixo, só nos graves."""
+    corpo = mais_devagar(x, fator)
+    peito = ajustar_tamanho(pb(mais_devagar(x, fator * 0.5), 380.0, 2), len(corpo))
+    return aspereza(corpo, aspero) + ganho_db(peito_db) * aspereza(peito, 1.2)
+
+
+def nivelar_voz(x):
+    """O RMS do trecho com som no alvo; se o pico passar do teto, desce tudo até ele."""
+    janela = amostras(0.03)
+    env = np.sqrt(np.convolve(x * x, np.ones(janela) / janela, mode="same"))
+    ativo = env > env.max() * 0.1
+    rms = np.sqrt(np.mean(x[ativo] ** 2))
+    y = x * (ganho_db(RMS_VOZ_DB) / max(rms, 1e-9))
+    pico = np.max(np.abs(y))
+    if pico > ganho_db(PICO_VOZ_DB):
+        y *= ganho_db(PICO_VOZ_DB) / pico
+    return y
+
+
+def gerar_voz_perto(v, rng):
+    """De perto: curto, seco, áspero. Um rosnado (1 e 2) ou um grito curto com rosnado por baixo (3)."""
+    if v == 3:
+        grito = garganta(recorte(556976, 10.90, 11.55), 0.78, aspero=1.8)
+        rosnado = garganta(recorte(257358, 18.15, 18.92), 0.82, aspero=1.5)
+        y = ajustar_tamanho(grito, max(len(grito), len(rosnado) + amostras(0.06)))
+        somar(y, rosnado, 0.06, 0.55)
+    else:
+        de, ate, fator = {1: (5.45, 7.08, 0.80), 2: (25.47, 26.90, 0.76)}[v]
+        y = garganta(recorte(257358, de, ate), fator)
+    y = pf(y, 75.0, 7000.0, 2)
+    y = reverberar(y, rng, 0.35, 0.12, brilho=3000.0, predelay=0.01)   # um quarto, não um salão
+    y = fade(pa(y, 60.0, 2), 12.0, 160.0)
+    return nivelar_voz(y)
+
+
+def gerar_voz_longe(v, rng):
+    """De longe: um grito mais comprido, abafado, com mais sala que voz. O 3 é um rosnado que vira grito."""
+    if v == 3:
+        rosnado = garganta(recorte(257358, 39.30, 40.97), 0.72, aspero=1.3)
+        grito = garganta(recorte(173944, 21.40, 23.10), 0.85, aspero=1.3, peito_db=-16.0)
+        y = ajustar_tamanho(rosnado, max(len(rosnado), len(grito) + amostras(0.5)))
+        somar(y, grito, 0.5, 0.8)
+    else:
+        ident, de, ate, fator = {1: (556976, 0.60, 2.98, 0.84), 2: (173944, 18.14, 20.41, 0.82)}[v]
+        y = garganta(recorte(ident, de, ate), fator, aspero=1.3, peito_db=-16.0)
+    y = pf(y, 90.0, 6000.0, 2)
+    corte = {1: 1500.0, 2: 1300.0, 3: 1700.0}[v]
+    y = ao_longe(y, rng, corte, 1.1, 0.38, predelay=0.05)
+    y = fade(pa(y, 70.0, 2), 30.0, 380.0)
+    return nivelar_voz(y)
+
+
+# ---------------------------------------------------------------------------
 # Sopros: apagar a chama, acordar de repente
 # ---------------------------------------------------------------------------
 
@@ -1723,6 +1823,10 @@ CATALOGO = [
         o_que_e="frases sussurradas sem sentido, de 3 a 7 sílabas"),
     Som("chamado", 2, 1, (2.0, 3.0), gerar_chamado,
         o_que_e="um chamado distante, entre bicho e gente"),
+    Som("voz_perto", 3, 1, (0.9, 2.6), gerar_voz_perto,
+        o_que_e="a voz dele de perto: rosnado seco (1, 2) e grito curto com rosnado (3); de gravação CC0 (ver fontes/)"),
+    Som("voz_longe", 3, 1, (2.4, 4.6), gerar_voz_longe,
+        o_que_e="a voz dele de longe: grito abafado, com sala (1, 2) e rosnado que vira grito (3); de gravação CC0"),
     Som("sino_longe", 2, 1, (5.0, 6.0), gerar_sino_longe, stream=True,
         o_que_e="um sino tocando longe (grande, uma badalada; rachado, duas)"),
     Som("vento_oco", 3, 1, (4.0, 7.0), gerar_vento_oco, stream=True,

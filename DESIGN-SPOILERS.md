@@ -2148,3 +2148,51 @@ Toda caçada, como quer que acabe, deixa `CACA id=... resumo` no log (TELEMETRIA
 - **Se ele percebe que "o truque parou de funcionar".** É a tese; não há como testar sem ele.
 - **Os números** (duas repetições, seis caçadas, quinze segundos, doze blocos, quatro segundos e meio, seis a nove fora, a metade da vida): ponto de partida, cada um com linha no log.
 - **Os passos da volta**: o som é o passo do bloco em que ele pisa, só para o alvo. Ninguém ouviu.
+
+# Versão 0.9.0-alpha27 — a voz da caçada
+
+A segunda metade do marco da caçada (a primeira é a alpha26). O dono pediu "música e gritos" na perseguição (pelo texto de outra IA, 15/10) e, em 16/10, respondeu à pergunta do volume colando a recomendação dela: sim a um grito ou rugido, em volume normal, sem pico, raro e ligado ao momento, variado, mudando com a distância, e misturado com a trilha sem cobrir os outros sinais. Em 10/10 ele já tinha dito que vozes deviam vir de "gravações livres e bibliotecas de sons".
+
+## O som
+
+- **De gravação, não sintetizado.** É a primeira coisa do mod feita de gravação. Três gravações CC0 do Freesound, de vozes de homem: rosnados ("Male Aggressive Growls", Kodack) e gritos ("Male Screams [1]", marc3122; "human male scream multi", JohnsonBrandEditing). Ficam em `ferramentas/sons/fontes/`, com página, autor, licença conferida e `sha1` em `ORIGENS.md`. São as prévias de alta qualidade que o site serve sem login (o original pede conta).
+- **O trabalho** (`gerar_voz_perto`, `gerar_voz_longe` no `gerar_sons.py`): tocar mais devagar (0,72 a 0,85 da velocidade: de três a seis semitons mais grave, e mais comprido), uma segunda cópia uma oitava abaixo só nos graves por baixo (o peito que um homem não tem), um pouco de aspereza (saturação suave). É o que faz a voz de gente virar a de uma coisa grande demais para ser gente, sem ficar com cara de efeito de dragão.
+- **Duas famílias, três arquivos cada.** `voz_perto` (1,4 a 2,5 s): seca, curta, áspera; dois rosnados e um grito curto com rosnado por baixo. `voz_longe` (3,8 a 4,2 s): gritos abafados (o ar e as paredes comem os agudos: passa-baixa em 1,3 a 1,7 kHz) com mais sala que voz (1,1 s de reverberação); o terceiro é um rosnado que vira grito.
+- **Volume medido, não no ouvido.** As duas famílias têm o mesmo nível: o RMS do trecho com som em −21 dBFS, o pico nunca acima de −6 (saíram entre −6,8 e −9,9). É o nível dos sons que já tocam na caçada (arranhar −21,5 de RMS; pano −21,4). "Mais urgente de perto" é timbre e duração; quem deixa a de longe mais baixa é a distância.
+- As gravações de rosnado vêm saturadas na origem (picos em 0 dBFS). Mais devagar e abafado, isso se perde em boa parte; é o primeiro ponto a rever se ele achar a voz "estourada".
+
+## Quando ele usa a voz (`assombracao/VozDaCacada`, pura)
+
+- **Três momentos:** quando a perseguição começa (fim do aviso), em 60% das caçadas; no **primeiro golpe** do jogador, sempre (sai de onde ele foi ferido, antes de sumir: é a resposta ao golpe, e deixa o golpe legível); e quando ele **reencontra** o jogador depois de oito segundos sem saber dele, em 50% das vezes (inclusive depois de fingir que desistiu).
+- **No máximo duas por caçada**, e quinze segundos entre uma e outra (o golpe não espera o intervalo).
+- **Nunca em cima de outro sinal da caçada**: dois segundos longe do pano do atalho, do aviso na boca do vão, da maçaneta e do aviso no bloco. Esses dizem ao jogador o que fazer.
+- **De longe (14 blocos ou mais) a abafada; de perto a seca.** A de longe sai com volume que só aumenta o alcance (o jogo não toca mais forte acima de 1), para chegar ao jogador com folga.
+- A altura varia de 0,93 a 1,05 a cada vez, e o jogo sorteia um dos três arquivos: a mesma situação não soa sempre igual.
+- **Só o alvo ouve**, como tudo da caçada (`ModSons.tocarPara`), em "Criaturas hostis" (o silêncio do mod não a corta).
+- Sorteio da própria caçada, nunca o do mundo.
+
+## A música da perseguição varia por encontro (`TrilhaCliente`)
+
+Quando as três camadas da perseguição começam juntas, o cliente sorteia (sem tocar no sorteio do mundo) um andamento e um tom para as três ao mesmo tempo (0,94, 1 ou 1,06: um semitom abaixo, o normal ou um acima, com o andamento junto; as três com a mesma altura continuam sincronizadas) e a ordem em que as duas de cima entram (cordas antes dos sinos, ou o contrário). Nunca a mesma combinação duas vezes seguidas. O volume das camadas não mudou.
+
+## O log e o analisador
+
+`CACA id=... voz=PERTO|LONGE momento=INICIO|FERIDO|REENCONTRO dist=... n=...`, e o resumo da caçada ganhou `vozes=N`. A tabela "Uma linha por caçada" ganhou a coluna "Vozes". A variação da música é do cliente e não vai para o log.
+
+## Os testes
+
+- **JUnit** (`VozDaCacadaTest`, seis): no máximo duas, o intervalo (menos no golpe), nunca em cima de outro sinal, as chances de cada momento, a de longe sem ficar mais forte e sempre alcançando o jogador, e a faixa da altura.
+- **Servidor** (`TestesDosSaltos.oGolpeTemVozSoParaOAlvo`; 106 no total): o primeiro golpe tem uma voz, a de perto, vinda de onde ele foi ferido; o amigo ao lado não recebe voz nenhuma; o segundo golpe não tem outra.
+- Nas caçadas dos testes de servidor de uma execução: 15 sem voz, 17 com uma, 3 com duas (18 de longe no começo, 1 de perto no começo, 3 no golpe, 1 no reencontro).
+- **O som em si:** `gerar_sons.py --so voz_perto voz_longe` confere pico, RMS, duração, contínua e pontas dos seis arquivos (todos ok), e rodar de novo gera os mesmos bytes.
+
+## Medição
+
+A sessão sintética (uma hora, três jogadores de mentira) deu 31, 43 e 29 saídas por hora e 8, 10 e 10 aparições por hora (fase 2, fase 4, mundo novo); na alpha26, 34, 41 e 31, e 8, 12 e 12. Uma caçada (a do jogador da fase 4), com captura e sem voz (o começo tem 60% de chance). A tabela "Uma linha por caçada" da sessão sintética é a linha de base do marco. Atenção ao ler o log dos testes: ele acumula as execuções, e os nomes dos jogadores de mentira se repetem entre uma e outra; separe a última execução antes de passar o analisador (eu misturei uma vez).
+
+## Não verificado por ninguém
+
+- **Como soa.** Ninguém ouviu: nem eu (não tenho como), nem o GitHub (a máquina de fotos não tem som). Escolhi as gravações e os trechos por medida (trechos sustentados, timbre, nível) e pelo nome. Pode soar como homem gritando devagar, que é o risco de quem trabalha voz de gente; pode soar "de filme". Só ele diz.
+- Se a voz cobre os passos dele na perseguição (os passos não são sinal "parado", eles acompanham o andar; a regra dos dois segundos não os protege). A de longe, abafada e com sala, deveria passar por baixo; a de perto toca quando ele está parado (o golpe) ou acabou de ver o jogador.
+- Se 60% no começo é muito: com uma caçada a cada 25 a 40 minutos, é uma voz a cada meia hora a uma hora de fase 4.
+- A variação da música: só mudou a altura e a ordem; ninguém ouviu.

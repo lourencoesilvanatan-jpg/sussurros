@@ -24,6 +24,7 @@ import com.sussurros.assombracao.Depuracao;
 import com.sussurros.assombracao.Diretor;
 import com.sussurros.assombracao.Percepcao;
 import com.sussurros.assombracao.Saltos;
+import com.sussurros.assombracao.VozDaCacada;
 import com.sussurros.bloco.CinzaEspalhadaBlock;
 
 /**
@@ -49,6 +50,9 @@ import com.sussurros.bloco.CinzaEspalhadaBlock;
  * depois do aviso; o atalho nunca cai nas costas, e depois de qualquer salto ele fica parado um tempo maior quanto
  * mais perto caiu. Ser ferido o tira da caçada por uns segundos, longe, e a volta é anunciada por passos. Cada
  * caçada deixa uma linha de resumo no log.
+ *
+ * 0.9.0-alpha27: a voz. Raramente, e só em três momentos (ver assombracao/VozDaCacada), ele grita ou rosna, de onde
+ * está e só para o alvo; nunca em cima de outro sinal da caçada.
  */
 final class Cacada {
 	enum Estagio {
@@ -163,6 +167,12 @@ final class Cacada {
 	private int travessias;
 	private int ultimoSalto = -1;
 	private int menorJanela = Integer.MAX_VALUE;
+	/** A voz (0.9.0-alpha27): quantas nesta caçada, quando foi a última e quando foi o último outro sinal (ticks da caçada). */
+	private int vozes;
+	private int ultimaVoz = -1;
+	private int ultimoSinal = -1;
+	/** Ele ficou muito tempo sem saber do jogador: vê-lo de novo é um reencontro. */
+	private boolean perdido;
 
 	Cacada(HospedeEntity h, HospedeBusca busca, ServerPlayer alvo, double fatorDoDiretor, boolean comAviso) {
 		this.h = h;
@@ -207,13 +217,13 @@ final class Cacada {
 		}
 		this.encerrada = true;
 		this.log(level, alvo, String.format(Locale.ROOT,
-				"CACA id=%s resumo fim=%s duracao=%ds perseguiu=%ds atalhos=%d travessias=%d golpes=%d menorJanela=%s desdeOSalto=%s liberado=%s fugiu=%s truque=%s",
+				"CACA id=%s resumo fim=%s duracao=%ds perseguiu=%ds atalhos=%d travessias=%d golpes=%d menorJanela=%s desdeOSalto=%s liberado=%s fugiu=%s truque=%s vozes=%d",
 				this.h.getIdManifestacao(), motivo, this.idade / 20,
 				this.persegueDesde < 0 ? 0 : (this.idade - this.persegueDesde) / 20,
 				this.atalhos, this.travessias, this.golpes,
 				this.menorJanela == Integer.MAX_VALUE ? "-" : String.format(Locale.ROOT, "%.1fs", this.menorJanela / 20.0),
 				this.ultimoSalto < 0 ? "-" : String.format(Locale.ROOT, "%.1fs", (this.idade - this.ultimoSalto) / 20.0),
-				this.liberacao.paraLog(), this.fugiu ? "sim" : "nao", this.truque ? "sim" : "nao"));
+				this.liberacao.paraLog(), this.fugiu ? "sim" : "nao", this.truque ? "sim" : "nao", this.vozes));
 	}
 
 	/** O jogador fugiu para longe nesta caçada (o Diretor guarda na memória quando ela acaba). */
@@ -272,6 +282,7 @@ final class Cacada {
 					this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "FIM_DO_AVISO");
 					this.persegueDesde = this.idade;
 					this.mudar(level, alvo, Estagio.PERSEGUE, "FIM_DO_AVISO");
+					this.voz(level, alvo, VozDaCacada.Momento.INICIO);
 				}
 			}
 			case FERIDO -> this.tickFerido(level, alvo, percebido, dist);
@@ -330,6 +341,7 @@ final class Cacada {
 			// Congela e sabe exatamente onde você está. Encarar segura, mas não vence: o relógio da caçada
 			// para, e de tempos em tempos você pisca.
 			this.h.pararEOlhar();
+			this.talvezReencontro(level, alvo, true);
 			this.busca.ouvirMovimento(level, this.h, alvo, true);
 			this.foraDaTela = 0;
 			if (++this.naTela >= this.proximoPiscar && this.piscarEm < 0) {
@@ -363,6 +375,7 @@ final class Cacada {
 		if (ve) {
 			this.busca.ver(level, this.h, alvo.position());
 		}
+		this.talvezReencontro(level, alvo, ve);
 		boolean sabe = this.busca.confianca() >= 0.6 && this.busca.idadeDoConhecimento(level.getGameTime()) <= 60;
 		if (sabe) {
 			this.contato++;
@@ -462,6 +475,7 @@ final class Cacada {
 		this.vaoBoca = adiante.immutable();
 		this.vaoAvisadoTick = level.getGameTime();
 		this.vaoEspera = 30 + this.sorte.nextInt(31); // de 1,5 a 3 s, como a espera atrás de uma porta
+		this.sinal();
 		this.h.getNavigation().stop();
 		ApoioCaca.contarVao(alvo, this.h);
 		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s vao boca=%s espera=%dt dist=%.1f",
@@ -772,6 +786,7 @@ final class Cacada {
 		this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "ATALHO");
 		this.atalhos++;
 		ApoioCaca.somDePano(alvo, this.h);
+		this.sinal();
 		double para = Math.sqrt(this.h.distanceToSqr(alvo));
 		// Parado, olhando para o jogador: o "barrado" é a mesma espera de quando uma linha o segura.
 		this.barrado = Saltos.esperaDepois(para, passo, ALCANCE_TOQUE);
@@ -787,6 +802,42 @@ final class Cacada {
 	boolean saltarParaTeste(ServerLevel level, ServerPlayer alvo) {
 		double dist = Math.sqrt(this.h.distanceToSqr(alvo));
 		return this.saltarPara(level, alvo, dist, this.passoAgora(level), Saltos.DISTANCIA_MINIMA, Saltos.DISTANCIA_MINIMA + 4, "atalho_teste");
+	}
+
+	/** Um sinal da caçada que diz ao jogador o que fazer (pano, vão, maçaneta, aviso no bloco): a voz não vem em cima. */
+	private void sinal() {
+		this.ultimoSinal = this.idade;
+	}
+
+	/**
+	 * A voz, se cabe agora (ver VozDaCacada): a de longe ou a de perto, de onde ele está, só para o alvo. O sorteio é
+	 * o da caçada, nunca o do mundo.
+	 */
+	private void voz(ServerLevel level, ServerPlayer alvo, VozDaCacada.Momento momento) {
+		double sorteio = this.sorte.nextDouble();
+		if (!VozDaCacada.pode(momento, this.vozes, this.ultimaVoz < 0 ? -1 : this.idade - this.ultimaVoz,
+				this.ultimoSinal < 0 ? -1 : this.idade - this.ultimoSinal, sorteio)) {
+			return;
+		}
+		double dist = Math.sqrt(this.h.distanceToSqr(alvo));
+		boolean longe = VozDaCacada.deLonge(dist);
+		this.vozes++;
+		this.ultimaVoz = this.idade;
+		ApoioCaca.voz(alvo, this.h, longe, VozDaCacada.volume(dist), VozDaCacada.altura(this.sorte.nextDouble()));
+		this.log(level, alvo, String.format(Locale.ROOT, "CACA id=%s voz=%s momento=%s dist=%.1f n=%d",
+				this.h.getIdManifestacao(), longe ? "LONGE" : "PERTO", momento, dist, this.vozes));
+	}
+
+	/** Muito tempo sem saber do jogador, e agora ele o vê (ou é visto): um reencontro, que às vezes tem voz. */
+	private void talvezReencontro(ServerLevel level, ServerPlayer alvo, boolean viu) {
+		if (viu) {
+			if (this.perdido) {
+				this.perdido = false;
+				this.voz(level, alvo, VozDaCacada.Momento.REENCONTRO);
+			}
+		} else if (this.busca.idadeDoConhecimento(level.getGameTime()) > VozDaCacada.PERDIDO_HA) {
+			this.perdido = true;
+		}
 	}
 
 	/** Nos quinze segundos depois do aviso não há salto: é quando o jogador decide o que fazer. */
@@ -910,6 +961,7 @@ final class Cacada {
 					&& this.h.blockPosition().distSqr(pos) <= 6.25) {
 				this.porta = pos.immutable();
 				this.portaEspera = 30 + this.sorte.nextInt(31); // de 1,5 a 3 s
+				this.sinal();
 				return;
 			}
 		}
@@ -1033,6 +1085,7 @@ final class Cacada {
 		this.travessias++;
 		// A janela de quem está em cima do bloco é o próprio aviso: o tempo de sair de perto.
 		this.saltou(this.avisoAtravessar);
+		this.sinal();
 		this.mudar(level, alvo, Estagio.ATRAVESSA, "SEM_CAMINHO bloco=" + escolhido.toShortString());
 	}
 
@@ -1155,6 +1208,10 @@ final class Cacada {
 			return;
 		}
 		this.golpes++;
+		// No primeiro golpe, a voz sai de onde ele foi ferido, antes de ele sumir dali.
+		if (this.golpes == 1) {
+			this.voz(level, alvo, VozDaCacada.Momento.FERIDO);
+		}
 		BlockPos lugar = this.lugarForaDaTela(level, alvo, 16, 24, false, true);
 		if (lugar != null) {
 			this.h.getNavigation().stop();

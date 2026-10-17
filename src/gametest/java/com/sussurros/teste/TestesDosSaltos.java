@@ -287,6 +287,66 @@ public class TestesDosSaltos {
 	}
 
 	/**
+	 * 0.9.0-alpha27: o primeiro golpe tem voz. Ela sai de onde ele foi ferido, é a de perto, chega só ao alvo (o amigo
+	 * ao lado não ouve nada dela), e o segundo golpe não tem outra.
+	 */
+	@GameTest(maxTicks = 900)
+	public void oGolpeTemVozSoParaOAlvo(GameTestHelper helper) {
+		ServerLevel level = helper.getLevel();
+		ServerPlayer jogador = jogadorNaFase4(helper, -10100, "voz-golpe");
+		ServerPlayer amigo = JogadorDeTeste.criarNoChao(helper, GameType.SURVIVAL, 5, -10100, 0);
+		Diretor.esquecer(amigo);
+		JogadorDeTeste.acompanhar(helper, jogador, "voz-golpe");
+		int[] relogio = new int[1];
+		int[] feridoEm = {-1};
+		Vec3[] ondeFoi = new Vec3[1];
+		helper.runAfterDelay(5, () -> comecar(helper, jogador, false));
+		TestesDePerto.cadaTick(helper, () -> {
+			relogio[0]++;
+			HospedeEntity h = Diretor.criatura(jogador);
+			if (feridoEm[0] < 0) {
+				if (h == null || !"PERSEGUE".equals(h.getEstagioDaCaca())) {
+					return;
+				}
+				h.snapTo(jogador.getX(), jogador.getY(), jogador.getZ() + 3.0, 180.0F, 0.0F);
+				jogador.lookAt(EntityAnchorArgument.Anchor.EYES, h.position().add(0, 1.2, 0));
+				ondeFoi[0] = h.getEyePosition();
+				JogadorDeTeste.esquecerSons(jogador);
+				JogadorDeTeste.esquecerSons(amigo);
+				h.hurtServer(level, level.damageSources().playerAttack(jogador), 1.0F);
+				feridoEm[0] = relogio[0];
+				return;
+			}
+			int desde = relogio[0] - feridoEm[0];
+			if (desde == 2) {
+				JogadorDeTeste.recebidos(jogador);
+				JogadorDeTeste.recebidos(amigo);
+				int doAlvo = JogadorDeTeste.sonsVindosDe(jogador, ondeFoi[0], 2.5, "sussurros:voz_perto");
+				helper.assertTrue(doAlvo == 1, "o golpe deveria ter uma voz, a de perto, vinda de onde ele foi ferido: "
+						+ JogadorDeTeste.ultimosSons(jogador));
+				helper.assertTrue(JogadorDeTeste.sonsVindosDeQueTem(amigo, ondeFoi[0], 64.0, "sussurros:voz") == 0,
+						"a voz é só do alvo: " + JogadorDeTeste.ultimosSons(amigo));
+				JogadorDeTeste.esquecerSons(jogador);
+			}
+			if (desde == 10 && h != null) {
+				// O segundo golpe (ele está longe, mas o teste bate assim mesmo) não tem outra voz.
+				h.hurtServer(level, level.damageSources().playerAttack(jogador), 1.0F);
+			}
+			if (desde == 12) {
+				JogadorDeTeste.recebidos(jogador);
+				helper.assertTrue(JogadorDeTeste.sonsVindosDeQueTem(jogador, jogador.position(), 64.0, "sussurros:voz") == 0,
+						"o segundo golpe não tem outra voz: " + JogadorDeTeste.ultimosSons(jogador));
+				if (h != null) {
+					h.sumir(level, false, "FIM_DO_TESTE");
+				}
+				JogadorDeTeste.remover(jogador);
+				JogadorDeTeste.remover(amigo);
+				helper.succeed();
+			}
+		});
+	}
+
+	/**
 	 * A captura pesa, mas não larga para morrer: a vida não fica abaixo da metade, ele é levado para o lado que tem
 	 * luz (há tochas de um lado só, a doze blocos ou mais), e nenhuma tocha é apagada em volta de onde ele acorda.
 	 * (Até a alpha25 o lugar preferido era o mais escuro, e as luzes em volta eram apagadas por um minuto.)
