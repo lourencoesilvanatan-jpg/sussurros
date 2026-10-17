@@ -2196,3 +2196,24 @@ A sessão sintética (uma hora, três jogadores de mentira) deu 31, 43 e 29 saí
 - Se a voz cobre os passos dele na perseguição (os passos não são sinal "parado", eles acompanham o andar; a regra dos dois segundos não os protege). A de longe, abafada e com sala, deveria passar por baixo; a de perto toca quando ele está parado (o golpe) ou acabou de ver o jogador.
 - Se 60% no começo é muito: com uma caçada a cada 25 a 40 minutos, é uma voz a cada meia hora a uma hora de fase 4.
 - A variação da música: só mudou a altura e a ordem; ninguém ouviu.
+
+# Conferência: o mundo novo forçado pelos comandos (17/10/2026)
+
+Não é versão: é medição, sem mudar o jogo. Em 15/10 um amigo do dono jogou em outro computador e, pelo que outra IA contou, achou que "mesmo forçando os níveis para o máximo demorou para presenciar acontecimentos". O log dele não chegou. A hipótese da passagem (0.11) era que `/sussurros fase 4` não mexe na obsessão e que a ameaça espera a obsessão subir.
+
+A sessão sintética ganhou `SUSSURROS_SESSAO_FORCADO=fase|obsessao`: o jogador do mundo novo começa com `/sussurros fase 4` (e, com `obsessao`, também `/sussurros obsessao 100`), pelo mesmo caminho dos comandos. 45 minutos de jogo cada, alpha27.
+
+| | primeiro evento | primeira aparição | primeira tentativa de contato | ameaça (AMEACANDO) | caçada |
+|---|---|---|---|---|---|
+| mundo novo de verdade (fase 0) | 5m56s | 15m55s | (relógio da primeira hora) | 39m02s (fase 3) | nenhuma em 60 min |
+| forçado: fase 4 | 2m47s | 6m31s | ~16 min de jogo | 36m23s | 37m23s |
+| forçado: fase 4 e obsessão 100 | 3m01s | 3m42s | ~16 min (relógio 958 s) | 37m46s | 38m19s |
+
+**A hipótese estava errada.** Com a obsessão no máximo desde o primeiro segundo, a ameaça veio na mesma hora que sem ela. A trava é o **escuro**: para passar de `ESCALANDO` a `AMEACANDO` o Diretor pede `V >= 60` (vulnerabilidade: escuro, sozinho, longe de casa), e `ESCALANDO` dura no máximo quinze minutos (`no > 900`) antes de virar `RECUANDO`. Na sessão forçada, o primeiro `ESCALANDO` (aos 8 min) caiu no dia, com `V` entre 15 e 25, e expirou aos 23 min; o recuo e a calma levaram até os 30 min; o segundo `ESCALANDO` esperou a noite seguinte, e a ameaça veio aos 38 min, assim que `V` passou de 60.
+
+O que isso diz para um jogador de verdade que força os níveis:
+
+- o mod fala desde os três minutos (sons, vultos), mas os comandos não pulam o relógio da primeira hora: a primeira vez em que ele tenta ser visto de verdade é por volta dos dezesseis minutos de jogo, como num mundo comum. Sem o primeiro contato feito, a cota de corpo (aparições vistas de tempos em tempos) não vale, mesmo na fase 4;
+- o momento mais forte depende de estar escuro na hora certa. Num mundo que começa de manhã, isso dá de meia hora a quarenta minutos.
+
+**Nada foi mudado.** As duas coisas que encurtariam isso mexem no ritmo do Diretor (`ESCALANDO` não expirar por causa do dia; ou o comando de fase dar o primeiro contato por feito), e o combinado da 0.11 é não mexer no Diretor até o dono jogar o marco (alpha26 e alpha27). Ficam como proposta. Os jogadores de mentira nunca miram, então a sessão não mede "visto"; os tempos acima são de criado, não de visto.

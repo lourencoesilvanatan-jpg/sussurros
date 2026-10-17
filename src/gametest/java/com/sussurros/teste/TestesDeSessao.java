@@ -25,6 +25,10 @@ import com.sussurros.rede.Rede;
  *     SUSSURROS_SESSAO=1 SUSSURROS_SESSAO_SEM_LIMITE=1 ./gradlew runGameTest     (como era sem o orçamento de atenção)
  *     python ferramentas/log/analisar.py build/run/gameTest/sussurros-debug.log --jogador <nome>
  *
+ * SUSSURROS_SESSAO_FORCADO=fase (ou =obsessao) faz o jogador do mundo novo começar como quem força os níveis com
+ * os comandos de teste: /sussurros fase 4 no primeiro segundo (e, com "obsessao", também /sussurros obsessao 100).
+ * Foi o que um amigo do dono fez em outro computador, em 15/10/2026, e achou que demorava a acontecer coisa.
+ *
  * Os nomes dos três jogadores saem no log do servidor, numa linha que começa por "[sessao]".
  *
  * Limites, para ninguém ler demais no resultado: o jogador de mentira "reage" sempre do mesmo jeito (para e
@@ -38,6 +42,8 @@ public class TestesDeSessao {
 	private static final boolean SEM_LIMITE = "1".equals(System.getenv("SUSSURROS_SESSAO_SEM_LIMITE"));
 	/** Minutos de jogo. SUSSURROS_SESSAO_MINUTOS muda (até 240). */
 	private static final int TICKS = 20 * 60 * Integer.parseInt(System.getenv().getOrDefault("SUSSURROS_SESSAO_MINUTOS", "60"));
+	/** "fase" ou "obsessao": o mundo novo forçado pelos comandos de teste (ver acima). Vazio: o mundo novo de verdade. */
+	private static final String FORCADO = System.getenv().getOrDefault("SUSSURROS_SESSAO_FORCADO", "");
 
 	@GameTest(maxTicks = 20 * 60 * 60 * 4)
 	public void umaHoraDeJogo(GameTestHelper helper) {
@@ -68,11 +74,18 @@ public class TestesDeSessao {
 				// nunca entrava na medição.
 				PrimeiroContato.darPorFeitoParaTeste(jogadores[i]);
 			}
+			if (i == 2 && !FORCADO.isEmpty()) {
+				// O mesmo caminho dos comandos: Diretor.definirFase e Diretor.definirObsessao. Sem primeiro contato.
+				Diretor.definirFase(jogadores[i], 4);
+				if ("obsessao".equals(FORCADO)) {
+					Diretor.definirObsessao(jogadores[i], 100);
+				}
+			}
 			centros[i] = jogadores[i].position();
 			saldoAnterior[i] = Atencao.saldoParaTeste(jogadores[i]);
 		}
-		Sussurros.LOGGER.info("[sessao] fase 2 = {}, fase 4 = {}, mundo novo = {}", jogadores[0].getName().getString(),
-				jogadores[1].getName().getString(), jogadores[2].getName().getString());
+		Sussurros.LOGGER.info("[sessao] fase 2 = {}, fase 4 = {}, mundo novo{} = {}", jogadores[0].getName().getString(),
+				jogadores[1].getName().getString(), FORCADO.isEmpty() ? "" : " forçado (" + FORCADO + ")", jogadores[2].getName().getString());
 		int[] relogio = new int[1];
 		int[] reageAte = new int[n];
 		// Não usa helper.onEachTick nem JogadorDeTeste.acompanhar: os dois agendam de uma vez uma tarefa para cada tick
