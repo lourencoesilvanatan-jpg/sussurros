@@ -2217,3 +2217,56 @@ O que isso diz para um jogador de verdade que força os níveis:
 - o momento mais forte depende de estar escuro na hora certa. Num mundo que começa de manhã, isso dá de meia hora a quarenta minutos.
 
 **Nada foi mudado.** As duas coisas que encurtariam isso mexem no ritmo do Diretor (`ESCALANDO` não expirar por causa do dia; ou o comando de fase dar o primeiro contato por feito), e o combinado da 0.11 é não mexer no Diretor até o dono jogar o marco (alpha26 e alpha27). Ficam como proposta. Os jogadores de mentira nunca miram, então a sessão não mede "visto"; os tempos acima são de criado, não de visto.
+
+# Versão 0.9.0-alpha28 — alguém esteve aqui
+
+A parte do pacote 3 que esperava uma decisão do dono desde 11/10: pôr blocos de verdade, que ficam, em caverna natural. Em 18/10/2026 ele respondeu: "sim se possivel ate perto do que eu construi, é pra pertubar o jogador mesmo". É a decisão de design que o princípio 5 do `ROADMAP.md` pedia. Até aqui tudo o que o mod punha perto dele sumia sozinho (miragem, `AlteracoesTemporarias`) ou ficava longe da base (a Soleira, a Casa do Vigia, o Boneco, que anda mas é tirado ao andar). Isto fica.
+
+A classe é `assombracao/AlguemEsteveAqui`. Não mexe no Diretor além de duas chamadas (no segundo e ao acordar), não gasta saldo de atenção (é coisa que ele só encontra se olhar) e não toca na caçada: o marco (alpha26 e alpha27) continua valendo.
+
+## Na caverna
+
+- **Quando:** da fase 2 em diante, com o primeiro contato feito (ou fase 3+), depois de quatro minutos seguidos debaixo da terra na mesma descida, com 12% de chance a cada vinte segundos; **uma vez por descida**, e no máximo a cada vinte e cinco minutos de mundo. Nunca com ele sendo assombrado de perto (criatura presente ou cena em curso).
+- **Onde:** a caverna em que ele está é percorrida a partir dele (em largura, por onde se anda, até 2.500 células e 34 blocos); o trecho é o primeiro pedaço dela a dezesseis blocos ou mais que está **escuro** (sem céu e com luz de tocha de no máximo 2: ninguém acendeu), **fora da vista** dele (nem os pés nem a cabeça de quem ficasse ali) e a **dez blocos ou mais de por onde ele andou** (o `Rastro`, uns seis minutos). Na prática: o pedaço da caverna logo adiante, que ele ainda não iluminou.
+- **O quê:** duas a quatro tochas de parede, a seis blocos ou mais uma da outra, na luz que ele usa (tocha ou tocha de alma, contando as que estão em volta dele). Uma só não conta (é só uma tocha) e é desfeita. Em 30% das vezes, se houver pedra para isso, **uma galeria** no lugar: três blocos de fundo e dois de altura cavados numa parede do trecho, com uma tocha no fundo, como um galho de mineração de outra pessoa.
+- **A galeria só cava pedra natural** (`base_stone_overworld`): nunca minério, nunca com líquido ou bloco que cai em volta, sempre com chão firme, e só se nenhum dos seis blocos estiver à vista.
+- **Na caverna que ele já acendeu, nada.** O pedaço da caverna dele exportado em 11/10 tem 110 células a dezesseis blocos ou mais da entrada, e nenhuma escura: ele acendeu tudo. Ali nada é posto (é um dos testes).
+
+## Perto da casa
+
+- **Quando:** com cama conhecida, da fase 2 em diante, em 45% dos dias do jogo, uma vez por dia; só com ele a **32 blocos ou mais da cama** (e a casa carregada), ou **ao acordar** de uma noite inteira de sono. Nunca com criatura presente ou cena.
+- **O quê, em rodízio** (nunca a mesma duas vezes seguidas; se a da vez não cabe, a seguinte):
+  1. **a tocha na janela:** uma tocha de parede do lado de fora da casa, presa na parede dele, ao lado de uma janela (vidro ou vidraça a até dez blocos da cama). O lado de fora é o que vê o céu; nunca colada numa porta;
+  2. **a tocha no chão:** uma tocha fincada no chão a quatro a oito blocos da porta que ele mais usa (ou da cama);
+  3. **a bancada:** uma bancada com uma tocha ao lado, a nove a dezesseis blocos da cama, como o acampamento da primeira noite de alguém.
+- A luz é a que ele usa (contada em volta da cama).
+- **Chão:** só lugar vazio, a céu aberto, sobre chão natural, e sem nada que não seja natural em volta (não encosta em cerca, horta, caminho nem parede dele). A tocha da janela é a única que encosta no que é dele: se apoia na parede, e mais nada.
+- **Nunca à vista:** todo lugar é conferido contra a tela dele.
+
+## Achar
+
+As últimas seis coisas postas ficam lembradas (posição, tipo, quando). Quando ele passa a até quatro blocos e meio de uma delas, ela conta como **achada**: uma linha no log, e uma "marca" para as famílias (`Familias.registrar`, família `MARCA`), se ela ainda estava lá. Se ele a tirou antes, o log diz `esta=nao`.
+
+## O que não muda
+
+- Nada é tirado do mundo depois (fica). Ele pode quebrar tudo: são blocos comuns.
+- Nada dele é quebrado, trocado ou tapado: é a regra "nunca estragar a construção", que a resposta dele não muda.
+- O saldo de atenção, o Diretor, a caçada e o som.
+
+## Os testes
+
+- **Servidor** (`TestesDeAlguem`, cinco; 111 no total):
+  - `naCavernaOTrechoQueEleNaoAndouAmanheceAceso`: túnel de pedra em L; as tochas vão para o braço que ele não vê, a catorze blocos ou mais, presas na parede, e só elas mudam no maciço.
+  - `aGaleriaSoCavaPedraEFicaFora`: os seis blocos cavados eram pedra, nenhum à vista, a tocha no fundo, e nada mais muda.
+  - `naCavernaQueEleJaAcendeuNadaMuda`: no pedaço da caverna do dono, que ele acendeu inteiro, nada é posto e nada muda.
+  - `pertoDaCasaNadaDeleMuda`: uma casinha de tábua com porta, janela e cama; com o jogador a sessenta blocos, as três coisas da casa são postas do lado de fora (a tocha da janela apoiada na parede dele, a do chão a três a nove blocos da porta, a bancada com a tocha), nenhum bloco da casa muda, e passando ao lado da tocha do chão ele a acha.
+  - `comEleOlhandoNadaAparece`: olhando para a casa a vinte blocos, nada é posto e nada muda.
+- **Não há foto nova**: o que aparece são blocos comuns do jogo (tocha, bancada).
+- **Sessão sintética não rodada**: os jogadores de mentira não descem nem têm cama, então nada disto acontece com eles, e nada do ritmo mudou.
+
+## Não verificado por ninguém
+
+- **Se perturba ou se parece "bug do mod".** Uma tocha na parede de fora da janela pode ser lida como "eu pus e esqueci". É o risco e é a graça. O primeiro dado é o `ALGUEM achado` e o que ele disser sem ser perguntado.
+- **A frequência.** 45% dos dias e uma vez por descida são ponto de partida. Com mais de uma coisa por dia na casa vira cenário; com menos, ele não liga uma à outra.
+- **Em servidor com amigos:** são blocos de verdade, todos veem. É a casa e a caverna de um jogador; quem estiver junto vê também.
+- **O "não andou ali"** usa os últimos seis minutos de caminho (o `Rastro`) e a luz: uma caverna que ele visitou há uma hora sem acender pode receber tochas como "nova". A luz é a régua principal.

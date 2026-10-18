@@ -867,6 +867,7 @@ public final class Diretor {
 		ChamasPalidas.segundo(level, p, e, fase, calma, seg);
 		Veu.segundo(level, p, e, tick);
 		Erguidos.segundo(level, p, m, e, fase, noite, seg, tick);
+		AlguemEsteveAqui.segundo(level, p, m, e, fase, seg);
 		CasaDoVigia.segundo(level, p, m, e, fase, seg);
 		Baralho.segundo(level, p, m, e, fase, seg, tick);
 
@@ -3727,6 +3728,7 @@ public final class Diretor {
 		if (p.isSleepingLongEnough()) {
 			Oferenda.aoAcordar(level, p, m, estado(p), fase, level.getGameTime());
 			Erguidos.aoAcordar(level, p, m, estado(p), fase);
+			AlguemEsteveAqui.aoAcordar(level, p, m, estado(p), fase);
 		}
 
 		// Ele deixou algo ao lado da cama enquanto você dormia.
