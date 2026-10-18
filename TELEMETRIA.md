@@ -997,3 +997,20 @@ Para conferir depois de uma sessão (o analisador monta a tabela "Uma linha por 
 - O resumo da caçada ganhou `vozes=N` no fim.
 
 Para conferir depois de uma sessão: a coluna "Vozes" da tabela "Uma linha por caçada". Nenhuma caçada com mais de duas; e, se ele disser que a voz cobriu alguma coisa, o segundo da linha `voz=` mostra o que estava acontecendo.
+
+## 0.9.0-alpha28 — alguém esteve aqui
+
+```
+[11200s][Jogador] ALGUEM posto onde=CAVERNA tipo=TOCHAS pos=(-1188,-41,1820) dist=19 tochas=3 ate=(-1190,-41,1832)
+[11950s][Jogador] ALGUEM posto onde=CAVERNA tipo=GALERIA pos=(-1201,-38,1811) dist=21 cavados=6 de=(-1210,-40,1800)
+[12010s][Jogador] ALGUEM sem_lugar onde=CAVERNA caverna=330 longe=110 semRastro=110 escuras=0
+[13020s][Jogador] ALGUEM posto onde=CASA tipo=TOCHA_NA_JANELA pos=(-1340,74,1946) dist=58 daCama=5
+[13300s][Jogador] ALGUEM achado tipo=TOCHA_NA_JANELA pos=(-1340,74,1946) depois=280s esta=sim
+[13300s][Jogador] FAMILIA familia=MARCA de=ALGUEM_TOCHA_NA_JANELA lugar=CASA
+```
+
+- `ALGUEM posto onde=CAVERNA|CASA tipo=TOCHAS|GALERIA|TOCHA_NA_JANELA|TOCHA_NO_CHAO|BANCADA pos=... dist=D ...`: alguém esteve ali. `dist` é até o jogador na hora. Na caverna, `tochas=N ate=...` (a primeira e a última) ou `cavados=6 de=...`; na casa, `daCama=`.
+- `ALGUEM sem_lugar onde=CAVERNA caverna=N longe=N semRastro=N escuras=N`: na caverna, a hora era essa e não havia trecho bom. Os números dizem onde parou: quantas células da caverna em volta dele, quantas a dezesseis blocos ou mais, quantas dessas longe de por onde ele andou, e quantas dessas escuras (as escuras que sobram ainda podiam estar à vista). `escuras=0` é caverna que ele já acendeu.
+- `ALGUEM achado tipo=... pos=... depois=Ns esta=sim|nao`: ele passou a até quatro blocos e meio dela. `depois` conta desde que foi posta; `esta=nao` é que ele (ou alguém) a tirou antes. Com `esta=sim` vem uma linha `FAMILIA familia=MARCA de=ALGUEM_<tipo>`.
+
+Para conferir depois de uma sessão: a seção "Alguém esteve aqui" do analisador (postas, achadas e em quanto tempo, tiradas, e as vezes sem lugar na caverna).

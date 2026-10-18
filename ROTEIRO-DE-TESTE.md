@@ -16,10 +16,13 @@ Você vai jogar várias versões de uma vez. Não precisa testar uma por uma: é
 | alpha25 | Em qualquer lugar. Quando ele aparecer, **faça com ele o que der vontade** (inclusive o que você fez em 11/10, na caverna), e repare no que acontece **na hora** e **nas noites seguintes, quando você estiver em casa**. Use também o que você já tem e sabe usar | Deu para perceber que ele reagiu ao que você fez? Na hora, depois, ou as duas coisas? Você descobriu alguma coisa que **piora** e alguma que **acalma**? |
 | alpha26 | Como na alpha24: jogar bastante **longe de casa, de noite ou debaixo da terra**, sem comando. Se aquele momento em que alguma coisa vem atrás de você acontecer, **faça o que você faria de verdade**, do jeito que vier à cabeça, e **leia a página que aparecer** nos primeiros minutos da sessão | Deu tempo de reagir? Em algum momento pareceu **injusto**? E o contrário: pareceu **fácil demais** de escapar? Depois, deu para continuar jogando ou você ficou numa situação sem saída? |
 | alpha27 | O mesmo da alpha26, **com som ligado** (fone é melhor) e o volume de "Criaturas hostis" audível | Algum som pareceu **alto demais**, estourado ou de mau gosto? Algum pareceu **falso**, "de filme"? Alguma coisa importante ficou **difícil de ouvir** por causa de outro som? |
+| alpha28 | **Explore cavernas novas**, das que você ainda não acendeu, e passe um tempo longe de casa e volte. Durma em casa de vez em quando | Você reparou em alguma coisa que **não lembra de ter feito**? Teve algo que pareceu **defeito do jogo**, ou que te incomodou de um jeito ruim (e não de um jeito bom)? |
 
 De comando, só o `/sussurros debug on`, como sempre.
 
 ## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha28: **a sua resposta de 18/10** ("sim, até perto do que eu construí"). Entra uma coisa nova, debaixo da terra e perto da sua casa, que fica no mundo de verdade. Nada seu é quebrado, trocado ou tapado. Para testar: explore cavernas que você ainda não acendeu, e passe um tempo longe de casa (e volte). Não vou dizer o que é. Se alguma coisa te incomodar do jeito errado, me diga, que eu ajusto.
 
 Versão 0.9.0-alpha27: **o som do momento que a alpha26 mexeu.** Entra o que você pediu sobre música e grito naquele momento, do jeito que você respondeu em 16/10: em volume normal, sem estouro, raro e variado. A música dele também deixa de ser sempre igual. É a primeira vez que o mod usa gravações de verdade (livres, de domínio público). Ninguém ouviu ainda: eu não tenho como ouvir, e a máquina do GitHub não tem som. Medi o volume por programa, e ficou no mesmo nível dos outros sons do mod. Se alguma coisa soar mal, me diga só "o som de tal hora ficou ruim", que eu acho no log. **Esta e a alpha26 são a versão para você jogar e me contar.**
 
@@ -141,6 +144,7 @@ Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abr
 Você não precisa repetir isto. Fica registrado para quem programa.
 
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
+- O que mudou na alpha28 foi exercitado contra um jogador de mentira em cinco situações: um túnel de pedra, um pedaço da sua caverna de verdade e uma casinha com porta, janela e cama. Em todas, nada do que já existia mudou (a casinha é comparada bloco por bloco antes e depois), e nada aparece com o jogador olhando.
 - O que mudou na alpha27 foi conferido em números (seis casos), contra um jogador de mentira (inclusive que quem está ao seu lado não ouve), e o volume dos sons novos foi medido por programa contra os sons que o mod já tinha. Como soa, nenhum teste diz.
 - O que mudou na alpha26 foi exercitado contra um jogador de mentira em cinco situações novas, que medem quanto tempo você tem para reagir, e as contas por trás disso em nove casos. As situações antigas desse momento continuam passando. O log do mod passa a ter uma linha por vez em que esse momento acontece, e eu conferi a leitura dela no seu log de 12/10.
 - O que mudou na alpha23 foi exercitado contra um jogador de mentira em mais duas situações, no mesmo túnel, e fotografado dentro do jogo de verdade. Desta vez os testes pesados rodaram só na máquina do GitHub: a sua estava sem memória livre para eles.

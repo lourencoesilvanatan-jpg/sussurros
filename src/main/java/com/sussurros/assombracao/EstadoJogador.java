@@ -67,6 +67,8 @@ final class EstadoJogador {
 	long cenaTunelLiberadaEm;
 	int cenasTunelFeitas;
 	long subsoloDesde = -1;
+	/** 0.9.0-alpha28: a descida (o subsoloDesde dela) em que alguém já esteve na caverna (ver AlguemEsteveAqui). Uma por descida. */
+	long alguemNaDescida = Long.MIN_VALUE;
 	boolean tentouCenaTunel;
 	boolean cenaTunelTeste;
 

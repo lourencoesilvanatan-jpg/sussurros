@@ -604,6 +604,23 @@ def analisar(linhas, jogador, caminho):
         veus, ' (vulto: ' + ', '.join('%s %d' % v for v in vultos.most_common()) + ')' if vultos else '', vulto_veio, vazios))
     out.append('')
 
+    # ----- alguém esteve aqui (0.9.0-alpha28) -----
+    out.append('## Alguém esteve aqui')
+    out.append('')
+    postos = [(t, m.group(1), m.group(2)) for t, m in
+              ((t, re.match(r'^ALGUEM posto onde=(\S+) tipo=(\S+)', texto)) for t, texto in linhas) if m]
+    achados = [(m.group(1), int(m.group(2)), m.group(3)) for m in
+               (re.match(r'^ALGUEM achado tipo=(\S+) pos=\S+ depois=(-?\d+)s esta=(\S+)', texto) for _, texto in linhas) if m]
+    sem_lugar = sum(1 for _, texto in linhas if texto.startswith('ALGUEM sem_lugar'))
+    if postos or achados or sem_lugar:
+        out.append('Postas: %d%s. Achadas: %d%s. Tiradas antes de ele achar (não estavam mais lá): %d. Na caverna, sem trecho escuro fora da vista: %d vez(es).' % (
+            len(postos), ' (' + ', '.join('%s %s' % (onde.lower(), tipo) for _, onde, tipo in postos) + ')' if postos else '',
+            len(achados), ', depois de ' + ', '.join('%s %s' % (tipo, hms(depois)) for tipo, depois, _ in achados) if achados else '',
+            sum(1 for _, _, esta in achados if esta == 'nao'), sem_lugar))
+    else:
+        out.append('Nada posto nesta sessão (precisa da fase 2, do primeiro contato, e de subsolo ou de cama conhecida).')
+    out.append('')
+
     # ----- a afronta (0.9.0-alpha25) -----
     out.append('## A afronta')
     out.append('')

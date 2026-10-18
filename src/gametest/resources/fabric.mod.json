@@ -23,6 +23,7 @@
 			"com.sussurros.teste.TestesDoVao",
 			"com.sussurros.teste.TestesDaAfronta",
 			"com.sussurros.teste.TestesDosSaltos",
+			"com.sussurros.teste.TestesDeAlguem",
 			"com.sussurros.teste.TestesDeSessao"
 		],
 		"fabric-client-gametest": [

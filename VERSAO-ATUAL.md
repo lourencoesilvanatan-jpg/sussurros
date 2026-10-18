@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha28
+
+A resposta à pergunta que estava pendente desde 11/10, que você respondeu em 18/10 ("sim, até perto do que eu construí"). Entra uma coisa nova, debaixo da terra e perto da sua casa, que fica no mundo. Nada seu é quebrado, trocado ou tapado. Não mexe no momento da alpha26 e da alpha27.
+
 ## 0.9.0-alpha27
 
 O som do mesmo momento que a alpha26 mexeu: entra o que você pediu ("música e gritos"), do jeito que você respondeu em 16/10 (volume normal, sem estouro, raro e variado). A música desse momento também passa a variar de uma vez para outra. É a primeira coisa do mod feita a partir de gravações de verdade (livres, de domínio público). Não entra item nem lugar novo. **Com a alpha26, é a versão para jogar e me contar como foi.**

@@ -322,7 +322,7 @@ public class TestesDePerto {
 	}
 
 	/** O lugar mais próximo de "alvo" onde alguém fica de pé, a até "raio" blocos. Com "escuro", só onde a luz é pouca. */
-	private static BlockPos emPe(ServerLevel level, BlockPos alvo, int raio, boolean escuro) {
+	static BlockPos emPe(ServerLevel level, BlockPos alvo, int raio, boolean escuro) {
 		BlockPos melhor = null;
 		for (BlockPos pos : BlockPos.betweenClosed(alvo.offset(-raio, -4, -raio), alvo.offset(raio, 4, raio))) {
 			if (cabe(level, pos) && (!escuro || level.getBrightness(LightLayer.BLOCK, pos) <= 3)
