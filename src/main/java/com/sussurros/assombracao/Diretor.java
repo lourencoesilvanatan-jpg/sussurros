@@ -3800,7 +3800,8 @@ public final class Diretor {
 
 	/**
 	 * O aviso da caçada: o mundo emudece e uma luz perto do jogador falha. Dura o tempo em que ele, se existir,
-	 * fica parado (8 a 10 s). É o que dá ao jogador a chance de correr para a vela ou sair de um beco.
+	 * fica parado (5 a 6,5 s desde a alpha29; eram 8 a 10). É o que dá ao jogador a chance de correr para a vela ou sair
+	 * de um beco. O silêncio e a marca de "aviso" para os sentidos continuam durando mais que isso: a caçada já começou.
 	 * O mesmo aviso acontece sem caçada (evento PRENUNCIO), para nunca virar certeza.
 	 */
 	private static void prenunciar(ServerLevel level, ServerPlayer p, EstadoJogador e, long tick, RandomSource rnd, boolean deVerdade) {

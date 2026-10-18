@@ -1,5 +1,9 @@
 # Estado atual
 
+## 0.9.0-alpha29
+
+Resposta ao que você disse da caçada em 18/10 ("ele não corre tanto, e parece meio travado até agir"): ele fica menos tempo parado no começo e corre mais. Você continua tendo como escapar, mas correndo de verdade. Nada mais muda.
+
 ## 0.9.0-alpha28
 
 A resposta à pergunta que estava pendente desde 11/10, que você respondeu em 18/10 ("sim, até perto do que eu construí"). Entra uma coisa nova, debaixo da terra e perto da sua casa, que fica no mundo. Nada seu é quebrado, trocado ou tapado. Não mexe no momento da alpha26 e da alpha27.

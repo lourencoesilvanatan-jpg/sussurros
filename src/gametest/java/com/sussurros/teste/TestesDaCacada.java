@@ -179,8 +179,9 @@ public class TestesDaCacada {
 			helper.assertTrue(jogador.getAttributeValue(Attributes.MAX_HEALTH) == 20.0, "caçada de teste não pode marcar");
 			helper.assertTrue(medida[1] > 20, "ele quase não andou: " + medida[1] + " ticks");
 			double blocosPorSegundo = medida[0] / medida[1] * 20.0;
-			// Pedimos 4,9 blocos/s no começo. Entre a caminhada (4,3) e a corrida (5,6) do jogador.
-			helper.assertTrue(blocosPorSegundo > 4.2 && blocosPorSegundo < 5.7,
+			// Pedimos 5,3 blocos/s no começo (até a alpha28, 4,9), subindo 6% por segundo enquanto ele sabe onde o jogador
+			// está: em média, entre a corrida do jogador (5,6) e a corrida com pulo (7,1). Mediu 5,8 na primeira vez.
+			helper.assertTrue(blocosPorSegundo > 4.8 && blocosPorSegundo < 6.8,
 					"velocidade fora do esperado: " + String.format("%.2f", blocosPorSegundo) + " blocos/s");
 			JogadorDeTeste.remover(jogador);
 		});

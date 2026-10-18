@@ -52,7 +52,7 @@ class SaltosTest {
 		assertTrue(perto >= meio && meio >= longe, perto + " / " + meio + " / " + longe);
 		// Sempre de dois a três segundos parado.
 		for (double d = 0; d <= 60; d += 0.5) {
-			for (double vel : new double[] {2.0, 4.9, 6.3 * 1.2}) {
+			for (double vel : new double[] {2.0, 5.3, 6.9 * 1.2}) {
 				int e = Saltos.esperaDepois(d, vel, alcance);
 				assertTrue(e >= Saltos.ESPERA_MINIMA && e <= Saltos.ESPERA_MAXIMA, "espera " + e + " a " + d + " blocos");
 			}
@@ -64,10 +64,10 @@ class SaltosTest {
 
 	@Test
 	void aJanelaDeUmAtalhoTemQuatroSegundosOuMais() {
-		// O atalho de longe cai de 12 a 16 blocos; na velocidade máxima que a caçada chega a pedir (6,3 vezes 1,2).
+		// O atalho de longe cai de 12 a 16 blocos; na velocidade máxima que a caçada chega a pedir (6,9 vezes 1,2, desde a alpha29).
 		for (double d = Saltos.DISTANCIA_MINIMA; d <= Saltos.DISTANCIA_MINIMA + 4; d += 0.5) {
-			int espera = Saltos.esperaDepois(d, 6.3 * 1.2, 2.4);
-			assertTrue(Saltos.janela(espera, d, 6.3 * 1.2, 2.4) >= 80, "janela curta a " + d + " blocos");
+			int espera = Saltos.esperaDepois(d, 6.9 * 1.2, 2.4);
+			assertTrue(Saltos.janela(espera, d, 6.9 * 1.2, 2.4) >= 80, "janela curta a " + d + " blocos");
 		}
 	}
 

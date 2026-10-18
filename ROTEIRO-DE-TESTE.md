@@ -17,10 +17,13 @@ Você vai jogar várias versões de uma vez. Não precisa testar uma por uma: é
 | alpha26 | Como na alpha24: jogar bastante **longe de casa, de noite ou debaixo da terra**, sem comando. Se aquele momento em que alguma coisa vem atrás de você acontecer, **faça o que você faria de verdade**, do jeito que vier à cabeça, e **leia a página que aparecer** nos primeiros minutos da sessão | Deu tempo de reagir? Em algum momento pareceu **injusto**? E o contrário: pareceu **fácil demais** de escapar? Depois, deu para continuar jogando ou você ficou numa situação sem saída? |
 | alpha27 | O mesmo da alpha26, **com som ligado** (fone é melhor) e o volume de "Criaturas hostis" audível | Algum som pareceu **alto demais**, estourado ou de mau gosto? Algum pareceu **falso**, "de filme"? Alguma coisa importante ficou **difícil de ouvir** por causa de outro som? |
 | alpha28 | **Explore cavernas novas**, das que você ainda não acendeu, e passe um tempo longe de casa e volte. Durma em casa de vez em quando | Você reparou em alguma coisa que **não lembra de ter feito**? Teve algo que pareceu **defeito do jogo**, ou que te incomodou de um jeito ruim (e não de um jeito bom)? |
+| alpha29 | O mesmo da alpha26: longe de casa, de noite ou debaixo da terra. **Ligue o `/sussurros debug on` toda vez que abrir o jogo** | Ele ainda pareceu travado no começo? Correu o bastante, ou demais? Deu para escapar de algum jeito? |
 
-De comando, só o `/sussurros debug on`, como sempre.
+De comando, só o `/sussurros debug on`, **toda vez que abrir o jogo** (ele desliga quando o jogo fecha).
 
 ## O que entrou (em termos gerais)
+
+Versão 0.9.0-alpha29: **o que você disse da caçada em 18/10** ("ele não corre tanto, e parece meio travado até agir"). Medi num teste e você tinha razão nas duas coisas: ele ficava parado tempo demais no começo e corria menos do que você. Agora fica menos tempo parado e corre mais; correndo de verdade, ainda dá para escapar. Um aviso importante: na sua segunda abertura do jogo em 18/10 o registro estava desligado (o `/sussurros debug on` desliga quando o jogo fecha), então das duas caçadas eu só sei o horário. Ligue toda vez que abrir o jogo. E caçada forçada por comando vale para você ver, mas não conta para o que o mod aprende.
 
 Versão 0.9.0-alpha28: **a sua resposta de 18/10** ("sim, até perto do que eu construí"). Entra uma coisa nova, debaixo da terra e perto da sua casa, que fica no mundo de verdade. Nada seu é quebrado, trocado ou tapado. Para testar: explore cavernas que você ainda não acendeu, e passe um tempo longe de casa (e volte). Não vou dizer o que é. Se alguma coisa te incomodar do jeito errado, me diga, que eu ajusto.
 
@@ -144,6 +147,7 @@ Pelos logs das sessões de 08/10 e 09/10/2026 e pelas suas respostas: o jogo abr
 Você não precisa repetir isto. Fica registrado para quem programa.
 
 - O mod carrega num servidor de verdade e todos os eventos rodam sem erro.
+- O que mudou na alpha29 foi medido num teste novo, que confere quanto tempo ele fica parado no começo e quanto demora para sair do lugar quando você para de olhar. Os testes antigos da caçada continuam passando.
 - O que mudou na alpha28 foi exercitado contra um jogador de mentira em cinco situações: um túnel de pedra, um pedaço da sua caverna de verdade e uma casinha com porta, janela e cama. Em todas, nada do que já existia mudou (a casinha é comparada bloco por bloco antes e depois), e nada aparece com o jogador olhando.
 - O que mudou na alpha27 foi conferido em números (seis casos), contra um jogador de mentira (inclusive que quem está ao seu lado não ouve), e o volume dos sons novos foi medido por programa contra os sons que o mod já tinha. Como soa, nenhum teste diz.
 - O que mudou na alpha26 foi exercitado contra um jogador de mentira em cinco situações novas, que medem quanto tempo você tem para reagir, e as contas por trás disso em nove casos. As situações antigas desse momento continuam passando. O log do mod passa a ter uma linha por vez em que esse momento acontece, e eu conferi a leitura dela no seu log de 12/10.
