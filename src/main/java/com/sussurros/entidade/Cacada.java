@@ -56,7 +56,7 @@ import com.sussurros.bloco.CinzaEspalhadaBlock;
  */
 final class Cacada {
 	enum Estagio {
-		AVISO,       // ele nasceu e não se mexe: o mundo emudeceu, uma luz falhou
+		AVISO,       // ele nasceu e não se mexe (5 a 6,5 s): o mundo emudeceu, uma luz falhou
 		PERSEGUE,    // anda quando não é visto; procura quando perde o rastro
 		ESPERA_VELA, // o alvo está na zona da vela: espera na borda, por tempo limitado
 		FINGE,       // fingiu que desistiu: calado, fora de vista, prestes a voltar
@@ -80,9 +80,18 @@ final class Cacada {
 	 * andava a 3,6 blocos/s quando pedíamos 4,9.
 	 */
 	static final double FATOR_VELOCIDADE = 43.4;
-	/** O jogador anda a 4,3 blocos/s, corre a 5,6 e corre pulando a 7,1. */
-	private static final double VELOCIDADE_INICIAL = 4.9;
-	private static final double VELOCIDADE_MAXIMA = 6.3;
+	/**
+	 * O jogador anda a 4,3 blocos/s, corre a 5,6 e corre pulando a 7,1. Ele começa um pouco abaixo da corrida e, sabendo
+	 * onde o jogador está, passa dela em uns três segundos; correr pulando ainda o vence.
+	 *
+	 * 0.9.0-alpha29: eram 4,9 e 6,3, subindo 4% por segundo. O dono, em 18/10/2026: "ele não corre tanto parece". Com os
+	 * saltos trancados pela alpha26 (ele não aparece mais na frente de quem foge), o perigo tem de vir do passo de
+	 * verdade, que é legível: quem corre vê que ele vem.
+	 */
+	private static final double VELOCIDADE_INICIAL = 5.3;
+	private static final double VELOCIDADE_MAXIMA = 6.9;
+	/** Quanto ele acelera por segundo sabendo onde o jogador está (era 4%). */
+	private static final double ACELERACAO = 0.06;
 	/** De quatro ele anda a pouco mais da metade: é no vão que o jogador tem tempo de vê-lo entrar. */
 	private static final double LENTO_DE_QUATRO = 0.55;
 	/** Só avisa na boca de um vão que esteja a até isto do jogador, no chão (blocos). Mais longe é só caminho. */
@@ -182,7 +191,9 @@ final class Cacada {
 		// comando segue a memória do jogador como uma de verdade, e é isso que os testes usam.
 		this.liberacao = ApoioCaca.liberacao(alvo);
 		this.persegueDesde = comAviso ? -1 : 0;
-		this.avisoRestante = comAviso ? 160 + this.sorte.nextInt(41) : 0;
+		// O aviso: de 5 a 6,5 s parado (era de 8 a 10). O dono, em 18/10/2026: "ele parece meio travado até agir, como um
+		// delay". O aviso continua sendo a chance de se preparar (o mundo emudece, uma luz falha); só ficou mais curto.
+		this.avisoRestante = comAviso ? 100 + this.sorte.nextInt(31) : 0;
 		this.estagio = comAviso ? Estagio.AVISO : Estagio.PERSEGUE;
 		this.proximoPiscar = 80 + this.sorte.nextInt(41);
 		h.getNavigation().setCanOpenDoors(true);
@@ -277,7 +288,7 @@ final class Cacada {
 				this.h.pararEOlhar();
 				if (--this.avisoRestante <= 0) {
 					// O aviso é a chance de o jogador se preparar, não de sumir: quando acaba, ele sabe onde o
-					// jogador está. Sem isto ele saía atrás do lugar de oito a dez segundos antes, e bastava andar
+					// jogador está. Sem isto ele saía atrás do lugar de cinco a dez segundos antes, e bastava andar
 					// para longe durante o aviso (a mais de 42 blocos ele não ouve) para a caçada acabar sozinha.
 					this.busca.ouvirAcao(level, this.h, alvo.position(), 0.9, "FIM_DO_AVISO");
 					this.persegueDesde = this.idade;
@@ -380,7 +391,7 @@ final class Cacada {
 		if (sabe) {
 			this.contato++;
 			this.semContato = 0;
-			this.velocidade = Math.min(VELOCIDADE_MAXIMA, this.velocidade * (1.0 + 0.04 / 20.0));
+			this.velocidade = Math.min(VELOCIDADE_MAXIMA, this.velocidade * (1.0 + ACELERACAO / 20.0));
 		} else {
 			this.semContato++;
 			this.velocidade = Math.max(VELOCIDADE_INICIAL, this.velocidade * (1.0 - 0.01 / 20.0));

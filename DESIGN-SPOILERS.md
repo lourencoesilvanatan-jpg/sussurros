@@ -2270,3 +2270,43 @@ As últimas seis coisas postas ficam lembradas (posição, tipo, quando). Quando
 - **A frequência.** 45% dos dias e uma vez por descida são ponto de partida. Com mais de uma coisa por dia na casa vira cenário; com menos, ele não liga uma à outra.
 - **Em servidor com amigos:** são blocos de verdade, todos veem. É a casa e a caverna de um jogador; quem estiver junto vê também.
 - **O "não andou ali"** usa os últimos seis minutos de caminho (o `Rastro`) e a luz: uma caverna que ele visitou há uma hora sem acender pode receber tochas como "nova". A luz é a régua principal.
+
+# Versão 0.9.0-alpha29 — o passo da caçada
+
+Depois do marco. Em 18/10/2026 o dono jogou (alpha28) e forçou duas caçadas por comando, numa abertura do jogo em que o log não estava ligado (o `/sussurros debug on` vale até fechar o jogo). As palavras dele: "a caçada achei legal, mas ele nao corre tanto parece, e ele parece meio travado ate agir, como um delay? sla, de uma olhada boa".
+
+Sem o log das duas caçadas, a leitura foi medida num teste novo (`TestesDoPasso.oPassoDaCacada`): caçada de comando, o jogador olha três segundos, vira as costas e corre a 5,6 blocos por segundo (a corrida do jogo) por dez segundos. Na alpha28:
+
+- **parado no começo: 8,4 s** (o aviso, de 8 a 10 s);
+- **saiu do lugar 0,25 s depois de o jogador virar**: não há atraso ao parar de olhar;
+- **correndo, o jogador abriu de 21,5 para 42,8 blocos em 10 s** (ele veio a uns 3,5 b/s).
+
+O "travado até agir" é o aviso. O "não corre tanto" é o passo: 4,9 b/s de partida, abaixo da corrida do jogador (5,6), e a aceleração de 4% por segundo só enquanto ele sabe onde o jogador está; cada olhada o congela. Com a alpha26 os saltos ficaram trancados (ele não aparece mais na frente de quem foge), então o passo virou o único perigo de quem corre, e ficou pouco.
+
+O jogador de mentira faz menos barulho que um de verdade correndo (o jogo não conta o movimento dele no ouvido da criatura: `getKnownMovement` é zero), então ele ouve menos e a medida da fuga sai pessimista. Os 3,5 b/s são um piso; com o dono, o passo era o pedido (4,9 a 6,3).
+
+## O que mudou
+
+- **O aviso:** de 8 a 10 s para **5 a 6,5 s** parado. Continua sendo a chance de se preparar (o mundo emudece, uma luz falha). O silêncio e a marca de "aviso" para os sentidos (`cacaAvisoAte`, dez segundos) não mudaram: a caçada já começou quando eles acabam.
+- **O passo:** começa em **5,3 b/s** (era 4,9; ainda abaixo da corrida), acelera **6% por segundo** sabendo onde o jogador está (era 4%) e vai até **6,9** (era 6,3; acima da corrida, abaixo da corrida com pulo, 7,1). Quem corre vê que ele vem e passa a perder terreno em uns três segundos; quem corre pulando ainda escapa. Os multiplicadores de antes continuam (o do Diretor, até 1,2; 0,85 na luz forte; 0,55 de quatro).
+- Na mesma medida, depois da mudança: **aviso de 6,2 s; saiu do lugar em 0,35 s; correndo, de 21,3 para 34,7 blocos em 10 s.**
+
+## Medição
+
+Sessão sintética de uma hora: 35, 44 e 29 saídas por hora e 9, 11 e 12 aparições por hora (fase 2, fase 4, mundo novo); na alpha27, 31, 43 e 29, e 8, 10 e 10. Duas caçadas, as duas com captura (os jogadores de mentira não fogem: andam em quadrado e, numa delas, entraram nele no fim do aviso).
+
+## O que não mudou
+
+- A regra: parado quando olhado, o piscar, a vela, o vão, a porta, os saltos e as travas da alpha26, a voz da alpha27, a captura.
+- A frequência das caçadas e o teto de tempo.
+
+## Os testes
+
+- `TestesDoPasso.oPassoDaCacada` (novo; 112 no total): o aviso de 4,5 a 7 s e o sair do lugar em até meio segundo. A distância de quem foge vai para o log sem ser exigida (o ouvido do jogador de mentira é pessimista).
+- `TestesDaCacada.quemFicaDeCostasELevado`: a faixa de velocidade medida passou de 4,2–5,7 para 4,8–6,8 b/s (mediu 5,8).
+- `SaltosTest`: as contas da janela usam a nova velocidade máxima (6,9 × 1,2); continuam passando.
+
+## Não verificado por ninguém
+
+- Se agora corre "o bastante" e se o aviso mais curto deixa tempo de reagir. A janela de reação dos saltos (alpha26) é proporcional à velocidade e continua garantida em conta, mas ninguém correu dele ainda.
+- **O log das duas caçadas de 18/10 não existe.** A próxima sessão precisa do `/sussurros debug on` a cada vez que o jogo for aberto.
